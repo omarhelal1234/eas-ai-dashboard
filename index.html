@@ -1,0 +1,5212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAS AI Adoption Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --bg-card-hover: #334155;
+  --border: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #06b6d4;
+  --purple: #8b5cf6;
+  --pink: #ec4899;
+  --sidebar-width: 260px;
+  --radius: 12px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  height: 100vh;
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+.sidebar-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.3px;
+}
+.sidebar-header p {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.nav-section {
+  padding: 16px 12px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  margin: 2px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+.nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.nav-item.active { background: var(--accent); color: white; font-weight: 500; }
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.nav-item .badge {
+  margin-left: auto;
+  background: rgba(255,255,255,0.15);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.nav-item.active .badge { background: rgba(255,255,255,0.25); }
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+.upload-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+.upload-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(59,130,246,0.05); }
+
+/* Main Content */
+.main {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-height: 100vh;
+}
+.page-header {
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+}
+.page-header h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+.page-header .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.page-content { padding: 24px 32px; }
+
+/* KPI Cards */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: all 0.2s;
+}
+.kpi-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.kpi-label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; }
+.kpi-value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+.kpi-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.kpi-value.blue { color: var(--accent); }
+.kpi-value.green { color: var(--success); }
+.kpi-value.yellow { color: var(--warning); }
+.kpi-value.purple { color: var(--purple); }
+.kpi-value.pink { color: var(--pink); }
+.kpi-value.cyan { color: var(--info); }
+
+/* Charts */
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.chart-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary); }
+.chart-container { position: relative; height: 280px; }
+
+/* Tables */
+.table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.table-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.table-header h3 { font-size: 15px; font-weight: 600; }
+.table-actions { display: flex; gap: 8px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+thead { background: rgba(0,0,0,0.2); }
+th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+tr:hover td { background: rgba(255,255,255,0.02); }
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-completed { background: rgba(16,185,129,0.15); color: var(--success); }
+.status-inprogress { background: rgba(59,130,246,0.15); color: var(--accent); }
+.status-pending { background: rgba(245,158,11,0.15); color: var(--warning); }
+.status-testing { background: rgba(139,92,246,0.15); color: var(--purple); }
+
+/* Practice Cards */
+.practice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.practice-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.practice-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.practice-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.practice-card-header h3 { font-size: 16px; font-weight: 600; }
+.practice-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.practice-stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.practice-stat-value { font-size: 18px; font-weight: 700; margin-top: 2px; }
+.progress-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 14px; overflow: hidden; }
+.progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+/* Buttons */
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: var(--bg-card-hover); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--text-muted); }
+.btn-success { background: var(--success); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 90%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+.modal h3 { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+/* Filters */
+.filters-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filter-select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.search-input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  min-width: 220px;
+}
+.search-input:focus, .filter-select:focus { outline: none; border-color: var(--accent); }
+
+/* Accomplishment cards */
+.acc-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+.acc-card:hover { border-color: var(--accent); }
+.acc-card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+.acc-card-title { font-size: 16px; font-weight: 600; }
+.acc-meta { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.acc-meta-item { font-size: 12px; color: var(--text-muted); }
+.acc-meta-item span { color: var(--text-secondary); font-weight: 500; }
+.acc-impact { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2); border-radius: 8px; padding: 12px; margin-top: 12px; }
+.acc-impact-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--success); margin-bottom: 6px; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 2000;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast-success { background: var(--success); color: white; }
+.toast-error { background: var(--danger); color: white; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Mobile */
+.mobile-toggle { display: none; position: fixed; top: 16px; left: 16px; z-index: 200; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: pointer; color: var(--text-primary); }
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .mobile-toggle { display: block; }
+  .page-header { padding: 24px 16px; padding-left: 56px; }
+  .page-content { padding: 16px; }
+  .chart-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-row { grid-template-columns: 1fr; }
+}
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+.empty-state svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.5; }
+.empty-state h3 { font-size: 16px; color: var(--text-secondary); margin-bottom: 8px; }
+
+/* Tab bar */
+.tab-bar { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg-secondary); border-radius: 8px; padding: 4px; border: 1px solid var(--border); width: fit-content; }
+.tab { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-muted); transition: all 0.15s; }
+.tab.active { background: var(--accent); color: white; }
+.tab:hover:not(.active) { color: var(--text-primary); }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- Mobile Toggle -->
+<button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+</button>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <h1>EAS AI Adoption</h1>
+    <p>Ejada Advanced Solutions</p>
+  </div>
+
+  <div class="nav-section">Overview</div>
+  <div class="nav-item active" data-page="dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Dashboard
+  </div>
+
+  <div class="nav-section">Practices</div>
+  <div class="nav-item" data-page="practices">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Practice Tracking
+    <span class="badge">6</span>
+  </div>
+  <div class="nav-item" data-page="tasks">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    All Tasks
+    <span class="badge" id="nav-task-count">50</span>
+  </div>
+
+  <div class="nav-section">Management</div>
+  <div class="nav-item" data-page="accomplishments">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    Accomplishments
+    <span class="badge" id="nav-acc-count">4</span>
+  </div>
+  <div class="nav-item" data-page="copilot">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Copilot Access
+    <span class="badge" id="nav-copilot-count">152</span>
+  </div>
+  <div class="nav-item" data-page="projects">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    Projects
+    <span class="badge" id="nav-project-count">25</span>
+  </div>
+
+  <div class="sidebar-footer">
+    <button class="upload-btn" onclick="document.getElementById('xlsxUpload').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload Excel (.xlsx)
+    </button>
+    <input type="file" id="xlsxUpload" accept=".xlsx,.xls" style="display:none" onchange="handleExcelUpload(this)">
+    <button class="upload-btn" style="margin-top:8px" onclick="exportToExcel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export to Excel
+    </button>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+  <!-- Dashboard Page -->
+  <div id="page-dashboard" class="page">
+    <div class="page-header">
+      <div>
+        <h2>Dashboard</h2>
+        <div class="subtitle">EAS AI Adoption Overview &mdash; SPOC: Omar Ibrahim</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="openModal('task')">+ Log Task</button>
+        <button class="btn btn-secondary" onclick="openModal('accomplishment')">+ Add Win</button>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Tasks by Practice</h3>
+          <div class="chart-container"><canvas id="chart-tasks-practice"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Time Saved by Practice (hrs)</h3>
+          <div class="chart-container"><canvas id="chart-time-saved"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Efficiency % by Practice</h3>
+          <div class="chart-container"><canvas id="chart-efficiency"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>AI Tools Usage</h3>
+          <div class="chart-container"><canvas id="chart-tools"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Task Categories Distribution</h3>
+          <div class="chart-container"><canvas id="chart-categories"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3>Weekly Trend (Tasks Logged)</h3>
+          <div class="chart-container"><canvas id="chart-weekly"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Practices Page -->
+  <div id="page-practices" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2>Practice Tracking</h2>
+        <div class="subtitle">AI adoption progress by practice</div>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="practice-grid" id="practice-grid"></div>
+      <div id="practice-detail" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- All Tasks Page -->
+  <div id="page-tasks" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2>All Tasks</h2>
+        <div class="subtitle">Complete task log across all practices</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('task')">+ Log Task</button>
+    </div>
+    <div class="page-content">
+      <div class="filters-bar">
+        <input type="text" class="search-input" id="task-search" placeholder="Search tasks, employees, projects..." oninput="renderTasks()">
+        <select class="filter-select" id="task-filter-practice" onchange="renderTasks()">
+          <option value="">All Practices</option>
+        </select>
+        <select class="filter-select" id="task-filter-category" onchange="renderTasks()">
+          <option value="">All Categories</option>
+        </select>
+        <select class="filter-select" id="task-filter-tool" onchange="renderTasks()">
+          <option value="">All AI Tools</option>
+        </select>
+        <select class="filter-select" id="task-filter-status" onchange="renderTasks()">
+          <option value="">All Statuses</option>
+          <option value="Completed">Completed</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Task Log</h3>
+          <span id="task-count-label" style="font-size:13px;color:var(--text-muted)"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Practice</th>
+                <th>Week</th>
+                <th>Project</th>
+                <th>Employee</th>
+                <th>Task</th>
+                <th>Category</th>
+                <th>AI Tool</th>
+                <th>Without AI</th>
+                <th>With AI</th>
+                <th>Saved</th>
+                <th>Eff %</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tasks-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accomplishments Page -->
+  <div id="page-accomplishments" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2>AI Accomplishments</h2>
+        <div class="subtitle">Notable AI-driven wins, POCs, and value-adds</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('accomplishment')">+ Add Accomplishment</button>
+    </div>
+    <div class="page-content">
+      <div class="filters-bar">
+        <input type="text" class="search-input" id="acc-search" placeholder="Search accomplishments..." oninput="renderAccomplishments()">
+        <select class="filter-select" id="acc-filter-practice" onchange="renderAccomplishments()">
+          <option value="">All Practices</option>
+        </select>
+      </div>
+      <div id="acc-list"></div>
+    </div>
+  </div>
+
+  <!-- Copilot Access Page -->
+  <div id="page-copilot" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2>GitHub Copilot Access</h2>
+        <div class="subtitle">User access management across practices</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('copilot')">+ Add User</button>
+    </div>
+    <div class="page-content">
+      <div class="filters-bar">
+        <input type="text" class="search-input" id="copilot-search" placeholder="Search name, email, skill..." oninput="renderCopilot()">
+        <select class="filter-select" id="copilot-filter-practice" onchange="renderCopilot()">
+          <option value="">All Practices</option>
+        </select>
+      </div>
+      <div class="kpi-grid" id="copilot-kpis" style="margin-bottom:20px"></div>
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Users</h3>
+          <span id="copilot-count-label" style="font-size:13px;color:var(--text-muted)"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Practice</th><th>Name</th><th>Email</th><th>Role/Skill</th><th>Status</th></tr></thead>
+            <tbody id="copilot-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects Page -->
+  <div id="page-projects" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2>AI Projects</h2>
+        <div class="subtitle">Projects tracked for AI adoption</div>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="filters-bar">
+        <input type="text" class="search-input" id="project-search" placeholder="Search projects..." oninput="renderProjects()">
+        <select class="filter-select" id="project-filter-practice" onchange="renderProjects()">
+          <option value="">All Practices</option>
+        </select>
+      </div>
+      <div class="table-card">
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Practice</th><th>Project Name</th><th>Code</th><th>Customer</th><th>Value (SAR)</th><th>Start</th><th>End</th><th>Revenue Type</th><th>PM</th></tr></thead>
+            <tbody id="projects-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <h3>Log AI Task</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Practice</label>
+        <select id="f-practice"></select>
+      </div>
+      <div class="form-group">
+        <label>Week #</label>
+        <input type="number" id="f-week" min="1" value="1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Week Start</label>
+        <input type="date" id="f-weekstart">
+      </div>
+      <div class="form-group">
+        <label>Week End</label>
+        <input type="date" id="f-weekend">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Project</label>
+      <select id="f-project"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Employee Name</label>
+        <input type="text" id="f-employee">
+      </div>
+      <div class="form-group">
+        <label>Task / Activity</label>
+        <input type="text" id="f-task">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Task Category</label>
+        <select id="f-category"></select>
+      </div>
+      <div class="form-group">
+        <label>AI Tool Used</label>
+        <select id="f-tool"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Time Without AI (hrs)</label>
+        <input type="number" id="f-time-without" step="0.25" min="0">
+      </div>
+      <div class="form-group">
+        <label>Time With AI (hrs)</label>
+        <input type="number" id="f-time-with" step="0.25" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Quality Rating (1-5)</label>
+        <input type="number" id="f-quality" min="1" max="5" step="0.5">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="Completed">Completed</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Pending">Pending</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes / Learnings</label>
+      <textarea id="f-notes" rows="2"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('task')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Accomplishment Modal -->
+<div class="modal-overlay" id="modal-accomplishment">
+  <div class="modal">
+    <h3>Log Accomplishment</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Practice</label>
+        <select id="fa-practice"></select>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="fa-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Project</label>
+      <input type="text" id="fa-project">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>SPOC / Lead</label>
+        <input type="text" id="fa-spoc">
+      </div>
+      <div class="form-group">
+        <label>Employee(s)</label>
+        <input type="text" id="fa-employees">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Accomplishment Title</label>
+      <input type="text" id="fa-title">
+    </div>
+    <div class="form-group">
+      <label>Details</label>
+      <textarea id="fa-details" rows="3"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>AI Tool Used</label>
+        <select id="fa-tool"></select>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="fa-category"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Before AI (Baseline)</label>
+        <input type="text" id="fa-before">
+      </div>
+      <div class="form-group">
+        <label>After AI (Result)</label>
+        <input type="text" id="fa-after">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Quantified Impact</label>
+      <textarea id="fa-impact" rows="2"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Business Gains</label>
+      <textarea id="fa-gains" rows="2"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Effort Saved (hrs)</label>
+        <input type="number" id="fa-effort" step="0.5" min="0">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="fa-status">
+          <option value="Completed">Completed</option>
+          <option value="testing">Testing</option>
+          <option value="In Progress">In Progress</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('accomplishment')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAccomplishment()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Copilot User Modal -->
+<div class="modal-overlay" id="modal-copilot">
+  <div class="modal">
+    <h3>Add Copilot User</h3>
+    <div class="form-group">
+      <label>Practice</label>
+      <select id="fc-practice"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="fc-name">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="fc-email">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Role / Skill</label>
+        <input type="text" id="fc-skill">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="fc-status">
+          <option value="access granted">Access Granted</option>
+          <option value="pending">Pending</option>
+          <option value="revoked">Revoked</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('copilot')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCopilotUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const APP_DATA = {
+  "summary": {
+    "practices": [
+      {
+        "name": "ERP Solutions",
+        "head": "Amer Farghaly",
+        "spoc": "Reham Ibrahim",
+        "tasks": 0,
+        "timeWithout": 0,
+        "timeWith": 0,
+        "timeSaved": 0,
+        "efficiency": 0,
+        "quality": 0,
+        "completed": 0,
+        "projects": 2
+      },
+      {
+        "name": "CES",
+        "head": "Osama Nagdy",
+        "spoc": "Norah Al Wabel",
+        "tasks": 7,
+        "timeWithout": 286,
+        "timeWith": 174.5,
+        "timeSaved": 111.5,
+        "efficiency": 60.0,
+        "quality": 3.67,
+        "completed": 6,
+        "projects": 3
+      },
+      {
+        "name": "BFSI",
+        "head": "Mohab ElHaddad",
+        "spoc": "Omar Ibrahim",
+        "tasks": 28,
+        "timeWithout": 140,
+        "timeWith": 54.35,
+        "timeSaved": 69.65,
+        "efficiency": 52.2,
+        "quality": 4.0,
+        "completed": 26,
+        "projects": 11
+      },
+      {
+        "name": "EPS",
+        "head": "Mohamed Ziaudin",
+        "spoc": "Yousef Milhem",
+        "tasks": 6,
+        "timeWithout": 2.5,
+        "timeWith": 0.01,
+        "timeSaved": 0.49,
+        "efficiency": 98.0,
+        "quality": 4.0,
+        "completed": 1,
+        "projects": 2
+      },
+      {
+        "name": "GRC",
+        "head": "Ahmed Madkour",
+        "spoc": "Mohamed Essam",
+        "tasks": 6,
+        "timeWithout": 30,
+        "timeWith": 5.25,
+        "timeSaved": 24.75,
+        "efficiency": 84.7,
+        "quality": 4.67,
+        "completed": 6,
+        "projects": 3
+      },
+      {
+        "name": "EPCS",
+        "head": "Mohamed Mobarak",
+        "spoc": "Ahmed Shaheen",
+        "tasks": 3,
+        "timeWithout": 0,
+        "timeWith": 0,
+        "timeSaved": 0,
+        "efficiency": 0,
+        "quality": 4.67,
+        "completed": 0,
+        "projects": 4
+      }
+    ],
+    "totals": {
+      "tasks": 50,
+      "timeWithout": 458.5,
+      "timeWith": 234.11,
+      "timeSaved": 206.39,
+      "efficiency": 73.7,
+      "quality": 4.2,
+      "completed": 39,
+      "projects": 25
+    }
+  },
+  "tasks": [
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "Miral Soliman ",
+      "task": "product catalog ",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 2.0,
+      "timeWith": 1.5,
+      "timeSaved": 0.5,
+      "efficiency": 0.25,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "Miral Soliman ",
+      "task": "Project scope questionnaire",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 4.0,
+      "timeWith": 3.05,
+      "timeSaved": 0.9500000000000002,
+      "efficiency": 0.23750000000000004,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "Gahada Bakry",
+      "task": "HLD/FSD",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 6.0,
+      "timeWith": 5.0,
+      "timeSaved": 1.0,
+      "efficiency": 0.16666666666666666,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Development",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 6.0,
+      "timeWith": 1.4,
+      "timeSaved": 4.6,
+      "efficiency": 0.7666666666666666,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Database",
+      "category": "Database",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 2.0,
+      "timeWith": 0.4,
+      "timeSaved": 1.6,
+      "efficiency": 0.8,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Development",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 4.0,
+      "timeWith": 3.0,
+      "timeSaved": 1.0,
+      "efficiency": 0.25,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Database",
+      "category": "Database",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 2.0,
+      "timeWith": 0.5,
+      "timeSaved": 1.5,
+      "efficiency": 0.75,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AbdelRahman Badr Kamel",
+      "task": "Code Review",
+      "category": "Code Review",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 2.0,
+      "timeWith": 1.5,
+      "timeSaved": 0.5,
+      "efficiency": 0.25,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AbdelRahman Badr Kamel",
+      "task": "Documentation",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 8.0,
+      "timeWith": 6.5,
+      "timeSaved": 1.5,
+      "efficiency": 0.1875,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Development",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 4.0,
+      "timeWith": 3.0,
+      "timeSaved": 1.0,
+      "efficiency": 0.25,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "1",
+      "weekStart": "15/2/2026",
+      "weekEnd": "19/2/2026",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Database",
+      "category": "Database",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 2.0,
+      "timeWith": 0.5,
+      "timeSaved": 1.5,
+      "efficiency": 0.75,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "Miral Soliman ",
+      "task": "",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "Miral Soliman ",
+      "task": "",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "Gahada Bakry",
+      "task": "",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Development",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 3.0,
+      "timeWith": 0.5,
+      "timeSaved": 2.5,
+      "efficiency": 0.8333333333333334,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Database",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 3.0,
+      "timeWith": 2.5,
+      "timeSaved": 0.5,
+      "efficiency": 0.16666666666666666,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Development",
+      "category": "Database",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 3.0,
+      "timeWith": 1.0,
+      "timeSaved": 2.0,
+      "efficiency": 0.6666666666666666,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AbdelRahman Badr Kamel",
+      "task": "Code Review",
+      "category": "Code Review",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 3.0,
+      "timeWith": 2.0,
+      "timeSaved": 1.0,
+      "efficiency": 0.3333333333333333,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AbdelRahman Badr Kamel",
+      "task": "Documentation",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 2.0,
+      "timeWith": 1.5,
+      "timeSaved": 0.5,
+      "efficiency": 0.25,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Development",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 3.0,
+      "timeWith": 2.5,
+      "timeSaved": 0.5,
+      "efficiency": 0.16666666666666666,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Database",
+      "category": "Database",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 3.0,
+      "timeWith": 1.0,
+      "timeSaved": 2.0,
+      "efficiency": 0.6666666666666666,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "6",
+      "weekStart": "24/3/2026",
+      "weekEnd": "26/3/2026",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "Omar Ibrahim ",
+      "task": "Code Review",
+      "category": "Code Review",
+      "aiTool": "Claude",
+      "prompt": "",
+      "timeWithout": 8.0,
+      "timeWith": 2.0,
+      "timeSaved": 6.0,
+      "efficiency": 0.75,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "6",
+      "weekStart": "24/3/2026",
+      "weekEnd": "26/3/2026",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AbdelRahman Badr Kamel",
+      "task": "Development",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 8.0,
+      "timeWith": 6.0,
+      "timeSaved": 2.0,
+      "efficiency": 0.25,
+      "quality": 0,
+      "status": "Completed",
+      "notes": "We used Copilot for identifying the steps and perquisites  for enabling HTTPS on WebLogic application server using .pfx certificates."
+    },
+    {
+      "practice": "BFSI",
+      "week": "7",
+      "weekStart": "29/3/2026",
+      "weekEnd": "2026-02-04 00:00:00",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AbdelRahman Badr Kamel",
+      "task": "Documentation",
+      "category": "Documentation",
+      "aiTool": "Claude",
+      "prompt": "",
+      "timeWithout": 8.0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": "Validating LLD sequence diagrams"
+    },
+    {
+      "practice": "BFSI",
+      "week": "7",
+      "weekStart": "29/3/2026",
+      "weekEnd": "2026-02-04 00:00:00",
+      "project": "Project C-Personal Finance",
+      "projectCode": "12135001",
+      "employee": "AbdelRahman Badr Kamel",
+      "task": "Code Review",
+      "category": "Code Review",
+      "aiTool": "Claude",
+      "prompt": "",
+      "timeWithout": 8.0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "7",
+      "weekStart": "29/3/2026",
+      "weekEnd": "2026-02-04 00:00:00",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Development",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 7.0,
+      "timeWith": 1.5,
+      "timeSaved": 5.5,
+      "efficiency": 0.7857142857142857,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "7",
+      "weekStart": "29/3/2026",
+      "weekEnd": "2026-02-04 00:00:00",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Development",
+      "category": "Development",
+      "aiTool": "Claude",
+      "prompt": "",
+      "timeWithout": 10.0,
+      "timeWith": 2.0,
+      "timeSaved": 8.0,
+      "efficiency": 0.8,
+      "quality": 0,
+      "status": "Completed",
+      "notes": "Claude was significantly helpful regarding the infinity Visualizer UI tool "
+    },
+    {
+      "practice": "BFSI",
+      "week": "7",
+      "weekStart": "29/3/2026",
+      "weekEnd": "2026-02-04 00:00:00",
+      "project": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "projectCode": "A1023401",
+      "employee": "AL-Moataz Bellah Khamis Ahmed ",
+      "task": "Code Review / Enhancements",
+      "category": "Code Review / Enhancements",
+      "aiTool": "Claude ",
+      "prompt": "",
+      "timeWithout": 4.0,
+      "timeWith": 0.5,
+      "timeSaved": 3.5,
+      "efficiency": 0.875,
+      "quality": 0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "7",
+      "weekStart": "29/3/2026",
+      "weekEnd": "2026-02-04 00:00:00",
+      "project": "ServiceNow",
+      "projectCode": "Demand",
+      "employee": "Omar Ibrahim ",
+      "task": "HLD ",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 6.0,
+      "timeWith": 2.0,
+      "timeSaved": 4.0,
+      "efficiency": 0.6666666666666666,
+      "quality": 4.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "7",
+      "weekStart": "29/3/2026",
+      "weekEnd": "2026-02-04 00:00:00",
+      "project": "CDF",
+      "projectCode": "Demand",
+      "employee": "Omar Ibrahim ",
+      "task": "RFP",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 7.0,
+      "timeWith": 1.0,
+      "timeSaved": 6.0,
+      "efficiency": 0.8571428571428571,
+      "quality": 4.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "8",
+      "weekStart": "2026-05-04 00:00:00",
+      "weekEnd": "2026-09-04 00:00:00",
+      "project": "UCDE",
+      "projectCode": "-",
+      "employee": "Omar Ibrahim ",
+      "task": "Experian Reverse engineering and FSD",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "Gave Copilot multiple old documentation to format in a readible business way and KT doecumentation",
+      "timeWithout": 12.0,
+      "timeWith": 2.0,
+      "timeSaved": 10.0,
+      "efficiency": 0.8333333333333334,
+      "quality": 4.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "BFSI \u2013 Weekly Aggregated Summary",
+      "weekStart": "",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "Metric",
+      "weekStart": "Value",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "Total Tasks Logged",
+      "weekStart": "28",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "Total Time Without AI (hrs)",
+      "weekStart": "140",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "Total Time With AI (hrs)",
+      "weekStart": "54.35",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "Total Time Saved (hrs)",
+      "weekStart": "69.65",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "Average Efficiency Gain %",
+      "weekStart": "0.5215201465201467",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "Average Quality Rating",
+      "weekStart": "4",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "Tasks Completed",
+      "weekStart": "26",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "BFSI",
+      "week": "Tasks In Progress",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u062a\u0639\u0631\u064a\u0641\u064a \u0627\u0644\u0645\u0648\u062d\u062f \u0644\u0644\u0639\u0645\u0644\u0627\u0621",
+      "projectCode": "53008701",
+      "employee": "Ahmed Ibrahim",
+      "task": "UI design for CRM form ",
+      "category": "Development",
+      "aiTool": "ChatGPT",
+      "prompt": "Ask chatGPT to suggest for design based on customer requirements",
+      "timeWithout": 8.0,
+      "timeWith": 3.0,
+      "timeSaved": 5.0,
+      "efficiency": 0.625,
+      "quality": 4.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u062a\u0639\u0631\u064a\u0641\u064a \u0627\u0644\u0645\u0648\u062d\u062f \u0644\u0644\u0639\u0645\u0644\u0627\u0621",
+      "projectCode": "53008701",
+      "employee": "Malak Madkour",
+      "task": "code review",
+      "category": "Code Review",
+      "aiTool": "Github Copilot",
+      "prompt": "Ask copilot to fix bugs",
+      "timeWithout": 2.0,
+      "timeWith": 0.5,
+      "timeSaved": 1.5,
+      "efficiency": 0.75,
+      "quality": 5.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u062a\u0639\u0631\u064a\u0641\u064a \u0627\u0644\u0645\u0648\u062d\u062f \u0644\u0644\u0639\u0645\u0644\u0627\u0621",
+      "projectCode": "53008701",
+      "employee": "Malak Madkour",
+      "task": "auctions module development",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "Ask copilot to assist in model creation and mapping to CRM",
+      "timeWithout": 4.0,
+      "timeWith": 1.0,
+      "timeSaved": 3.0,
+      "efficiency": 0.75,
+      "quality": 4.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "2",
+      "weekStart": "22/2/2026",
+      "weekEnd": "26/2/2026",
+      "project": "\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u062a\u0639\u0631\u064a\u0641\u064a \u0627\u0644\u0645\u0648\u062d\u062f \u0644\u0644\u0639\u0645\u0644\u0627\u0621",
+      "projectCode": "53008701",
+      "employee": "Fady Banoub",
+      "task": "HTML and CSS web resources for UI design ",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "Ask copilot to assist in building CSS and HTML files",
+      "timeWithout": 8.0,
+      "timeWith": 2.0,
+      "timeSaved": 6.0,
+      "efficiency": 0.75,
+      "quality": 4.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "CES \u2013 Weekly Aggregated Summary",
+      "weekStart": "",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "Metric",
+      "weekStart": "Value",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "Total Tasks Logged",
+      "weekStart": "7",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "Total Time Without AI (hrs)",
+      "weekStart": "286",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "Total Time With AI (hrs)",
+      "weekStart": "174.5",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "Total Time Saved (hrs)",
+      "weekStart": "111.5",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "Average Efficiency Gain %",
+      "weekStart": "0.600378787878788",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "Average Quality Rating",
+      "weekStart": "3.6666666666666665",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "Tasks Completed",
+      "weekStart": "6",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "CES",
+      "week": "Tasks In Progress",
+      "weekStart": "1",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "12",
+      "weekStart": "29/3/2026",
+      "weekEnd": "2026-02-04 00:00:00",
+      "project": "RRM ERP Cloud Services Implementation 15/12/2025",
+      "projectCode": "56000301",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "ERP \u2013 Weekly Aggregated Summary",
+      "weekStart": "",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "Metric",
+      "weekStart": "Value",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "Total Tasks Logged",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "Total Time Without AI (hrs)",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "Total Time With AI (hrs)",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "Total Time Saved (hrs)",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "Average Efficiency Gain %",
+      "weekStart": "",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "Average Quality Rating",
+      "weekStart": "",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "Tasks Completed",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "ERP",
+      "week": "Tasks In Progress",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "1",
+      "weekStart": "2026-04-12 00:00:00",
+      "weekEnd": "16-04-2026",
+      "project": "ANB EPS Corporate Module",
+      "projectCode": "12150101",
+      "employee": "",
+      "task": "Providing Teams transcript to COPILOT prompt to generate MOM",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "Need to conduct a meeting with transcript and send it from teams to coplito to generate MOM",
+      "timeWithout": 1.0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "2",
+      "weekStart": "19-04-2026",
+      "weekEnd": "23-04-2026",
+      "project": "ANB EPS Corporate Module",
+      "projectCode": "12150101",
+      "employee": "",
+      "task": "Provide Code / Script provided by the bank of their current system, provide it to the copilot prompt and get it in our solution language",
+      "category": "Code Review",
+      "aiTool": "Github Copilot",
+      "prompt": "Having like JAVA script from the customer and try to analyze it",
+      "timeWithout": 1.0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "3",
+      "weekStart": "2026-05-04 00:00:00",
+      "weekEnd": "2026-09-04 00:00:00",
+      "project": "ANB EPS Corporate Module",
+      "projectCode": "12150101",
+      "employee": "",
+      "task": "Ask Copilot prompt to generate SWIFT MT / MX samples for different message types",
+      "category": "Testing",
+      "aiTool": "Github Copilot",
+      "prompt": "Asked the prompt to provide some samples of different types / different currencies / ...etc.",
+      "timeWithout": 0.5,
+      "timeWith": 0.01,
+      "timeSaved": 0.49,
+      "efficiency": 0.98,
+      "quality": 4.0,
+      "status": "Completed",
+      "notes": "Whatever provided seems to be fine, any tuning is being provided is taken into consieration"
+    },
+    {
+      "practice": "EPS",
+      "week": "4",
+      "weekStart": "2026-04-12 00:00:00",
+      "weekEnd": "16-04-2026",
+      "project": "Migration of TiPlus backend interfaces to MQ based MT & MX",
+      "projectCode": "12158001",
+      "employee": "",
+      "task": "Test Data Generation and Preparation",
+      "category": "Testing",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "5",
+      "weekStart": "19-04-2026",
+      "weekEnd": "23-04-2026",
+      "project": "ANB EPS Corporate Module",
+      "projectCode": "12150101",
+      "employee": "",
+      "task": "User Story Enhancement for Tester Readability",
+      "category": "Testing",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "6",
+      "weekStart": "26-04-2026",
+      "weekEnd": "30-04-2026",
+      "project": "Migration of TiPlus backend interfaces to MQ based MT & MX",
+      "projectCode": "12158001",
+      "employee": "",
+      "task": "AI generates structured user guide content from scripts, process steps, and system descriptions, producing professional documentation drafts for review and refinement.",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "EPS \u2013 Weekly Aggregated Summary",
+      "weekStart": "",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "Metric",
+      "weekStart": "Value",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "Total Tasks Logged",
+      "weekStart": "6",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "Total Time Without AI (hrs)",
+      "weekStart": "2.5",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "Total Time With AI (hrs)",
+      "weekStart": "0.01",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "Total Time Saved (hrs)",
+      "weekStart": "0.49",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "Average Efficiency Gain %",
+      "weekStart": "0.98",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "Average Quality Rating",
+      "weekStart": "4",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "Tasks Completed",
+      "weekStart": "1",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPS",
+      "week": "Tasks In Progress",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "EPCS \u2013 Weekly Aggregated Summary",
+      "weekStart": "",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "Metric",
+      "weekStart": "Value",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "Total Tasks Logged",
+      "weekStart": "3",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "Total Time Without AI (hrs)",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "Total Time With AI (hrs)",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "Total Time Saved (hrs)",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "Average Efficiency Gain %",
+      "weekStart": "",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "Average Quality Rating",
+      "weekStart": "4.666666666666667",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "Tasks Completed",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "EPCS",
+      "week": "Tasks In Progress",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "1",
+      "weekStart": "15/03/26",
+      "weekEnd": "19/03/26",
+      "project": "VAT Application Support",
+      "projectCode": "12164301",
+      "employee": "Yousef Elshabrawy",
+      "task": "Resolving ORA-01555 Snapshot Too Old Error",
+      "category": "Database",
+      "aiTool": "Github Copilot",
+      "prompt": "What is ORA-01555: snapshot too old?",
+      "timeWithout": 4.0,
+      "timeWith": 0.5,
+      "timeSaved": 3.5,
+      "efficiency": 0.875,
+      "quality": 5.0,
+      "status": "Completed",
+      "notes": "This ORA-01555 error means your long-running query needed older UNDO data, but Oracle had already overwritten it."
+    },
+    {
+      "practice": "GRC",
+      "week": "2",
+      "weekStart": "22/03/26",
+      "weekEnd": "26/03/26",
+      "project": "VAT Application Support",
+      "projectCode": "12164301",
+      "employee": "Yousef Elshabrawy",
+      "task": "SQL Query Optimization",
+      "category": "Database",
+      "aiTool": "Github Copilot",
+      "prompt": "Giving the query and asking about the performance tunning techniques I can use.",
+      "timeWithout": 8.0,
+      "timeWith": 2.0,
+      "timeSaved": 6.0,
+      "efficiency": 0.75,
+      "quality": 4.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "1",
+      "weekStart": "15/03/26",
+      "weekEnd": "19/03/26",
+      "project": "ANB Change Request VAT Reconcilation",
+      "projectCode": "12144401",
+      "employee": "Umair Saleh",
+      "task": "Converting Static MERGE PL/SQL to Dynamic MERGE PL/SQL",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "Optimization techniques for the procedures ",
+      "timeWithout": 2.0,
+      "timeWith": 0.25,
+      "timeSaved": 1.75,
+      "efficiency": 0.875,
+      "quality": 5.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "2",
+      "weekStart": "22/03/26",
+      "weekEnd": "26/03/26",
+      "project": "ANB Change Request VAT Reconcilation",
+      "projectCode": "12144401",
+      "employee": "Umair Saleh",
+      "task": "SQL CASE to OR Condition Conversion",
+      "category": "Development",
+      "aiTool": "Github Copilot",
+      "prompt": "Ask copilot to convert the query.",
+      "timeWithout": 2.0,
+      "timeWith": 0.25,
+      "timeSaved": 1.75,
+      "efficiency": 0.875,
+      "quality": 5.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "3",
+      "weekStart": "2026-05-04 00:00:00",
+      "weekEnd": "2026-09-04 00:00:00",
+      "project": "VAT Application Support",
+      "projectCode": "12164301",
+      "employee": "Yousef Elshabrawy",
+      "task": "Drop multiple partitions dynamically from a daliy partitioned table",
+      "category": "Database",
+      "aiTool": "Github Copilot",
+      "prompt": "How to drop multiple partitions from a daily paritioned table in Oracle?",
+      "timeWithout": 2.0,
+      "timeWith": 0.25,
+      "timeSaved": 1.75,
+      "efficiency": 0.875,
+      "quality": 5.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "8",
+      "weekStart": "2026-05-04 00:00:00",
+      "weekEnd": "2026-09-04 00:00:00",
+      "project": "UCDE",
+      "projectCode": "-",
+      "employee": "Ahmed Younis",
+      "task": "Experian Reverse engineering and FSD",
+      "category": "Documentation",
+      "aiTool": "Github Copilot",
+      "prompt": "Gave Copilot multiple old documentation to format in a readible business way and KT doecumentation",
+      "timeWithout": 12.0,
+      "timeWith": 2.0,
+      "timeSaved": 10.0,
+      "efficiency": 0.8333333333333334,
+      "quality": 4.0,
+      "status": "Completed",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "GRC \u2013 Weekly Aggregated Summary",
+      "weekStart": "",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "Metric",
+      "weekStart": "Value",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "Total Tasks Logged",
+      "weekStart": "6",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "Total Time Without AI (hrs)",
+      "weekStart": "30",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "Total Time With AI (hrs)",
+      "weekStart": "5.25",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "Total Time Saved (hrs)",
+      "weekStart": "24.75",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "Average Efficiency Gain %",
+      "weekStart": "0.8472222222222222",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "Average Quality Rating",
+      "weekStart": "4.666666666666667",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "Tasks Completed",
+      "weekStart": "6",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    },
+    {
+      "practice": "GRC",
+      "week": "Tasks In Progress",
+      "weekStart": "0",
+      "weekEnd": "",
+      "project": "",
+      "projectCode": "",
+      "employee": "",
+      "task": "",
+      "category": "",
+      "aiTool": "",
+      "prompt": "",
+      "timeWithout": 0,
+      "timeWith": 0,
+      "timeSaved": 0,
+      "efficiency": 0,
+      "quality": 0,
+      "status": "",
+      "notes": ""
+    }
+  ],
+  "accomplishments": [
+    {
+      "id": "1",
+      "date": "2026-02-28 00:00:00",
+      "practice": "BFSI",
+      "project": "Go Money",
+      "projectCode": "",
+      "spoc": "Omar Ibrahim",
+      "employees": "Moemen Morsy/Al Moataz ibrahim",
+      "title": "Full LMS Code Review & Remediation",
+      "details": "Performed a comprehensive code review of the entire LMS codebase using GitHub Copilot. Identified critical code quality issues, security vulnerabilities, and performance bottlenecks. Applied AI-assisted code modifications and refactoring to improve maintainability, readability, and overall health of the codebase.",
+      "aiTool": "Github Copilot",
+      "category": "Code Review",
+      "before": "Health Score: 2.5 / 10",
+      "after": "Health Score: 6.8 / 10",
+      "impact": "Health score improved by +4.3 (172% improvement)",
+      "businessGains": "Client trust & confidence restored; reduced technical debt; improved code maintainability; strengthened delivery credibility",
+      "cost": "Free of Cost",
+      "effortSaved": "",
+      "status": "Completed",
+      "evidence": "",
+      "notes": "First AI accomplishment logged for BFSI practice"
+    },
+    {
+      "id": "2",
+      "date": "2026-02-25 00:00:00",
+      "practice": "EPCS",
+      "project": "IT & Digital Transformation - Clarity Implementation",
+      "projectCode": "C1009701",
+      "spoc": "Ahmed Shaheen",
+      "employees": "Eyad Ahmed / Menna Allah Ali ",
+      "title": "AI\u2011assisted data migration validation & export",
+      "details": "Built a Python Tkinter desktop application that automates end\u2011to\u2011end data migration prep. The app ingests .xlsx files, applies JSON\u2011based validation rules, highlights invalid rows with error reasons, enables in\u2011app corrections, and exports both an error report (.xlsx) and multiple import\u2011ready .csv batches (<=200 rows). Validation rules are configurable and reusable, reducing manual review, rework, and import delays.",
+      "aiTool": "Github Copilot",
+      "category": "Application Development",
+      "before": "Cycle Time: 3.0 hrs per file",
+      "after": "Cycle Time: 1.0 hr per file",
+      "impact": "Time reduced from 3 hrs to 1 hr per file (\u20112 hrs, ~67% faster).",
+      "businessGains": "Faster turnaround, fewer errors, standardized validation and batching.",
+      "cost": "Free of Cost",
+      "effortSaved": "2",
+      "status": "Completed",
+      "evidence": "Demo",
+      "notes": "\u00a0"
+    },
+    {
+      "id": "3",
+      "date": "2026-05-03 00:00:00",
+      "practice": "EPCS",
+      "project": "ART - Alfresco DMS Production Support Services",
+      "projectCode": "14005204",
+      "spoc": "Ahmed AlSareti",
+      "employees": "Omar GamalEldeen / \nAbdullah Al Duwaihi / Mahinour Emad Kadry",
+      "title": "application development and configuration",
+      "details": "add and configure HTTP-to-HTTPS proxy to Alfresco Kubernetes cluster to keep Elastisearch secured ",
+      "aiTool": "Github Copilot",
+      "category": "Application configuration",
+      "before": "",
+      "after": "",
+      "impact": "Development and configuration time had been reduced from 8 hrs to 1 hr ",
+      "businessGains": "Faser to finalize customer CR",
+      "cost": "Free of Cost",
+      "effortSaved": "8",
+      "status": "testing",
+      "evidence": "",
+      "notes": ""
+    },
+    {
+      "id": "4",
+      "date": "15/3/2026",
+      "practice": "EPCS",
+      "project": "DMS Activities",
+      "projectCode": "51014108-001",
+      "spoc": "Ahmed AlSareti",
+      "employees": "Omar GamalEldeen / \nAbdullah Al Duwaihi / Mahinour Emad Kadry",
+      "title": "application development",
+      "details": "update Alfresco workspace front-end application (Angular) to allow search by metadata",
+      "aiTool": "Github Copilot",
+      "category": "Application Development",
+      "before": "",
+      "after": "",
+      "impact": "Development and configuration time had been reduced from 1 week to 2 days ",
+      "businessGains": "enhance internal web applications development",
+      "cost": "Free of Cost",
+      "effortSaved": "",
+      "status": "Completed",
+      "evidence": "https://github.com/ejadasa-copilot-business/alfresco-digital-workspace",
+      "notes": ""
+    }
+  ],
+  "copilotUsers": [
+    {
+      "practice": "BFSI",
+      "name": "Ibrahim Amin ",
+      "email": "iamin@ejada.com    ",
+      "skill": "Developer Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Omar Ghazalah",
+      "email": "oghazalah@ejada.com",
+      "skill": "Developer Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Omar Ibrahim ",
+      "email": "oibrahim@ejada.com",
+      "skill": "Solution Architect ",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Amr Akady",
+      "email": "amr.alkady@ejada.com",
+      "skill": "Solution Architect ",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Miral Soliman ",
+      "email": "miral.soliman@ejada.com",
+      "skill": "Business Analyst",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Gahada Bakry",
+      "email": "gbakry@ejada.com",
+      "skill": "Business Analyst",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Bassem Nasr ",
+      "email": "basim.nasir@ejada.com",
+      "skill": "LEAD BUSINESS ARCHITECT",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Mohammed Omar Eid",
+      "email": "moeid@ejada.com",
+      "skill": "Senior Enterprise Architect",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Islam Mohamed",
+      "email": "imohamed@ejada.com",
+      "skill": "Analyst/Senior Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Nourane Elkhawalka",
+      "email": "nelkhawalka@ejada.com",
+      "skill": "Delivery Manager",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Sabreen AbdElmaguid",
+      "email": "sabdelmaguid@ejada.com",
+      "skill": "Developer Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Youssuf Elshayeb ",
+      "email": "yelshayeb@ejada.com\u00a0",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Farah Hassaan ",
+      "email": "fhassaan@ejada.com\u00a0",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Moustafa Daebis ",
+      "email": "mdaebis@ejada.com\u00a0",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Seif Eldin Amr ",
+      "email": "seifeldin.amr@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "AL-Moataz Bellah Khamis Ahmed ",
+      "email": "abellah@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Nour Eldin Hazem Abdelsalam",
+      "email": "nhabdelsalam@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Yara Elmelegy  ",
+      "email": "yelmelegy@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Rafeef Alsealo",
+      "email": "ralsealo@ejada.com",
+      "skill": "Business Analyst",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Abdulrahman Alafandy",
+      "email": "aalafandy@ejada.com",
+      "skill": "Technical Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Ahmed Said Mohamed ",
+      "email": "amsaid@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Mariam Elshimi ",
+      "email": "melshimi@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Manar Elsayed ",
+      "email": "maelsayed-v@ejada.com",
+      "skill": "Developer",
+      "remarks": "pending"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Maram Motaz ",
+      "email": "mmotaz@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Ahmad Nouh",
+      "email": "anouh@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Farah Elgendy                  ",
+      "email": "felgendy@ejada.com      ",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Salma Ahmed Abdelsalam Mostafa ",
+      "email": "salma.ahmed@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Ziad Elkhazendar               ",
+      "email": "zelkhazendar@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Ingy Ibrahim                   ",
+      "email": "iibrahim@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Hossam Gamal Abdelhaleem",
+      "email": "hgamal@ejada.com",
+      "skill": "Technical Project Manager",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Amr Nady",
+      "email": "anady@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Ahmed Elsahamy",
+      "email": "aelsahlamy@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Ahmad Elkilany",
+      "email": "aelkilany@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "AbdelRahman Badr Kamel",
+      "email": "abadr@ejada.com",
+      "skill": "Technical Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Marry Waseem",
+      "email": "mwaseem@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Abdelrahman Mohamed Khalil",
+      "email": "amkhalil@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Mohammed Abdulelah Al Harbi",
+      "email": "maalharbi@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Yahia Zaky",
+      "email": "yzaky@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Youmna Elmezyn",
+      "email": "yelmezyn@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Hakeemah Alharbi",
+      "email": "halharbi@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "BFSI",
+      "name": "Osama Alhasson",
+      "email": "oalhasson@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "CES",
+      "name": "Ahmed Ibrahim",
+      "email": "aibrahim@ejada.com",
+      "skill": "Technical Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "GRC",
+      "name": "Maisam Ali",
+      "email": "maisam@ejada.com",
+      "skill": "Project Manager",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "GRC",
+      "name": "Umair Saleh",
+      "email": "usaleh@ejada.com",
+      "skill": "Data Engineer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "GRC",
+      "name": "Yousef Elshabrawy",
+      "email": "yelshabrawy@ejada.com",
+      "skill": "Software Engineer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Reham Ibrahim",
+      "email": "rmibrahim@ejada.com",
+      "skill": "Development / Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "AmerFarghaly",
+      "email": "afarghaly@ejada.com",
+      "skill": "ERP unit Manager",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Osama Yehia Mohamed Mohamed Awad",
+      "email": "oyehia@ejada.com",
+      "skill": "Functional / Sr. Associate",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Salma Saeed Mahmoud Gharib ",
+      "email": "sgharib@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mohamed Ayman Said Mahmoud ",
+      "email": "masaid@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Ahmed Waleed Mostafa Abdelhalem Ali",
+      "email": "awkhalifa@ejada.com",
+      "skill": "Functional / Sr. Associate",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Reda Abdullah Elsayed Abdelmalak ElMekawy",
+      "email": "relmekawy@ejada.com",
+      "skill": "Development / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mohamed Saad Ali Ali Elazaly",
+      "email": "mselazaly@ejada.com",
+      "skill": "Development / Sr. Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mohamed Emad Ahmed Mansour Mohamed Mansour",
+      "email": "memansour@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Nour Mahmoud Ali Mahmoud Nafady",
+      "email": "nour.nafady@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Nada Ali Hassan Ahmed Abdelrahim",
+      "email": "nada.abdelrahim@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Khaled Ossama Abdelrahman Mohamed Abouelella",
+      "email": "kossama@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "IBRAHIM HASSAN ABDELSAMAD ZAYED",
+      "email": "izayed@ejada.com",
+      "skill": "DBA / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Doaa Mohamed Mohamed Mostafa",
+      "email": "doaa.mostafa@ejada.com",
+      "skill": "Development / Sr. Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MAHMOUD NAEL ABDULLAH DRAIDI",
+      "email": "mdraidi@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "TARIQ MOHAMMED S ALNASYAN",
+      "email": "talnasyan@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MANAR EMAD F ALSHAREEF",
+      "email": "malshareef@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MAHA HMOUD M ALAAMRI",
+      "email": "maha.alaamri@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "RENAD SAEED S ALSHEHRI",
+      "email": "ranad.alshehri@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "HANIN KHALID M ALSHAMRANI",
+      "email": "halshamrani@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mahmoud Ahmed Mohamed Hussein Shalaby",
+      "email": "mshalaby@ejada.com",
+      "skill": "Functional / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Hossam Fahim Abdelhakeem Mohamed",
+      "email": "hfmohamed@ejada.com",
+      "skill": "Functional / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "ADEL MOHAMED AHMED MOHAMED",
+      "email": "aamohamed@ejada.com",
+      "skill": "Functional / Sr. Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Abdelrahman Hatem Metwally Mahmoud ",
+      "email": "ametwally@ejada.com",
+      "skill": "Development / Sr. Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MOHAMMED KHALIFAH SAEED BAHNASAWI",
+      "email": "mkhalifah@ejada.com",
+      "skill": "Functional / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "ADEL ELSAID MOHAMED MOUSTAFA",
+      "email": "aelsaid@ejada.com",
+      "skill": "Functional / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "HAITHAM HANI AHMED MAAMOUN SALLAM",
+      "email": "hsallam@ejada.com",
+      "skill": "Functional / Sr. Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "ELSAYED ISMAEL ELSAYED MOHAMED IBRAHIM",
+      "email": "eismail@ejada.com",
+      "skill": "Management",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Omar Ragab Hassan Salem",
+      "email": "osalem@ejada.com",
+      "skill": "Functional / Sr. Associate",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MOHAMED ABD ELKHALEK ELSAKA IBRAHIIM",
+      "email": "melsaka@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "HAYTHAM MOHAMED ABDELHAMID ELSAYED",
+      "email": "helsayed@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Islam Zaki",
+      "email": "islam.zaki@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Salma Yousry AbdElmetal \u00a0Amin ",
+      "email": "syabdelmetal@ejada.com",
+      "skill": "Development / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Hossam Wally Ibrahim Wally",
+      "email": "hossam.wally@ejada.com",
+      "skill": "Development / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Shaimaa Molouk Mohamed Ibrahim Abdallah",
+      "email": "shaimaa.abdallah@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MOSTAFA MOHARRAM ABDEL LATIF GHOBASHY",
+      "email": "mghobashy@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MOHAMMED OMAR MOHAMMED ALBALKHI",
+      "email": "Malbalkhi@ejada.com",
+      "skill": "Development / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "IBRAHEEM FAYAK IBRAHEEM HASAN",
+      "email": "ifhassan@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "NIJAMUDEEN SHIEK ALAWUDEEN",
+      "email": "nalawudeen@ejada.com",
+      "skill": "Development / Sr. Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "ABDULELAH HADYAN H ALTHUWAYBI",
+      "email": "aalthuwaybi@ejada.com",
+      "skill": "Development / Sr. Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "ABDULAZIZ AHMED A ALANAZI",
+      "email": "aaalanazi@ejada.com",
+      "skill": "Development / Sr. Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MOHAMMED SAEED RAJAB SHABAAN",
+      "email": "mshaaban@ejada.com",
+      "skill": "Development / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MOHAMMAD SAYED AHMED HAMMAM",
+      "email": "mhamam@ejada.com",
+      "skill": "Functional / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Ahmed Ibrahim Ahmed Ali Kotb",
+      "email": "akotb@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "HOSSAM FARAJ MOHAMED ABDELMEGUID",
+      "email": "hmohammed@ejada.com",
+      "skill": "Functional / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "HASSAN HUSSEIN ABDALLAH MANTAWY",
+      "email": "hmantawy@ejada.com",
+      "skill": "Functional / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MUSTAFA MOHAMED SHEHATA RADWAN",
+      "email": "mostafa@ejada.com",
+      "skill": "Functional / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mohamed Hassan Abdelaziz Sallam",
+      "email": "msallam@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "TAHER MOHAMED ELSAID MESBAH",
+      "email": "telsaaed@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Ranim Mahmoud Ahmed ElShafie ",
+      "email": "rmelshafie@ejada.com",
+      "skill": "Development / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mostafa Fathy Abdelwahab Mohamed Emara",
+      "email": "memara@ejada.com",
+      "skill": "Development / Sr. Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Sama Abdullah Zakaria AboAlnaja",
+      "email": "szakaria@ejada.com",
+      "skill": "Development / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Abdallah Ibrahim Abdullah Othman Saleh",
+      "email": "aisaleh@ejada.com",
+      "skill": "Development / Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Islam Ahmed Mohamed Hassanin",
+      "email": "ihassanin@ejada.com",
+      "skill": "Development / Sr. Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Omar Magdy",
+      "email": "oabdelhameed@ejada.com",
+      "skill": "Functional / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Ahmed Elmissiry",
+      "email": "aelmissiry@ejada.com",
+      "skill": "Development / Team Leader",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "AHMED ABDUL HAMEED RAGAB ABDEL HAMID",
+      "email": "aabdelhamid@ejada.com",
+      "skill": "Functional / SME",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MOHAMMED MAHMOUD AHMED SAYED EL ESAWEE",
+      "email": "melesawee@ejada.com",
+      "skill": "Functional / SME",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "MOHAMMED IBRAHIM MOHAMMED GHAZI",
+      "email": "mabdelmegid@ejada.com",
+      "skill": "Functional / SME",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Hamed Mohamed Farag",
+      "email": "hmfarag@ejada.com",
+      "skill": "Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mahmoud Ali Mohamed kamal",
+      "email": "mkamal@ejada.com",
+      "skill": "Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mahmoud Abdrabou",
+      "email": "mabdrabo@ejada.com",
+      "skill": "Functional / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Islam Sobhy Mohamed",
+      "email": "iahmed@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Nourhan AlSaud",
+      "email": "nalsaud@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Omar Ahmed Abd Al-Azeem",
+      "email": "oabdrabou@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mahmoud Ahmed Ragabe ",
+      "email": "maragabe@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Ahmed Alaa Shaker Elbadry",
+      "email": "aashaker@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Mohamed Mahmoud  Mohamed Hassan Radwan",
+      "email": "mradwan@ejada.com",
+      "skill": "Functional / Senior Associate",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Reham Ibrahim mohamed Ibrahim Mohamed",
+      "email": "rmibrahim@ejada.com",
+      "skill": "Development / Senior Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "ABDULLAH HUSSAIN T BO ZAID",
+      "email": "abozaid@ejada.com ",
+      "skill": "Development / Associate Software Engineer ",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "FATIMAH HUSSAIN A ALDAGDOUG",
+      "email": "faldagdoug@ejada.com",
+      "skill": "Development / Software Engineer ",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Ahmed Mohamed Ibrahim Saber ",
+      "email": "amsaber@ejada.com",
+      "skill": "Management",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "TANWEER ZAKI",
+      "email": "tzaki@ejada.com",
+      "skill": "Development / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Ahmed Ibrahim Ibrahim Abdelmotaleb Tortor",
+      "email": "atortor@ejada.com",
+      "skill": "Functional / Senior Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Ahmed Abdelaziz Ragab Sheta ",
+      "email": "aaragab@ejada.com",
+      "skill": "Technical / Senior Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "FATMEH WAGEEH MEIRZA AL SAIF",
+      "email": "falsaif@ejada.com",
+      "skill": "Development / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "SALEH ABDULLAH AL MAHROUS",
+      "email": "salmahrous@ejada.com",
+      "skill": "Development / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "HUSAIN ALI IBRAHIM ALSALEM",
+      "email": "halsalem@ejada.com",
+      "skill": "Development / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Rami Rabea Mohamed Ali",
+      "email": "rali@ejada.com",
+      "skill": "Functional / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "ELSAYED SALAHELDIN ABOUD MAHMOUD ELMAWY",
+      "email": "eelmawy@ejada.com",
+      "skill": "Functional / Principal",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "ABDULLAH MOHAMED MOHAMED HAMED",
+      "email": "ahamed@ejada.com",
+      "skill": "Functional / Senior Team Lead",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "ERP",
+      "name": "Ahmed El Sharqawy",
+      "email": "aelsharkawy@ejada.com",
+      "skill": "Functional / Consultant",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "GRC",
+      "name": "Maisam Ali",
+      "email": "maisam@ejada.com",
+      "skill": "Project Manager",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "GRC",
+      "name": "Yousef El Shabrawy",
+      "email": "yelshabrawy@ejada.com",
+      "skill": "Support Engineer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "GRC",
+      "name": "Umair Saleh Muhammad",
+      "email": "usaleh@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "CES",
+      "name": "Malak Madkour",
+      "email": "mmadkour@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "CES",
+      "name": "Mohamed Mohsen",
+      "email": "mohamed.madboly@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "CES",
+      "name": "Mostafa Khaled",
+      "email": "mostafa.zayed@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "CES",
+      "name": "Fady Banoub",
+      "email": "fbanoub@ejada.com",
+      "skill": "Developer",
+      "remarks": "access granted"
+    },
+    {
+      "practice": "",
+      "name": "Q1980",
+      "email": "ahmed.farag@ejada.com",
+      "skill": "",
+      "remarks": ""
+    },
+    {
+      "practice": "",
+      "name": "Q1774",
+      "email": "bbassant@ejada.com",
+      "skill": "",
+      "remarks": ""
+    },
+    {
+      "practice": "",
+      "name": "Q0458",
+      "email": "kibrahim@ejada.com",
+      "skill": "",
+      "remarks": ""
+    },
+    {
+      "practice": "",
+      "name": "Q2186",
+      "email": "ahmed.morsy@ejada.com",
+      "skill": "",
+      "remarks": ""
+    },
+    {
+      "practice": "",
+      "name": "Q2009",
+      "email": "noibrahim@ejada.com",
+      "skill": "",
+      "remarks": ""
+    },
+    {
+      "practice": "",
+      "name": "U0024",
+      "email": "ogfathy@ejada.com",
+      "skill": "",
+      "remarks": ""
+    },
+    {
+      "practice": "BFSI",
+      "name": "Manar Elsayed\u00a0",
+      "email": "maelsayed-v@ejada.com",
+      "skill": "Developer",
+      "remarks": ""
+    },
+    {
+      "practice": "CES",
+      "name": "Ramy moustafa",
+      "email": "mramy@ejada.com",
+      "skill": "Technical Team Lead",
+      "remarks": ""
+    },
+    {
+      "practice": "CES",
+      "name": "Eslam Khattab",
+      "email": "ekhattab@ejada.com",
+      "skill": "sloution architect",
+      "remarks": ""
+    },
+    {
+      "practice": "CES",
+      "name": "Haguar Dessouky",
+      "email": "hdessouky@ejada.com",
+      "skill": "CRM Developer",
+      "remarks": ""
+    },
+    {
+      "practice": "CES",
+      "name": "Omar Nour",
+      "email": "onour@ejada.com",
+      "skill": "CRM Developer",
+      "remarks": ""
+    },
+    {
+      "practice": "CES",
+      "name": "Nada Gaafar",
+      "email": "ngaafar@ejada.com",
+      "skill": "CRM Developer",
+      "remarks": ""
+    },
+    {
+      "practice": "CES",
+      "name": "Omar Amir Youssef",
+      "email": "oayoussef@ejada.com",
+      "skill": "CRM Developer",
+      "remarks": ""
+    },
+    {
+      "practice": "CES",
+      "name": "Mohamed Ghoz",
+      "email": "mghoz@ejada.com",
+      "skill": "CRM Setup Admin",
+      "remarks": ""
+    },
+    {
+      "practice": "CES",
+      "name": "Mishary Al Jarie",
+      "email": "maljarie@ejada.com",
+      "skill": "CRM Setup Admin",
+      "remarks": ""
+    },
+    {
+      "practice": "BFSI",
+      "name": "Hossam Shaybon",
+      "email": "\u00a0hshaybon@ejada.com",
+      "skill": "Developer\u00a0",
+      "remarks": ""
+    },
+    {
+      "practice": "BFSI",
+      "name": "Ayman Sayed",
+      "email": "ayman.sayed@ejada.com",
+      "skill": "BFSI Delivery Manager",
+      "remarks": ""
+    },
+    {
+      "practice": "",
+      "name": "Ahmed Younis",
+      "email": "",
+      "skill": "",
+      "remarks": ""
+    }
+  ],
+  "projects": [
+    {
+      "practice": "BFSI",
+      "projectCode": "12135001",
+      "contractNumber": "KSA-25-0123",
+      "customer": "Al Rajhi Bank",
+      "contractValue": 7420000.0,
+      "startDate": "2025-01-23 00:00:00",
+      "endDate": "2025-09-30 00:00:00",
+      "projectName": "Project C-Personal Finance",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E1919 - Youssef Mohamed Yousef Salah (ymyoussef)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "A1023401",
+      "contractNumber": "KSA-25-0319",
+      "customer": "Etihad GO Telecom Company",
+      "contractValue": 2250000.0,
+      "startDate": "2025-05-08 00:00:00",
+      "endDate": "2026-02-15 00:00:00",
+      "projectName": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "Q1981 - Sarah Ali Mohamed El Mansoury (selmansoury)"
+    },
+    {
+      "practice": "ERP",
+      "projectCode": "56000301",
+      "contractNumber": "KSA-25-0797",
+      "customer": "Remat Al-Riyadh",
+      "contractValue": 14941795.65,
+      "startDate": "2025-12-15 00:00:00",
+      "endDate": "2027-06-30 00:00:00",
+      "projectName": "RRM ERP Cloud Services Implementation",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "A0038: Mohamed Abdul Aziz Khaleel"
+    },
+    {
+      "practice": "ERP",
+      "projectCode": "C1007201",
+      "contractNumber": "",
+      "customer": "ITSM",
+      "contractValue": 0,
+      "startDate": "",
+      "endDate": "",
+      "projectName": "ITSM Project",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": ""
+    },
+    {
+      "practice": "GRC",
+      "projectCode": "12164301",
+      "contractNumber": "",
+      "customer": "",
+      "contractValue": 0,
+      "startDate": "2025-12-01 00:00:00",
+      "endDate": "2026-11-30 00:00:00",
+      "projectName": "VAT Application Support",
+      "revenueType": "TM",
+      "lineType": "External",
+      "projectManager": "Maisam Ali"
+    },
+    {
+      "practice": "GRC",
+      "projectCode": "12144401",
+      "contractNumber": "",
+      "customer": "",
+      "contractValue": 0,
+      "startDate": "2025-06-01 00:00:00",
+      "endDate": "2026-06-01 00:00:00",
+      "projectName": "ANB Change Request VAT Reconcilation",
+      "revenueType": "Fixed Price",
+      "lineType": "External",
+      "projectManager": "Maisam Ali"
+    },
+    {
+      "practice": "GRC",
+      "projectCode": "12154701",
+      "contractNumber": "",
+      "customer": "",
+      "contractValue": 0,
+      "startDate": "2024-09-15 00:00:00",
+      "endDate": "2026-09-30 00:00:00",
+      "projectName": "ANB Consumer Loans Historical Reconcilation",
+      "revenueType": "Fixed Price",
+      "lineType": "External",
+      "projectManager": "Maisam Ali"
+    },
+    {
+      "practice": "CES",
+      "projectCode": "62002301",
+      "contractNumber": "KSA-23-0238",
+      "customer": "Ministry of Health",
+      "contractValue": 9750013.0,
+      "startDate": "2023-04-01 00:00:00",
+      "endDate": "31-12-2026",
+      "projectName": "MOH - Portals Support & Management",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "S0013 - Simon Jiries Istefan Salameh (ssalameh)"
+    },
+    {
+      "practice": "CES",
+      "projectCode": "",
+      "contractNumber": "KSA-25-0854",
+      "customer": "Zakat, Tax and Customs Authority",
+      "contractValue": 2608600.0,
+      "startDate": "2025-04-12 00:00:00",
+      "endDate": "30-09-2027",
+      "projectName": "\u062a\u0637\u0648\u064a\u0631 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u062a\u0639\u0631\u064a\u0641\u064a \u0627\u0644\u0645\u0648\u062d\u062f \u0644\u0644\u0639\u0645\u0644\u0627\u0621",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E0546 - Mohammed Mustafa Mohammed El Marasy (melmarasy)"
+    },
+    {
+      "practice": "CES",
+      "projectCode": "23045701",
+      "contractNumber": "KSA-25-0718",
+      "customer": "Tawtheeq Company for Registering Financial Lease Contracts",
+      "contractValue": 600000.0,
+      "startDate": "30-11-2025",
+      "endDate": "2026-01-09 00:00:00",
+      "projectName": "tawtheeq service now crm",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E2048 - Salah Shahat Hassanin Elayat (selayat)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "13011901",
+      "contractNumber": "KSA-25-0532",
+      "customer": "Emkan Finance Company",
+      "contractValue": 1890000.0,
+      "startDate": "2025-01-09 00:00:00",
+      "endDate": "31-12-2025",
+      "projectName": "Emkan E-Commerce",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E3046 - Mohammad Abdul Muttalib Khan (akhan)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "13012401",
+      "contractNumber": "KSA-25-0500",
+      "customer": "Emkan Finance Company",
+      "contractValue": 2070000.0,
+      "startDate": "20-10-2025",
+      "endDate": "31-05-2026",
+      "projectName": "Emkan Freelance",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E3046 - Mohammad Abdul Muttalib Khan (akhan)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "13012501",
+      "contractNumber": "KSA-25-0597",
+      "customer": "Emkan Finance Company",
+      "contractValue": 2310000.0,
+      "startDate": "2025-01-10 00:00:00",
+      "endDate": "31-05-2026",
+      "projectName": "Emkan Revamp",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E2994 - Ahmed\u00a0 Ali Abdelaziz Ismail Khater (ahmed.khater)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "13005301",
+      "contractNumber": "KSA-24-0094",
+      "customer": "Emkan Finance Company",
+      "contractValue": 44776400.0,
+      "startDate": "18-03-2024",
+      "endDate": "31-12-2025",
+      "projectName": "Emkan - BNPL Implementation (LMS + LOS)",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E3046 - Mohammad Abdul Muttalib Khan (akhan)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "13008001",
+      "contractNumber": "KSA-24-0317",
+      "customer": "Emkan Finance Company",
+      "contractValue": 8100000.0,
+      "startDate": "18-08-2024",
+      "endDate": "31-12-2025",
+      "projectName": "Emkan - Apple Project Implementation",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E2584 - Waleed Mohamed Amin Elsaid Abdelhamid Saleh (wsaleh)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "13008101",
+      "contractNumber": "KSA-24-0447",
+      "customer": "Emkan Finance Company",
+      "contractValue": 11895902.0,
+      "startDate": "2024-08-10 00:00:00",
+      "endDate": "2025-01-10 00:00:00",
+      "projectName": "Emkan - SME Product Suite Implementation (B2B)",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E1915 - Mohab Mahmoud Kamel Elhadad (melhadad)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "13013201",
+      "contractNumber": "KSA-25-0675",
+      "customer": "Emkan Finance Company",
+      "contractValue": 1601419.0,
+      "startDate": "2025-09-11 00:00:00",
+      "endDate": "2026-08-02 00:00:00",
+      "projectName": "EMKAN Vulnerability Report",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E1534 - Fathy Ahmed Shehata Khattab (fkhatab)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "A1023401",
+      "contractNumber": "KSA-25-0319",
+      "customer": "Etihad GO Telecom Company",
+      "contractValue": 2250000.0,
+      "startDate": "2025-08-05 00:00:00",
+      "endDate": "15-02-2026",
+      "projectName": "Go Money MICRO FINANCE LENDING PLATFORM",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "Q1981 - Sarah Ali Mohamed El Mansoury (selmansoury)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "94000802",
+      "contractNumber": "KSA-24-0304",
+      "customer": "Tourism Development Fund",
+      "contractValue": 5130400.0,
+      "startDate": "2024-11-08 00:00:00",
+      "endDate": "2026-11-08 00:00:00",
+      "projectName": "TDF Transact Support and Enhancement - Temenos T24",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "Q1981 - Sarah Ali Mohamed El Mansoury (selmansoury)"
+    },
+    {
+      "practice": "BFSI",
+      "projectCode": "94000601",
+      "contractNumber": "KSA-23-0116",
+      "customer": "Tourism Development Fund",
+      "contractValue": 3478000.0,
+      "startDate": "26-09-2023",
+      "endDate": "19-06-2025",
+      "projectName": "TDF - Risk Monitoring and Reporting Portal",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "Q1981 - Sarah Ali Mohamed El Mansoury (selmansoury)"
+    },
+    {
+      "practice": "Payments Solutions",
+      "projectCode": "12158001",
+      "contractNumber": "",
+      "customer": "ANB",
+      "contractValue": 490000.0,
+      "startDate": "2025-09-22 00:00:00",
+      "endDate": "2026-06-30 00:00:00",
+      "projectName": "Migration of TiPlus backend interfaces to MQ based MT & MX",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E2195 - HASEEB ULLAH KHAN"
+    },
+    {
+      "practice": "Payments Solutions",
+      "projectCode": "12150101",
+      "contractNumber": "",
+      "customer": "ANB",
+      "contractValue": 2688760.0,
+      "startDate": "2025-05-30 00:00:00",
+      "endDate": "2026-12-01 00:00:00",
+      "projectName": "ANB EPS Corporate Module",
+      "revenueType": "Fixed Price",
+      "lineType": "Internal",
+      "projectManager": "E2195 - HASEEB ULLAH KHAN \u00a0"
+    }
+  ],
+  "lovs": {
+    "taskCategories": [
+      "Development",
+      "Database",
+      "Documentation",
+      "Testing",
+      "Code Review"
+    ],
+    "aiTools": [
+      "Github Copilot",
+      "Cursor",
+      "Codex",
+      "Claude",
+      "ChatGPT",
+      "Gemini"
+    ]
+  }
+};
+
+</script>
+<script>
+// ======== STATE ========
+let data = JSON.parse(JSON.stringify(APP_DATA));
+let charts = {};
+const practiceColors = {
+  'BFSI': '#3b82f6', 'CES': '#10b981', 'ERP': '#f59e0b',
+  'EPS': '#8b5cf6', 'GRC': '#ec4899', 'EPCS': '#06b6d4'
+};
+const practiceNames = {
+  'BFSI': 'Financial Services (BFSI)',
+  'CES': 'Customer Engagement (CES)',
+  'ERP': 'ERP Solutions',
+  'EPS': 'Payments (EPS)',
+  'GRC': 'GRC',
+  'EPCS': 'Enterprise Portfolio & Content (EPCS)'
+};
+
+// ======== NAVIGATION ========
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.getElementById('page-' + item.dataset.page).classList.remove('hidden');
+    document.querySelector('.sidebar').classList.remove('open');
+    if (item.dataset.page === 'dashboard') renderDashboard();
+    if (item.dataset.page === 'practices') renderPractices();
+    if (item.dataset.page === 'tasks') renderTasks();
+    if (item.dataset.page === 'accomplishments') renderAccomplishments();
+    if (item.dataset.page === 'copilot') renderCopilot();
+    if (item.dataset.page === 'projects') renderProjects();
+  });
+});
+
+// ======== HELPERS ========
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function statusBadge(status) {
+  if (!status) return '';
+  const s = status.toLowerCase().trim();
+  let cls = 'status-pending';
+  if (s === 'completed') cls = 'status-completed';
+  else if (s === 'in progress') cls = 'status-inprogress';
+  else if (s === 'testing') cls = 'status-testing';
+  return `<span class="status-badge ${cls}">${status}</span>`;
+}
+
+function fmt(n, d = 1) { return n ? Number(n).toFixed(d) : '0'; }
+function fmtPct(n) { return n ? (n * 100).toFixed(1) + '%' : '0%'; }
+function fmtInt(n) { return n ? Math.round(n).toLocaleString() : '0'; }
+
+function recalcSummary() {
+  const practices = ['BFSI','CES','ERP','EPS','EPCS','GRC'];
+  const summaryMap = {};
+  practices.forEach(p => {
+    summaryMap[p] = { tasks: 0, timeWithout: 0, timeWith: 0, timeSaved: 0, efficiency: 0, quality: 0, qualityCount: 0, completed: 0 };
+  });
+  data.tasks.forEach(t => {
+    const p = t.practice;
+    if (!summaryMap[p]) return;
+    summaryMap[p].tasks++;
+    summaryMap[p].timeWithout += t.timeWithout || 0;
+    summaryMap[p].timeWith += t.timeWith || 0;
+    summaryMap[p].timeSaved += t.timeSaved || 0;
+    if (t.quality > 0) { summaryMap[p].quality += t.quality; summaryMap[p].qualityCount++; }
+    if (t.status && t.status.toLowerCase() === 'completed') summaryMap[p].completed++;
+  });
+  data.summary.practices.forEach(sp => {
+    const key = sp.name === 'ERP Solutions' ? 'ERP' : sp.name === 'CES' ? 'CES' : sp.name;
+    const shortKey = practices.find(p => sp.name.includes(p)) || sp.name;
+    const m = summaryMap[shortKey];
+    if (!m) return;
+    sp.tasks = m.tasks;
+    sp.timeWithout = m.timeWithout;
+    sp.timeWith = m.timeWith;
+    sp.timeSaved = m.timeSaved;
+    sp.efficiency = m.timeWithout > 0 ? (m.timeSaved / m.timeWithout) * 100 : 0;
+    sp.quality = m.qualityCount > 0 ? m.quality / m.qualityCount : 0;
+    sp.completed = m.completed;
+  });
+  const t = data.summary.totals;
+  t.tasks = data.tasks.length;
+  t.timeWithout = data.tasks.reduce((s, x) => s + (x.timeWithout || 0), 0);
+  t.timeWith = data.tasks.reduce((s, x) => s + (x.timeWith || 0), 0);
+  t.timeSaved = data.tasks.reduce((s, x) => s + (x.timeSaved || 0), 0);
+  t.efficiency = t.timeWithout > 0 ? (t.timeSaved / t.timeWithout) * 100 : 0;
+  const qTasks = data.tasks.filter(x => x.quality > 0);
+  t.quality = qTasks.length > 0 ? qTasks.reduce((s, x) => s + x.quality, 0) / qTasks.length : 0;
+  t.completed = data.tasks.filter(x => x.status && x.status.toLowerCase() === 'completed').length;
+  t.projects = data.projects.length;
+}
+
+// ======== DASHBOARD ========
+function renderDashboard() {
+  recalcSummary();
+  const t = data.summary.totals;
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue">${t.tasks}</div><div class="kpi-sub">${t.completed} completed</div></div>
+    <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value green">${fmt(t.timeSaved, 0)}</div><div class="kpi-sub">of ${fmt(t.timeWithout, 0)} total hrs</div></div>
+    <div class="kpi-card"><div class="kpi-label">Avg Efficiency</div><div class="kpi-value yellow">${fmt(t.efficiency, 1)}%</div><div class="kpi-sub">time reduction</div></div>
+    <div class="kpi-card"><div class="kpi-label">Avg Quality</div><div class="kpi-value purple">${fmt(t.quality, 1)}/5</div><div class="kpi-sub">rating</div></div>
+    <div class="kpi-card"><div class="kpi-label">Active Projects</div><div class="kpi-value cyan">${t.projects}</div><div class="kpi-sub">across 6 practices</div></div>
+    <div class="kpi-card"><div class="kpi-label">Copilot Users</div><div class="kpi-value pink">${data.copilotUsers.length}</div><div class="kpi-sub">access granted</div></div>
+  `;
+  renderCharts();
+}
+
+function renderCharts() {
+  Object.values(charts).forEach(c => c.destroy());
+  charts = {};
+  const practices = data.summary.practices;
+  const labels = practices.map(p => p.name.replace('Solutions','').replace('Financial Services','BFSI').replace('Customer Engagement','CES').replace('Enterprise Portfolio & Content','EPCS').replace('Payments','EPS').trim());
+  const colors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4'];
+  const chartOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } } } };
+
+  charts.tasksPractice = new Chart(document.getElementById('chart-tasks-practice'), {
+    type: 'bar', data: { labels, datasets: [{ data: practices.map(p => p.tasks), backgroundColor: colors, borderRadius: 6, borderSkipped: false }] }, options: chartOpts
+  });
+  charts.timeSaved = new Chart(document.getElementById('chart-time-saved'), {
+    type: 'bar', data: { labels, datasets: [
+      { label: 'Time Without AI', data: practices.map(p => p.timeWithout), backgroundColor: 'rgba(239,68,68,0.6)', borderRadius: 6, borderSkipped: false },
+      { label: 'Time With AI', data: practices.map(p => p.timeWith), backgroundColor: 'rgba(59,130,246,0.6)', borderRadius: 6, borderSkipped: false },
+      { label: 'Time Saved', data: practices.map(p => p.timeSaved), backgroundColor: 'rgba(16,185,129,0.6)', borderRadius: 6, borderSkipped: false }
+    ] }, options: { ...chartOpts, plugins: { legend: { display: true, labels: { color: '#94a3b8', font: { size: 11 } } } } }
+  });
+  charts.efficiency = new Chart(document.getElementById('chart-efficiency'), {
+    type: 'bar', data: { labels, datasets: [{ data: practices.map(p => p.efficiency), backgroundColor: colors.map(c => c + '99'), borderColor: colors, borderWidth: 2, borderRadius: 6, borderSkipped: false }] },
+    options: { ...chartOpts, scales: { ...chartOpts.scales, y: { ...chartOpts.scales.y, max: 100 } } }
+  });
+
+  // AI Tools donut
+  const toolCounts = {};
+  data.tasks.forEach(t => { if (t.aiTool) toolCounts[t.aiTool] = (toolCounts[t.aiTool] || 0) + 1; });
+  const toolLabels = Object.keys(toolCounts);
+  const toolColors = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316'];
+  charts.tools = new Chart(document.getElementById('chart-tools'), {
+    type: 'doughnut', data: { labels: toolLabels, datasets: [{ data: Object.values(toolCounts), backgroundColor: toolColors.slice(0, toolLabels.length), borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 }, padding: 12 } } } }
+  });
+
+  // Categories donut
+  const catCounts = {};
+  data.tasks.forEach(t => { if (t.category) catCounts[t.category] = (catCounts[t.category] || 0) + 1; });
+  const catLabels = Object.keys(catCounts);
+  charts.categories = new Chart(document.getElementById('chart-categories'), {
+    type: 'doughnut', data: { labels: catLabels, datasets: [{ data: Object.values(catCounts), backgroundColor: toolColors.slice(0, catLabels.length), borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 }, padding: 12 } } } }
+  });
+
+  // Weekly trend
+  const weekCounts = {};
+  data.tasks.forEach(t => { const w = 'Week ' + t.week; weekCounts[w] = (weekCounts[w] || 0) + 1; });
+  const weekLabels = Object.keys(weekCounts).sort((a,b) => parseInt(a.split(' ')[1]) - parseInt(b.split(' ')[1]));
+  charts.weekly = new Chart(document.getElementById('chart-weekly'), {
+    type: 'line', data: { labels: weekLabels, datasets: [{ data: weekLabels.map(w => weekCounts[w]), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#3b82f6', pointRadius: 5 }] },
+    options: chartOpts
+  });
+}
+
+// ======== PRACTICES ========
+function renderPractices() {
+  recalcSummary();
+  const grid = document.getElementById('practice-grid');
+  const detail = document.getElementById('practice-detail');
+  detail.classList.add('hidden');
+  grid.classList.remove('hidden');
+
+  grid.innerHTML = data.summary.practices.map((p, i) => {
+    const shortName = ['ERP','CES','BFSI','EPS','GRC','EPCS'][i];
+    const color = Object.values(practiceColors)[i];
+    const effPct = Math.min(p.efficiency, 100);
+    return `
+    <div class="practice-card" onclick="showPracticeDetail('${shortName}')">
+      <div class="practice-card-header">
+        <h3>${p.name}</h3>
+        <span style="color:${color};font-size:24px;font-weight:700">${p.tasks}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+        Head: ${p.head} &bull; SPOC: ${p.spoc}
+      </div>
+      <div class="practice-stats">
+        <div><div class="practice-stat-label">Hours Saved</div><div class="practice-stat-value" style="color:var(--success)">${fmt(p.timeSaved, 0)}</div></div>
+        <div><div class="practice-stat-label">Efficiency</div><div class="practice-stat-value" style="color:var(--warning)">${fmt(p.efficiency, 0)}%</div></div>
+        <div><div class="practice-stat-label">Quality</div><div class="practice-stat-value" style="color:var(--purple)">${fmt(p.quality, 1)}</div></div>
+      </div>
+      <div class="progress-bar"><div class="progress-bar-fill" style="width:${effPct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function showPracticeDetail(practice) {
+  document.getElementById('practice-grid').classList.add('hidden');
+  const detail = document.getElementById('practice-detail');
+  detail.classList.remove('hidden');
+  const tasks = data.tasks.filter(t => t.practice === practice);
+  const info = data.summary.practices.find(p => p.name.includes(practice)) || {};
+
+  detail.innerHTML = `
+    <button class="btn btn-secondary" onclick="renderPractices()" style="margin-bottom:16px">&larr; Back to Practices</button>
+    <h3 style="font-size:20px;margin-bottom:20px">${practiceNames[practice] || practice}</h3>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Tasks</div><div class="kpi-value blue">${info.tasks || 0}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value green">${fmt(info.timeSaved, 1)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Efficiency</div><div class="kpi-value yellow">${fmt(info.efficiency, 1)}%</div></div>
+      <div class="kpi-card"><div class="kpi-label">Quality</div><div class="kpi-value purple">${fmt(info.quality, 1)}/5</div></div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><h3>Tasks (${tasks.length})</h3></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Week</th><th>Project</th><th>Employee</th><th>Task</th><th>Category</th><th>Tool</th><th>Without AI</th><th>With AI</th><th>Saved</th><th>Status</th></tr></thead>
+          <tbody>
+            ${tasks.map(t => `<tr>
+              <td>${t.week}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.project}">${t.project}</td>
+              <td>${t.employee}</td><td>${t.task}</td><td>${t.category}</td><td>${t.aiTool}</td>
+              <td>${fmt(t.timeWithout)}</td><td>${fmt(t.timeWith)}</td><td style="color:var(--success);font-weight:600">${fmt(t.timeSaved)}</td><td>${statusBadge(t.status)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ======== TASKS ========
+function renderTasks() {
+  const search = (document.getElementById('task-search').value || '').toLowerCase();
+  const fPractice = document.getElementById('task-filter-practice').value;
+  const fCategory = document.getElementById('task-filter-category').value;
+  const fTool = document.getElementById('task-filter-tool').value;
+  const fStatus = document.getElementById('task-filter-status').value;
+
+  let filtered = data.tasks.filter(t => {
+    if (fPractice && t.practice !== fPractice) return false;
+    if (fCategory && t.category !== fCategory) return false;
+    if (fTool && t.aiTool !== fTool) return false;
+    if (fStatus && t.status !== fStatus) return false;
+    if (search) {
+      const hay = [t.practice, t.project, t.employee, t.task, t.category, t.aiTool, t.notes].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('task-count-label').textContent = `Showing ${filtered.length} of ${data.tasks.length} tasks`;
+  document.getElementById('tasks-tbody').innerHTML = filtered.map(t => `
+    <tr>
+      <td><span style="color:${practiceColors[t.practice] || '#94a3b8'};font-weight:600">${t.practice}</span></td>
+      <td>${t.week}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.project}">${t.project}</td>
+      <td>${t.employee}</td>
+      <td>${t.task}</td>
+      <td>${t.category}</td>
+      <td>${t.aiTool}</td>
+      <td>${fmt(t.timeWithout)}</td>
+      <td>${fmt(t.timeWith)}</td>
+      <td style="color:var(--success);font-weight:600">${fmt(t.timeSaved)}</td>
+      <td>${t.timeWithout > 0 ? fmt((t.timeSaved / t.timeWithout) * 100, 0) + '%' : '-'}</td>
+      <td>${statusBadge(t.status)}</td>
+    </tr>
+  `).join('');
+}
+
+// ======== ACCOMPLISHMENTS ========
+function renderAccomplishments() {
+  const search = (document.getElementById('acc-search').value || '').toLowerCase();
+  const fPractice = document.getElementById('acc-filter-practice').value;
+
+  let filtered = data.accomplishments.filter(a => {
+    if (fPractice && a.practice !== fPractice) return false;
+    if (search) {
+      const hay = [a.title, a.details, a.practice, a.project, a.employees, a.impact].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('acc-list').innerHTML = filtered.length === 0
+    ? '<div class="empty-state"><h3>No accomplishments found</h3><p>Add your first AI win using the button above.</p></div>'
+    : filtered.map(a => `
+    <div class="acc-card">
+      <div class="acc-card-header">
+        <div class="acc-card-title">${a.title}</div>
+        ${statusBadge(a.status)}
+      </div>
+      <div class="acc-meta">
+        <div class="acc-meta-item">Practice: <span style="color:${practiceColors[a.practice] || '#94a3b8'}">${a.practice}</span></div>
+        <div class="acc-meta-item">Date: <span>${a.date}</span></div>
+        <div class="acc-meta-item">Project: <span>${a.project}</span></div>
+        <div class="acc-meta-item">Tool: <span>${a.aiTool}</span></div>
+        <div class="acc-meta-item">Lead: <span>${a.spoc}</span></div>
+      </div>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:8px">${a.details ? a.details.substring(0, 300) + (a.details.length > 300 ? '...' : '') : ''}</div>
+      ${a.impact ? `<div class="acc-impact">
+        <div class="acc-impact-title">Impact</div>
+        <div style="font-size:13px;color:var(--text-secondary)">${a.impact}</div>
+        ${a.businessGains ? `<div style="font-size:12px;color:var(--text-muted);margin-top:6px">${a.businessGains}</div>` : ''}
+      </div>` : ''}
+      ${a.before || a.after ? `<div style="display:flex;gap:16px;margin-top:12px;font-size:12px">
+        ${a.before ? `<div><span style="color:var(--danger)">Before:</span> <span style="color:var(--text-secondary)">${a.before}</span></div>` : ''}
+        ${a.after ? `<div><span style="color:var(--success)">After:</span> <span style="color:var(--text-secondary)">${a.after}</span></div>` : ''}
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ======== COPILOT ========
+function renderCopilot() {
+  const search = (document.getElementById('copilot-search').value || '').toLowerCase();
+  const fPractice = document.getElementById('copilot-filter-practice').value;
+
+  let filtered = data.copilotUsers.filter(u => {
+    if (fPractice && u.practice !== fPractice) return false;
+    if (search) {
+      const hay = [u.name, u.email, u.skill, u.practice].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // KPIs
+  const byPractice = {};
+  data.copilotUsers.forEach(u => { byPractice[u.practice] = (byPractice[u.practice] || 0) + 1; });
+  document.getElementById('copilot-kpis').innerHTML = Object.entries(byPractice).map(([p, c]) =>
+    `<div class="kpi-card"><div class="kpi-label">${p}</div><div class="kpi-value" style="color:${practiceColors[p] || '#94a3b8'}">${c}</div><div class="kpi-sub">users</div></div>`
+  ).join('');
+
+  document.getElementById('copilot-count-label').textContent = `Showing ${filtered.length} of ${data.copilotUsers.length} users`;
+  document.getElementById('copilot-tbody').innerHTML = filtered.map(u => `
+    <tr>
+      <td><span style="color:${practiceColors[u.practice] || '#94a3b8'};font-weight:600">${u.practice}</span></td>
+      <td>${u.name}</td>
+      <td style="color:var(--text-muted)">${u.email}</td>
+      <td>${u.skill}</td>
+      <td>${statusBadge(u.remarks === 'access granted' ? 'Completed' : u.remarks)}</td>
+    </tr>
+  `).join('');
+}
+
+// ======== PROJECTS ========
+function renderProjects() {
+  const search = (document.getElementById('project-search').value || '').toLowerCase();
+  const fPractice = document.getElementById('project-filter-practice').value;
+
+  let filtered = data.projects.filter(p => {
+    if (fPractice && p.practice !== fPractice) return false;
+    if (search) {
+      const hay = [p.projectName, p.customer, p.practice, p.projectCode, p.projectManager].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('projects-tbody').innerHTML = filtered.map(p => `
+    <tr>
+      <td><span style="color:${practiceColors[p.practice] || '#94a3b8'};font-weight:600">${p.practice}</span></td>
+      <td>${p.projectName}</td>
+      <td style="color:var(--text-muted)">${p.projectCode}</td>
+      <td>${p.customer}</td>
+      <td>${p.contractValue ? Number(p.contractValue).toLocaleString() : '-'}</td>
+      <td style="color:var(--text-muted)">${p.startDate ? p.startDate.split(' ')[0] : '-'}</td>
+      <td style="color:var(--text-muted)">${p.endDate ? p.endDate.split(' ')[0] : '-'}</td>
+      <td>${p.revenueType}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.projectManager}">${p.projectManager}</td>
+    </tr>
+  `).join('');
+}
+
+// ======== MODALS ========
+function openModal(type) {
+  document.getElementById('modal-' + type).classList.add('active');
+}
+function closeModal(type) {
+  document.getElementById('modal-' + type).classList.remove('active');
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+
+function saveTask() {
+  const practice = document.getElementById('f-practice').value;
+  const task = {
+    practice,
+    week: document.getElementById('f-week').value,
+    weekStart: document.getElementById('f-weekstart').value,
+    weekEnd: document.getElementById('f-weekend').value,
+    project: document.getElementById('f-project').value,
+    projectCode: '',
+    employee: document.getElementById('f-employee').value,
+    task: document.getElementById('f-task').value,
+    category: document.getElementById('f-category').value,
+    aiTool: document.getElementById('f-tool').value,
+    prompt: '',
+    timeWithout: parseFloat(document.getElementById('f-time-without').value) || 0,
+    timeWith: parseFloat(document.getElementById('f-time-with').value) || 0,
+    timeSaved: 0,
+    efficiency: 0,
+    quality: parseFloat(document.getElementById('f-quality').value) || 0,
+    status: document.getElementById('f-status').value,
+    notes: document.getElementById('f-notes').value
+  };
+  task.timeSaved = task.timeWithout - task.timeWith;
+  task.efficiency = task.timeWithout > 0 ? task.timeSaved / task.timeWithout : 0;
+
+  data.tasks.push(task);
+  closeModal('task');
+  showToast('Task logged successfully!');
+  renderDashboard();
+  updateNavCounts();
+}
+
+function saveAccomplishment() {
+  const acc = {
+    id: String(data.accomplishments.length + 1),
+    date: document.getElementById('fa-date').value,
+    practice: document.getElementById('fa-practice').value,
+    project: document.getElementById('fa-project').value,
+    projectCode: '',
+    spoc: document.getElementById('fa-spoc').value,
+    employees: document.getElementById('fa-employees').value,
+    title: document.getElementById('fa-title').value,
+    details: document.getElementById('fa-details').value,
+    aiTool: document.getElementById('fa-tool').value,
+    category: document.getElementById('fa-category').value,
+    before: document.getElementById('fa-before').value,
+    after: document.getElementById('fa-after').value,
+    impact: document.getElementById('fa-impact').value,
+    businessGains: document.getElementById('fa-gains').value,
+    cost: 'Free of Cost',
+    effortSaved: document.getElementById('fa-effort').value,
+    status: document.getElementById('fa-status').value,
+    evidence: '',
+    notes: ''
+  };
+  data.accomplishments.push(acc);
+  closeModal('accomplishment');
+  showToast('Accomplishment added!');
+  updateNavCounts();
+}
+
+function saveCopilotUser() {
+  const user = {
+    practice: document.getElementById('fc-practice').value,
+    name: document.getElementById('fc-name').value,
+    email: document.getElementById('fc-email').value,
+    skill: document.getElementById('fc-skill').value,
+    remarks: document.getElementById('fc-status').value
+  };
+  data.copilotUsers.push(user);
+  closeModal('copilot');
+  showToast('Copilot user added!');
+  renderCopilot();
+  updateNavCounts();
+}
+
+// ======== EXCEL UPLOAD ========
+function handleExcelUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      // Parse tasks from practice sheets
+      const practices = ['BFSI', 'CES', 'ERP', 'EPS', 'EPCS', 'GRC'];
+      let newTasks = [];
+      practices.forEach(sheet => {
+        if (!wb.SheetNames.includes(sheet)) return;
+        const ws = wb.Sheets[sheet];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        let headerIdx = -1;
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i] && String(rows[i][0]).trim() === 'Week #') { headerIdx = i; break; }
+        }
+        if (headerIdx < 0) return;
+        for (let i = headerIdx + 1; i < rows.length; i++) {
+          const r = rows[i];
+          if (!r || !r[0] || String(r[0]).trim() === '') continue;
+          newTasks.push({
+            practice: sheet, week: String(r[0] || ''), weekStart: String(r[1] || ''), weekEnd: String(r[2] || ''),
+            project: String(r[3] || ''), projectCode: String(r[4] || ''), employee: String(r[5] || ''),
+            task: String(r[6] || ''), category: String(r[7] || ''), aiTool: String(r[8] || ''),
+            prompt: String(r[9] || ''), timeWithout: parseFloat(r[10]) || 0, timeWith: parseFloat(r[11]) || 0,
+            timeSaved: parseFloat(r[12]) || 0, efficiency: parseFloat(r[13]) || 0,
+            quality: parseFloat(r[14]) || 0, status: String(r[15] || ''), notes: String(r[16] || '')
+          });
+        }
+      });
+      if (newTasks.length > 0) {
+        data.tasks = newTasks;
+        recalcSummary();
+        showToast(`Imported ${newTasks.length} tasks from Excel!`);
+        renderDashboard();
+        updateNavCounts();
+      } else {
+        showToast('No tasks found in uploaded file', 'error');
+      }
+    } catch (err) {
+      showToast('Error reading file: ' + err.message, 'error');
+    }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ======== EXCEL EXPORT ========
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // Summary sheet
+  const summaryData = [
+    ['EAS AI Adoption - Overall Weekly Progress Summary'],
+    ['EAS Overall AI SPOC: Omar Ibrahim'],
+    [],
+    ['Practice', 'Practice Head', 'AI SPOC', 'Total Tasks', 'Time Without AI (hrs)', 'Time With AI (hrs)', 'Time Saved (hrs)', 'Efficiency %', 'Quality (1-5)', 'Completed', 'Projects']
+  ];
+  data.summary.practices.forEach(p => {
+    summaryData.push([p.name, p.head, p.spoc, p.tasks, p.timeWithout, p.timeWith, p.timeSaved, p.efficiency, p.quality, p.completed, p.projects]);
+  });
+  const t = data.summary.totals;
+  summaryData.push(['TOTAL', '', '', t.tasks, t.timeWithout, t.timeWith, t.timeSaved, t.efficiency, t.quality, t.completed, t.projects]);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), 'Summary');
+
+  // Task sheets per practice
+  const practices = ['BFSI', 'CES', 'ERP', 'EPS', 'EPCS', 'GRC'];
+  practices.forEach(p => {
+    const tasks = data.tasks.filter(t => t.practice === p);
+    const rows = [['Week #', 'Week Start', 'Week End', 'Project', 'Code', 'Employee', 'Task', 'Category', 'AI Tool', 'Prompt', 'Without AI (hrs)', 'With AI (hrs)', 'Saved (hrs)', 'Efficiency', 'Quality', 'Status', 'Notes']];
+    tasks.forEach(t => rows.push([t.week, t.weekStart, t.weekEnd, t.project, t.projectCode, t.employee, t.task, t.category, t.aiTool, t.prompt, t.timeWithout, t.timeWith, t.timeSaved, t.efficiency, t.quality, t.status, t.notes]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), p);
+  });
+
+  // Accomplishments
+  const accRows = [['#', 'Date', 'Practice', 'Project', 'Code', 'SPOC', 'Employees', 'Title', 'Details', 'AI Tool', 'Category', 'Before', 'After', 'Impact', 'Business Gains', 'Cost', 'Effort Saved', 'Status']];
+  data.accomplishments.forEach(a => accRows.push([a.id, a.date, a.practice, a.project, a.projectCode, a.spoc, a.employees, a.title, a.details, a.aiTool, a.category, a.before, a.after, a.impact, a.businessGains, a.cost, a.effortSaved, a.status]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(accRows), 'Accomplishments');
+
+  // Copilot Users
+  const copRows = [['Practice', 'Name', 'Email', 'Skill', 'Status']];
+  data.copilotUsers.forEach(u => copRows.push([u.practice, u.name, u.email, u.skill, u.remarks]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(copRows), 'Copilot Users');
+
+  XLSX.writeFile(wb, 'EAS_AI_Adoption_Export.xlsx');
+  showToast('Excel exported successfully!');
+}
+
+// ======== INIT ========
+function populateFilters() {
+  const practices = ['BFSI', 'CES', 'ERP', 'EPS', 'EPCS', 'GRC'];
+  const categories = data.lovs.taskCategories;
+  const tools = data.lovs.aiTools;
+
+  // Task filter dropdowns
+  const practiceSelects = ['task-filter-practice', 'acc-filter-practice', 'copilot-filter-practice', 'project-filter-practice'];
+  practiceSelects.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    practices.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; el.appendChild(o); });
+  });
+
+  const catSel = document.getElementById('task-filter-category');
+  categories.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o); });
+
+  const toolSel = document.getElementById('task-filter-tool');
+  tools.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; toolSel.appendChild(o); });
+
+  // Form dropdowns
+  ['f-practice', 'fa-practice', 'fc-practice'].forEach(id => {
+    const el = document.getElementById(id);
+    practices.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; el.appendChild(o); });
+  });
+
+  ['f-category', 'fa-category'].forEach(id => {
+    const el = document.getElementById(id);
+    categories.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; el.appendChild(o); });
+  });
+
+  ['f-tool', 'fa-tool'].forEach(id => {
+    const el = document.getElementById(id);
+    tools.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; el.appendChild(o); });
+  });
+
+  // Project dropdown for task form
+  const projSel = document.getElementById('f-project');
+  const projNames = [...new Set(data.tasks.map(t => t.project).filter(Boolean))];
+  projNames.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; projSel.appendChild(o); });
+}
+
+function updateNavCounts() {
+  document.getElementById('nav-task-count').textContent = data.tasks.length;
+  document.getElementById('nav-acc-count').textContent = data.accomplishments.length;
+  document.getElementById('nav-copilot-count').textContent = data.copilotUsers.length;
+  document.getElementById('nav-project-count').textContent = data.projects.length;
+}
+
+// Boot
+populateFilters();
+updateNavCounts();
+renderDashboard();
+</script>
+</body>
+</html>
