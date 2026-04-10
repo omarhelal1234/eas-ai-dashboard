@@ -1567,7 +1567,7 @@ async function renderLeaderboard() {
 
 // ======== CONTRIBUTOR: MY TASKS ========
 async function renderMyTasks() {
-  const profile = EAS_Auth.getUserProfile();
+  const profile = await EAS_Auth.getUserProfile();
   const userName = EAS_Auth.getUserName();
   const userEmail = profile?.email || '';
   document.getElementById('mytasks-subtitle').textContent = `${userName} — Your AI contributions`;
@@ -2123,8 +2123,8 @@ function exportToExcel() {
 function populateFilters() {
   if (!data) return;
   const practices = ['BFSI', 'CES', 'ERP', 'EPS', 'EPCS', 'GRC'];
-  const categories = data.lovs.taskCategories;
-  const tools = data.lovs.aiTools;
+  const categories = data.lovs?.taskCategories || [];
+  const tools = data.lovs?.aiTools || [];
 
   // Task filter dropdowns
   const practiceSelects = ['task-filter-practice', 'acc-filter-practice', 'copilot-filter-practice', 'project-filter-practice', 'lb-filter-practice', 'uc-filter-practice'];
@@ -2135,24 +2135,27 @@ function populateFilters() {
   });
 
   const catSel = document.getElementById('task-filter-category');
-  categories.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o); });
+  if (catSel) categories.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o); });
 
   const toolSel = document.getElementById('task-filter-tool');
-  tools.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; toolSel.appendChild(o); });
+  if (toolSel) tools.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; toolSel.appendChild(o); });
 
   // Form dropdowns
   ['f-practice', 'fa-practice', 'fc-practice'].forEach(id => {
     const el = document.getElementById(id);
+    if (!el) return;
     practices.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; el.appendChild(o); });
   });
 
   ['f-category', 'fa-category'].forEach(id => {
     const el = document.getElementById(id);
+    if (!el) return;
     categories.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; el.appendChild(o); });
   });
 
   ['f-tool', 'fa-tool'].forEach(id => {
     const el = document.getElementById(id);
+    if (!el) return;
     tools.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; el.appendChild(o); });
   });
 
@@ -2164,11 +2167,13 @@ function populateFilters() {
 
   // Project dropdown for task form
   const projSel = document.getElementById('f-project');
-  const projNames = [...new Set(data.tasks.map(t => t.project).filter(Boolean))];
-  projNames.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; projSel.appendChild(o); });
+  if (projSel) {
+    const projNames = [...new Set(data.tasks.map(t => t.project).filter(Boolean))];
+    projNames.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; projSel.appendChild(o); });
+  }
 }
 
-function updateNavCounts() {
+async function updateNavCounts() {
   if (!data) return;
   const fd = getFilteredData();
   document.getElementById('nav-task-count').textContent = fd.tasks.length;
@@ -2179,7 +2184,8 @@ function updateNavCounts() {
   const mtEl = document.getElementById('nav-mytask-count');
   if (mtEl) {
     const userName = EAS_Auth.getUserName();
-    const userEmail = EAS_Auth.getUserProfile()?.email || '';
+    const profile = await EAS_Auth.getUserProfile();
+    const userEmail = profile?.email || '';
     const myCount = data.tasks.filter(t =>
       (t.employee && t.employee.toLowerCase() === userName.toLowerCase()) ||
       (t.employeeEmail && t.employeeEmail.toLowerCase() === userEmail.toLowerCase())
@@ -2190,6 +2196,7 @@ function updateNavCounts() {
 
 // Boot
 async function boot() {
+  try {
   // 1. Auth check
   const authed = await EAS_Auth.requireAuth();
   if (!authed) return; // Redirected to login
@@ -2220,7 +2227,7 @@ async function boot() {
   
   // Set user avatar initials
   const name = EAS_Auth.getUserName();
-  const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  const initials = name ? name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() : '??';
   document.getElementById('user-avatar').textContent = initials;
   
   // Update header context
@@ -2245,12 +2252,14 @@ async function boot() {
   } catch (err) {
     console.error('Failed to fetch data:', err);
     showToast('Failed to load data from server', 'error');
-    return;
+    // Don't return — still hide overlay below
   }
   
-  // 5. Initialize UI
-  populateFilters();
-  updateNavCounts();
+  // 5. Initialize UI (only if data loaded)
+  if (data) {
+    populateFilters();
+    await updateNavCounts();
+  }
   
   // Role-aware default page
   if (role === 'spoc') {
@@ -2293,11 +2302,9 @@ async function boot() {
   document.getElementById('uc-search')?.addEventListener('input', EAS_Utils.debounce(() => renderUseCases(), 300));
   
   // 8. Accessibility enhancements
-  // Add aria-hidden to all decorative SVGs in nav items and sidebar footer
   document.querySelectorAll('.nav-item svg, .sidebar-footer svg, .upload-btn svg').forEach(svg => {
     svg.setAttribute('aria-hidden', 'true');
   });
-  // Make nav items keyboard-accessible
   document.querySelectorAll('.nav-item').forEach(item => {
     item.setAttribute('tabindex', '0');
     item.setAttribute('role', 'button');
@@ -2311,9 +2318,14 @@ async function boot() {
   if (themeLabel) {
     themeLabel.textContent = document.documentElement.getAttribute('data-theme') === 'light' ? 'Dark Mode' : 'Light Mode';
   }
-  
-  // 10. Hide loading overlay
-  document.getElementById('auth-loading').style.display = 'none';
+
+  } catch (bootError) {
+    console.error('boot() failed:', bootError);
+    showToast('Dashboard failed to load: ' + bootError.message, 'error');
+  } finally {
+    // 10. ALWAYS hide loading overlay
+    document.getElementById('auth-loading').style.display = 'none';
+  }
 }
 
 boot();

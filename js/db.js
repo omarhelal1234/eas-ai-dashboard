@@ -319,8 +319,8 @@ const EAS_DB = (() => {
     }
     const lovs = { taskCategories: [], aiTools: [] };
     (data || []).forEach(row => {
-      if (row.category === 'task_category') lovs.taskCategories.push(row.value);
-      else if (row.category === 'ai_tool') lovs.aiTools.push(row.value);
+      if (row.category === 'taskCategory') lovs.taskCategories.push(row.value);
+      else if (row.category === 'aiTool') lovs.aiTools.push(row.value);
     });
     return lovs;
   }
