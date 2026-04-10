@@ -1811,5 +1811,425 @@ function recalcSummary() {
   totals.quality = allQ.length > 0 ? allQ.reduce((s, t) => s + t.quality, 0) / allQ.length : 0;
 }
 </script>
+
+<!-- ========== AI ADOPTION AGENT CHAT WIDGET ========== -->
+<style>
+.adoption-agent-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #0078d4);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  z-index: 999;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.adoption-agent-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
+}
+
+.adoption-agent-widget {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  width: 420px;
+  height: 600px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 5px 40px rgba(0, 0, 0, 0.2);
+  display: none;
+  flex-direction: column;
+  z-index: 999;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+.adoption-agent-widget.open {
+  display: flex;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.agent-header {
+  background: linear-gradient(135deg, #3b82f6, #0078d4);
+  color: white;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.agent-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agent-close-btn:hover {
+  opacity: 0.8;
+}
+
+.agent-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f9fafb;
+}
+
+.agent-message {
+  display: flex;
+  gap: 8px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.agent-message.user {
+  justify-content: flex-end;
+}
+
+.agent-message.bot {
+  justify-content: flex-start;
+}
+
+.agent-bubble {
+  max-width: 80%;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.agent-message.user .agent-bubble {
+  background: #3b82f6;
+  color: white;
+  border-radius: 12px 4px 12px 12px;
+}
+
+.agent-message.bot .agent-bubble {
+  background: #e5e7eb;
+  color: #1f2937;
+  border-radius: 4px 12px 12px 12px;
+}
+
+.agent-bubble a {
+  color: #0078d4;
+  text-decoration: underline;
+}
+
+.agent-message.bot .agent-bubble a {
+  color: #0078d4;
+}
+
+.agent-input-area {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 8px;
+  background: white;
+}
+
+.agent-input-area input {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.agent-input-area input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.agent-input-area button {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+  font-size: 13px;
+}
+
+.agent-input-area button:hover {
+  background: #2563eb;
+}
+
+.agent-input-area button:active {
+  transform: scale(0.95);
+}
+
+.agent-loading {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 12px;
+  background: #e5e7eb;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.agent-loading span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: bounce 1.4s infinite;
+}
+
+.agent-loading span:nth-child(2) { animation-delay: 0.2s; }
+.agent-loading span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+
+.agent-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  border-left: 3px solid #dc2626;
+}
+
+.agent-disclaimer {
+  font-size: 11px;
+  color: #6b7280;
+  padding: 12px;
+  text-align: center;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+@media (max-width: 768px) {
+  .adoption-agent-widget {
+    width: calc(100vw - 40px);
+    height: 70vh;
+    bottom: 80px;
+    right: 20px;
+  }
+}
+</style>
+
+<!-- Chat Widget HTML -->
+<button id="adoption-agent-toggle" class="adoption-agent-toggle" title="Ask AI Adoption Agent">
+  💬
+</button>
+
+<div id="adoption-agent-widget" class="adoption-agent-widget">
+  <div class="agent-header">
+    <div class="agent-header-title">
+      <span>🤖</span>
+      <span>AI Adoption Agent</span>
+    </div>
+    <button class="agent-close-btn" onclick="toggleAdoptionAgent()">✕</button>
+  </div>
+  
+  <div id="agent-messages" class="agent-messages"></div>
+  
+  <div class="agent-disclaimer">
+    Powered by Claude AI. Analyzes live dashboard data for insights & recommendations.
+  </div>
+  
+  <div class="agent-input-area">
+    <input 
+      id="agent-input" 
+      type="text" 
+      placeholder="Ask about reports, metrics, blockers, recommendations..."
+      onkeypress="if(event.key==='Enter') sendAdoptionAgentQuery()"
+    />
+    <button onclick="sendAdoptionAgentQuery()">Send</button>
+  </div>
+</div>
+
+<script>
+let agentConversation = [];
+let agentIsLoading = false;
+
+// Backend endpoint URL — update this when deploying to production
+const AGENT_API_URL = 'http://localhost:3001/api/adoption-agent';
+
+/**
+ * Convert basic markdown to HTML for agent responses
+ */
+function markdownToHtml(text) {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^### (.+)$/gm, '<h4 style="margin:8px 0 4px;font-size:13px;">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 style="margin:10px 0 4px;font-size:14px;">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h3 style="margin:10px 0 6px;font-size:15px;">$1</h3>')
+    .replace(/^[\-\*] (.+)$/gm, '<li style="margin-left:16px;list-style:disc;">$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li style="margin-left:16px;list-style:decimal;">$1</li>')
+    .replace(/`([^`]+)`/g, '<code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:12px;">$1</code>')
+    .replace(/\n{2,}/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+}
+
+function toggleAdoptionAgent() {
+  const widget = document.getElementById('adoption-agent-widget');
+  widget.classList.toggle('open');
+  if (widget.classList.contains('open')) {
+    document.getElementById('agent-input').focus();
+    if (agentConversation.length === 0) {
+      showAgentGreeting();
+    }
+  }
+}
+
+function showAgentGreeting() {
+  const messagesDiv = document.getElementById('agent-messages');
+  const greeting = document.createElement('div');
+  greeting.className = 'agent-message bot';
+  greeting.innerHTML = `
+    <div class="agent-bubble">
+      <strong>Welcome to AI Adoption Agent!</strong><br><br>
+      I can help you with:<br>
+      • 📊 Current adoption metrics & trends<br>
+      • 🎯 Q2 progress reports<br>
+      • 🔴 Risk & escalation alerts<br>
+      • 💡 Actionable recommendations<br>
+      • 👥 Practice-level analysis<br>
+      • 📈 Forecasts & projections<br><br>
+      <em>Ask me anything about AI adoption!</em>
+    </div>
+  `;
+  messagesDiv.appendChild(greeting);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+async function sendAdoptionAgentQuery() {
+  const input = document.getElementById('agent-input');
+  const query = input.value.trim();
+  
+  if (!query || agentIsLoading) return;
+  
+  const messagesDiv = document.getElementById('agent-messages');
+  
+  // Add user message
+  const userMsg = document.createElement('div');
+  userMsg.className = 'agent-message user';
+  userMsg.innerHTML = `<div class="agent-bubble">${escapeHtml(query)}</div>`;
+  messagesDiv.appendChild(userMsg);
+  
+  input.value = '';
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  
+  // Show loading state
+  agentIsLoading = true;
+  const loadingMsg = document.createElement('div');
+  loadingMsg.className = 'agent-message bot';
+  loadingMsg.id = 'agent-loading';
+  loadingMsg.innerHTML = '<div class="agent-loading"><span></span><span></span><span></span></div>';
+  messagesDiv.appendChild(loadingMsg);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  
+  try {
+    // Call backend endpoint
+    const response = await fetch(AGENT_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: query.substring(0, 2000),
+        conversation: agentConversation.slice(-20),
+        userRole: (typeof EAS_Auth !== 'undefined' && EAS_Auth?.getUserRole?.()) || 'admin',
+        userPractice: (typeof EAS_Auth !== 'undefined' && EAS_Auth?.getUserPractice?.()) || '',
+        timestamp: new Date().toISOString()
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    // Remove loading state
+    document.getElementById('agent-loading')?.remove();
+    
+    // Add agent response (render markdown)
+    const agentMsg = document.createElement('div');
+    agentMsg.className = 'agent-message bot';
+    agentMsg.innerHTML = `<div class="agent-bubble">${markdownToHtml(result.reply)}</div>`;
+    messagesDiv.appendChild(agentMsg);
+    
+    // Store in conversation history
+    agentConversation.push({ role: 'user', text: query });
+    agentConversation.push({ role: 'agent', text: result.reply });
+    
+    // Keep last 20 messages for context
+    if (agentConversation.length > 40) {
+      agentConversation = agentConversation.slice(-40);
+    }
+    
+  } catch (err) {
+    console.error('Agent error:', err);
+    document.getElementById('agent-loading')?.remove();
+    
+    const errDiv = document.createElement('div');
+    errDiv.className = 'agent-message bot';
+    errDiv.innerHTML = `<div class="agent-error">❌ Sorry, I couldn't process that. Please try again or check your connection.</div>`;
+    messagesDiv.appendChild(errDiv);
+  } finally {
+    agentIsLoading = false;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+}
+
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Toggle button click handler
+document.getElementById('adoption-agent-toggle')?.addEventListener('click', toggleAdoptionAgent);
+</script>
+
 </body>
 </html>

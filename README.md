@@ -53,8 +53,16 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 │   ├── IMPLEMENTATION_PLAN.md
 │   └── ONBOARDING_GUIDE.md
 │
+├── server/                 # AI Adoption Agent backend
+│   ├── adoption-agent-endpoint.js  # Express API (Claude + Supabase)
+│   ├── package.json                # Backend dependencies
+│   ├── .env.example                # Environment template
+│   ├── README.md                   # API documentation
+│   ├── SETUP_GUIDE.md              # Deployment guide
+│   └── QUICK_START.md              # 5-minute setup
+│
 ├── .agents/                # Copilot agent skills (Superpowers)
-├── .github/                # GitHub config (copilot-instructions.md)
+├── .github/                # GitHub config (copilot-instructions.md, AI Adoption Agent)
 ├── .env.example            # Environment variable template
 ├── .gitignore
 ├── package.json
@@ -67,6 +75,20 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 2. Copy `.env.example` to `.env` and add your Supabase keys
 3. Run `npm install`
 4. Open `login.html` in browser (or serve via local server)
+
+### AI Adoption Agent (Chat Widget)
+
+The admin portal includes an embedded AI chat widget powered by Claude 3.5 Sonnet with live Supabase data:
+
+```bash
+cd server/
+npm install
+cp .env.example .env
+# Add your ANTHROPIC_API_KEY from https://console.anthropic.com/
+npm start
+```
+
+Then open admin.html and click the 💬 button. See [server/QUICK_START.md](server/QUICK_START.md) for details.
 
 See [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md) for full setup instructions.
 
@@ -87,6 +109,16 @@ See [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md) for full setup instruct
 | **Contributor** | Personal dashboard, My Tasks, badges, practice leaderboard | Self-registered users |
 
 ## Changelog
+
+### AI Adoption Agent — Chat Widget (Apr 10, 2026)
+- **Embedded chat widget** in admin portal (admin.html) — click 💬 button to open
+- **Backend endpoint** (server/adoption-agent-endpoint.js) — Express + Claude 3.5 Sonnet + live Supabase data
+- **Live metrics injection** — Adoption rate, tasks, hours saved, per-practice breakdown injected into AI context
+- **Role-aware filtering** — Admin sees all practices; SPOC sees only their practice
+- **Markdown rendering** — Agent responses render bold, headers, lists, code blocks
+- **Conversation history** — Up to 20 exchanges maintained for contextual follow-ups
+- **Input validation** — Query length limit (2000 chars), conversation sanitization, CORS configuration
+- **Mobile responsive** — Widget adapts to screen size (70vh on mobile)
 
 ### Post-Launch Enhancements (Apr 10, 2026)
 - **Contributor data visibility fix**: Added broad authenticated-read RLS policies on tasks, accomplishments, copilot_users, and users tables so all logged-in users see program-wide data
