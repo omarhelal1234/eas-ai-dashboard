@@ -222,13 +222,16 @@ CREATE POLICY "practices_admin_write" ON practices FOR ALL USING (get_user_role(
 CREATE POLICY "quarters_read" ON quarters FOR SELECT USING (true);
 CREATE POLICY "quarters_admin_write" ON quarters FOR ALL USING (get_user_role() = 'admin');
 
--- ---- USERS: admin full access, others read own ----
+-- ---- USERS: admin full access, all authenticated can read ----
 CREATE POLICY "users_admin_all" ON users FOR ALL USING (get_user_role() = 'admin');
+CREATE POLICY "users_read_all_authenticated" ON users FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "users_read_own" ON users FOR SELECT USING (auth_id = auth.uid());
 
 -- ---- TASKS ----
 -- Admin: full access
 CREATE POLICY "tasks_admin_all" ON tasks FOR ALL USING (get_user_role() = 'admin');
+-- All authenticated users can read all tasks (dashboard, leaderboard, charts)
+CREATE POLICY "tasks_read_all_authenticated" ON tasks FOR SELECT USING (auth.uid() IS NOT NULL);
 -- SPOC: full access to own practice
 CREATE POLICY "tasks_spoc_read" ON tasks FOR SELECT USING (
   get_user_role() = 'spoc' AND practice = get_user_practice()
@@ -252,6 +255,8 @@ CREATE POLICY "tasks_contributor_insert" ON tasks FOR INSERT WITH CHECK (
 
 -- ---- ACCOMPLISHMENTS ----
 CREATE POLICY "acc_admin_all" ON accomplishments FOR ALL USING (get_user_role() = 'admin');
+-- All authenticated users can read all accomplishments
+CREATE POLICY "acc_read_all_authenticated" ON accomplishments FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "acc_spoc_read" ON accomplishments FOR SELECT USING (
   get_user_role() = 'spoc' AND practice = get_user_practice()
 );
@@ -270,6 +275,8 @@ CREATE POLICY "acc_contributor_read" ON accomplishments FOR SELECT USING (
 
 -- ---- COPILOT USERS ----
 CREATE POLICY "copilot_admin_all" ON copilot_users FOR ALL USING (get_user_role() = 'admin');
+-- All authenticated users can read all copilot users
+CREATE POLICY "copilot_read_all_authenticated" ON copilot_users FOR SELECT USING (auth.uid() IS NOT NULL);
 CREATE POLICY "copilot_spoc_read" ON copilot_users FOR SELECT USING (
   get_user_role() = 'spoc' AND practice = get_user_practice()
 );

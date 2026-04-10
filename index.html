@@ -276,6 +276,10 @@
         <select class="filter-select" id="acc-filter-practice" aria-label="Filter by practice" onchange="renderAccomplishments()">
           <option value="">All Practices</option>
         </select>
+        <div class="quarter-selector-wrapper" style="margin-left:auto">
+          <label for="acc-filter-quarter">Quarter</label>
+          <select class="quarter-selector" id="acc-filter-quarter" aria-label="Filter by quarter"></select>
+        </div>
       </div>
       <div id="acc-list"></div>
     </div>
@@ -384,6 +388,10 @@
         <h2>Leaderboard</h2>
         <div class="subtitle">AI adoption rankings across practices</div>
       </div>
+      <div class="quarter-selector-wrapper">
+        <label for="lb-filter-quarter">Quarter</label>
+        <select class="quarter-selector" id="lb-filter-quarter" aria-label="Filter by quarter"></select>
+      </div>
     </div>
     <div class="page-content">
       <!-- Practice Rankings -->
@@ -415,7 +423,13 @@
         <h2>My Tasks</h2>
         <div class="subtitle" id="mytasks-subtitle">Your AI task submissions</div>
       </div>
-      <button class="btn btn-primary" onclick="openModal('task')">+ Log Task</button>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="quarter-selector-wrapper">
+          <label for="mytasks-filter-quarter">Quarter</label>
+          <select class="quarter-selector" id="mytasks-filter-quarter" aria-label="Filter by quarter"></select>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('task')">+ Log Task</button>
+      </div>
     </div>
     <div class="page-content">
       <div class="kpi-grid" id="mytasks-kpis"></div>
@@ -472,17 +486,17 @@
         <select id="f-practice"></select>
       </div>
       <div class="form-group">
-        <label>Week #</label>
-        <input type="number" id="f-week" min="1" value="1">
+        <label>Week # <span style="font-size:11px;color:var(--text-muted)">(auto)</span></label>
+        <input type="number" id="f-week" min="1" readonly style="background:var(--bg-secondary);cursor:default">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Week Start</label>
+        <label>Week Start <span style="font-size:11px;color:var(--text-muted)">(optional)</span></label>
         <input type="date" id="f-weekstart">
       </div>
       <div class="form-group">
-        <label>Week End</label>
+        <label>Week End <span style="font-size:11px;color:var(--text-muted)">(optional)</span></label>
         <input type="date" id="f-weekend">
       </div>
     </div>
@@ -1303,23 +1317,26 @@ function gotoTaskPage(p) { taskPage = p; renderTasks(); }
 
 // ======== ACCOMPLISHMENTS ========
 function renderAccomplishments() {
-  const fd = getFilteredData();
-  if (!fd) return;
   const search = (document.getElementById('acc-search').value || '').toLowerCase();
   const fPractice = document.getElementById('acc-filter-practice').value;
+  const pageQuarter = document.getElementById('acc-filter-quarter')?.value || EAS_DB.getSelectedQuarter();
 
-  let filtered = fd.accomplishments.filter(a => {
-    if (fPractice && a.practice !== fPractice) return false;
-    if (search) {
-      const hay = [a.title, a.details, a.practice, a.project, a.employees, a.impact].join(' ').toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
-    return true;
-  });
+  // Fetch accomplishments for the page-specific quarter
+  EAS_DB.fetchAccomplishments(pageQuarter).then(rawAccomplishments => {
+    const accomplishments = rawAccomplishments.map(EAS_Utils.sanitizeObj);
 
-  document.getElementById('acc-list').innerHTML = filtered.length === 0
-    ? '<div class="empty-state"><h3>No accomplishments found</h3><p>Add your first AI win using the button above.</p></div>'
-    : filtered.map(a => `
+    let filtered = accomplishments.filter(a => {
+      if (fPractice && a.practice !== fPractice) return false;
+      if (search) {
+        const hay = [a.title, a.details, a.practice, a.project, a.employees, a.impact].join(' ').toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      return true;
+    });
+
+    document.getElementById('acc-list').innerHTML = filtered.length === 0
+      ? '<div class="empty-state"><h3>No accomplishments found</h3><p>Add your first AI win using the button above.</p></div>'
+      : filtered.map(a => `
     <div class="acc-card">
       <div class="acc-card-header">
         <div class="acc-card-title">${a.title}</div>
@@ -1348,6 +1365,8 @@ function renderAccomplishments() {
       </div>` : ''}
     </div>
   `).join('');
+
+  }); // end .then(fetchAccomplishments)
 }
 
 // ======== COPILOT ========
@@ -1496,7 +1515,7 @@ async function nudgeInactive(userId, userName) {
 
 // ======== LEADERBOARD ========
 async function renderLeaderboard() {
-  const quarterId = EAS_DB.getSelectedQuarter();
+  const quarterId = document.getElementById('lb-filter-quarter')?.value || EAS_DB.getSelectedQuarter();
   const fPractice = document.getElementById('lb-filter-practice')?.value || '';
 
   // Fetch both leaderboards
@@ -1547,15 +1566,25 @@ async function renderLeaderboard() {
 }
 
 // ======== CONTRIBUTOR: MY TASKS ========
-function renderMyTasks() {
-  if (!data) return;
+async function renderMyTasks() {
   const profile = EAS_Auth.getUserProfile();
   const userName = EAS_Auth.getUserName();
   const userEmail = profile?.email || '';
   document.getElementById('mytasks-subtitle').textContent = `${userName} — Your AI contributions`;
 
+  // Fetch tasks for the page-specific quarter
+  const pageQuarter = document.getElementById('mytasks-filter-quarter')?.value || EAS_DB.getSelectedQuarter();
+  let pageTasks;
+  try {
+    pageTasks = await EAS_DB.fetchTasks(pageQuarter);
+    pageTasks = pageTasks.map(EAS_Utils.sanitizeObj);
+  } catch (err) {
+    console.error('renderMyTasks fetch error:', err);
+    pageTasks = data ? data.tasks : [];
+  }
+
   // Filter to only this user's tasks (by name or email match)
-  const myTasks = data.tasks.filter(t =>
+  const myTasks = pageTasks.filter(t =>
     (t.employee && t.employee.toLowerCase() === userName.toLowerCase()) ||
     (t.employeeEmail && t.employeeEmail.toLowerCase() === userEmail.toLowerCase())
   );
@@ -1715,6 +1744,18 @@ function openModal(type) {
     if (type === 'task') {
       document.querySelector('#modal-task .modal h3').textContent = 'Log AI Task';
       document.querySelector('#modal-task .btn-primary').textContent = 'Save Task';
+      // Auto-populate week fields for new tasks
+      const weekRange = EAS_Utils.getCurrentWeekRange();
+      const weekNum = EAS_Utils.getQuarterWeekNumber(new Date(), EAS_DB.getQuarters());
+      document.getElementById('f-week').value = weekNum;
+      document.getElementById('f-weekstart').value = weekRange.start;
+      document.getElementById('f-weekend').value = weekRange.end;
+      // Auto-fill employee name for contributors
+      const userName = EAS_Auth.getUserName();
+      const empField = document.getElementById('f-employee');
+      if (userName && (!empField.value || empField.value === '')) {
+        empField.value = userName;
+      }
     } else if (type === 'accomplishment') {
       document.querySelector('#modal-accomplishment .modal h3').textContent = 'Log Accomplishment';
       document.querySelector('#modal-accomplishment .btn-primary').textContent = 'Save';
@@ -1742,11 +1783,19 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 async function saveTask() {
   const practice = document.getElementById('f-practice').value;
   if (!practice) { showToast('Please select a practice', 'error'); return; }
+
+  // Apply week defaults: if not entered, use current week Sun-Thu
+  const weekRange = EAS_Utils.getCurrentWeekRange();
+  let weekStart = document.getElementById('f-weekstart').value || weekRange.start;
+  let weekEnd = document.getElementById('f-weekend').value || weekRange.end;
+  // Auto-calculate quarter-relative week number from weekStart
+  let weekNum = EAS_Utils.getQuarterWeekNumber(weekStart, EAS_DB.getQuarters());
+
   const task = {
     practice,
-    week: document.getElementById('f-week').value,
-    weekStart: document.getElementById('f-weekstart').value,
-    weekEnd: document.getElementById('f-weekend').value,
+    week: weekNum,
+    weekStart: weekStart,
+    weekEnd: weekEnd,
     project: document.getElementById('f-project').value,
     projectCode: '',
     employee: document.getElementById('f-employee').value,
@@ -1784,17 +1833,21 @@ async function saveTask() {
   renderDashboard();
   renderTasks();
   updateNavCounts();
-  // Reset form
+  // Reset form with auto-calculated week defaults
+  const resetWeek = EAS_Utils.getCurrentWeekRange();
+  const resetWeekNum = EAS_Utils.getQuarterWeekNumber(new Date(), EAS_DB.getQuarters());
   document.getElementById('f-practice').selectedIndex = 0;
-  document.getElementById('f-week').value = '1';
-  document.getElementById('f-weekstart').value = '';
-  document.getElementById('f-weekend').value = '';
+  document.getElementById('f-week').value = resetWeekNum;
+  document.getElementById('f-weekstart').value = resetWeek.start;
+  document.getElementById('f-weekend').value = resetWeek.end;
   document.getElementById('f-employee').value = '';
   document.getElementById('f-task').value = '';
   document.getElementById('f-time-without').value = '';
   document.getElementById('f-time-with').value = '';
   document.getElementById('f-quality').value = '';
   document.getElementById('f-notes').value = '';
+  // Also re-render My Tasks if contributor
+  renderMyTasks();
 }
 
 async function saveAccomplishment() {
@@ -2144,6 +2197,22 @@ async function boot() {
   // 2. Load quarters from Supabase
   await EAS_DB.loadQuarters();
   EAS_DB.populateQuarterSelector('quarter-selector');
+  
+  // 2b. Populate page-specific quarter selectors (independent of global)
+  EAS_DB.populatePageQuarterSelector('lb-filter-quarter', () => renderLeaderboard());
+  EAS_DB.populatePageQuarterSelector('mytasks-filter-quarter', () => renderMyTasks());
+  EAS_DB.populatePageQuarterSelector('acc-filter-quarter', () => renderAccomplishments());
+  
+  // 2c. Wire week-start date change to auto-update week number
+  const fWeekStart = document.getElementById('f-weekstart');
+  if (fWeekStart) {
+    fWeekStart.addEventListener('change', () => {
+      const val = fWeekStart.value;
+      if (val) {
+        document.getElementById('f-week').value = EAS_Utils.getQuarterWeekNumber(val, EAS_DB.getQuarters());
+      }
+    });
+  }
   
   // 3. Set up user display
   EAS_Auth.updateUserDisplay();

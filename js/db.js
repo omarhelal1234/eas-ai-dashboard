@@ -83,6 +83,36 @@ const EAS_DB = (() => {
     });
   }
 
+  /**
+   * Populate a page-specific quarter selector (no global side-effects).
+   * @param {string} selectId — element ID of the <select>
+   * @param {function} onChange — callback receiving the selected quarter value
+   */
+  function populatePageQuarterSelector(selectId, onChange) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '';
+
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = 'All Time';
+    select.appendChild(allOpt);
+
+    _quarters.forEach(q => {
+      const opt = document.createElement('option');
+      opt.value = q.id;
+      opt.textContent = q.label + (q.is_active ? ' (Current)' : '') + (q.is_locked ? ' 🔒' : '');
+      select.appendChild(opt);
+    });
+
+    // Default to the global selected quarter
+    select.value = getSelectedQuarter();
+
+    if (typeof onChange === 'function') {
+      select.addEventListener('change', () => onChange(select.value));
+    }
+  }
+
   // ---- Quarter Comparison Helpers ----
 
   function getPreviousQuarter(quarterId) {
@@ -381,8 +411,8 @@ const EAS_DB = (() => {
       week_end:        taskData.weekEnd || null,
       project:         taskData.project || null,
       project_code:    taskData.projectCode || null,
-      employee_name:   taskData.employee || null,
-      employee_email:  taskData.employeeEmail || null,
+      employee_name:   taskData.employee || profile?.name || null,
+      employee_email:  taskData.employeeEmail || profile?.email || null,
       task_description: taskData.task || null,
       category:        taskData.category || null,
       ai_tool:         taskData.aiTool || null,
@@ -799,6 +829,7 @@ const EAS_DB = (() => {
     setSelectedQuarter,
     getQuarterLabel,
     populateQuarterSelector,
+    populatePageQuarterSelector,
     getPreviousQuarter,
     calcDelta,
     formatDelta,

@@ -162,6 +162,50 @@ const EAS_Utils = (() => {
     return new Date(s);
   }
 
+  // ===========================================================
+  // Week Calculation Helpers (Sun–Thu work week)
+  // ===========================================================
+
+  /**
+   * Get the current work week range (Sunday–Thursday).
+   * @param {Date} [refDate] — reference date, defaults to today
+   * @returns {{ start: string, end: string }} ISO date strings (YYYY-MM-DD)
+   */
+  function getCurrentWeekRange(refDate) {
+    const today = refDate ? new Date(refDate) : new Date();
+    const day = today.getDay(); // 0=Sun … 6=Sat
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() - day); // go back to Sunday
+    const thursday = new Date(sunday);
+    thursday.setDate(sunday.getDate() + 4); // Sunday + 4 = Thursday
+    return {
+      start: sunday.toISOString().split('T')[0],
+      end: thursday.toISOString().split('T')[0]
+    };
+  }
+
+  /**
+   * Calculate the quarter-relative week number (1–13).
+   * @param {Date|string} date — the date to evaluate
+   * @param {Array} quarters — array of quarter objects with start_date, end_date
+   * @returns {number} week number (1-based)
+   */
+  function getQuarterWeekNumber(date, quarters) {
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return 1;
+    // Find the quarter this date belongs to
+    const q = (quarters || []).find(q => {
+      const qs = new Date(q.start_date);
+      const qe = new Date(q.end_date);
+      qe.setHours(23, 59, 59); // include the end date
+      return d >= qs && d <= qe;
+    });
+    if (!q) return 1; // fallback if date is outside any quarter
+    const qStart = new Date(q.start_date);
+    const diffDays = Math.floor((d - qStart) / 86400000);
+    return Math.min(Math.max(Math.floor(diffDays / 7) + 1, 1), 13);
+  }
+
   return {
     fmt,
     fmtPct,
@@ -176,6 +220,8 @@ const EAS_Utils = (() => {
     practiceColors,
     chartColors,
     debounce,
-    parseDate
+    parseDate,
+    getCurrentWeekRange,
+    getQuarterWeekNumber
   };
 })();

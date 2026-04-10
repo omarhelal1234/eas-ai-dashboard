@@ -19,6 +19,7 @@
 | 1.6 | Apr 12, 2026 | Omar Ibrahim | Phase 5 completed — SPOC panel, leaderboard, badges, nudge, use case library |
 | 1.7 | Apr 12, 2026 | Omar Ibrahim | Phase 6 completed — accessibility, dark/light mode, forecasting, PDF reports |
 | 2.0 | Apr 10, 2026 | Omar Ibrahim | All 6 phases complete — final plan consolidation |
+| 2.1 | Apr 10, 2026 | Omar Ibrahim | Post-launch: contributor data visibility fix, page quarter selectors, auto week number |
 
 ---
 

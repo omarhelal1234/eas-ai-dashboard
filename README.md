@@ -88,6 +88,13 @@ See [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md) for full setup instruct
 
 ## Changelog
 
+### Post-Launch Enhancements (Apr 10, 2026)
+- **Contributor data visibility fix**: Added broad authenticated-read RLS policies on tasks, accomplishments, copilot_users, and users tables so all logged-in users see program-wide data
+- **Page-level quarter selectors**: Leaderboard, My Tasks, and Accomplishments pages each have their own independent quarter dropdown — no longer tied to the global dashboard selector
+- **Auto week number**: Week # is auto-calculated as quarter-relative (1–13) based on the task date; field is read-only
+- **Week date defaults**: Week Start and Week End default to the current work week (Sun–Thu) if not manually entered
+- **Auto employee info**: Employee name and email auto-populated from the logged-in user's profile on new tasks
+
 ### Phase 6 — Polish & Advanced Features
 - **Dark/Light mode**: Theme toggle in sidebar, persists via localStorage, applies across all 3 pages
 - **Trend forecasting**: Linear regression on tasks, hours saved, efficiency, and adoption for next 4 weeks with 2 forecast charts
