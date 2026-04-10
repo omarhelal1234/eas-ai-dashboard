@@ -208,28 +208,43 @@
 
 ## Phase 6: Polish & Advanced Features 🔲
 
-**Status:** Planned | **Target:** Jun 1–15, 2026
+**Status:** Complete | **Completed:** All 8 tasks delivered
 
 ### Objectives
 
-1. PDF report generation
-2. Advanced analytics and forecasting
-3. Performance optimization
-4. Accessibility audit and fixes
-5. Final documentation
+1. ✅ PDF report generation (jsPDF manual layout)
+2. ✅ Advanced analytics and forecasting (linear regression, all KPIs)
+3. ✅ Performance optimization (defer CDN scripts, preconnect, reorder loads)
+4. ✅ Accessibility audit and fixes (WCAG 2.1 AA)
+5. ✅ Keyboard navigation + focus-visible styles
+6. ✅ Dark/light mode toggle (CSS custom properties, localStorage)
+7. ✅ Final documentation update
 
 ### Tasks
 
-| # | Task | Est. Hours | Priority |
-|---|------|-----------|----------|
-| 6.1 | Quarterly PDF report generation | 8h | P3 |
-| 6.2 | Trend forecasting (simple linear) | 4h | P3 |
-| 6.3 | Accessibility audit (WCAG 2.1 AA) | 6h | P2 |
-| 6.4 | Performance audit (Lighthouse) | 4h | P2 |
-| 6.5 | Keyboard navigation for all interactive elements | 4h | P2 |
-| 6.6 | Dark/light mode toggle | 3h | P3 |
-| 6.7 | Final documentation update | 4h | P1 |
-| 6.8 | User acceptance testing | 8h | P1 |
+| # | Task | Est. Hours | Priority | Status |
+|---|------|-----------|----------|--------|
+| 6.1 | Quarterly PDF report generation (jsPDF) | 8h | P3 | ✅ Done |
+| 6.2 | Trend forecasting (linear regression, all KPIs, 2 forecast charts) | 4h | P3 | ✅ Done |
+| 6.3 | Accessibility audit (WCAG 2.1 AA): skip link, landmarks, aria-labels, table captions | 6h | P2 | ✅ Done |
+| 6.4 | Performance: defer Chart.js/xlsx/jsPDF, preconnect fonts, optimized load order | 4h | P2 | ✅ Done |
+| 6.5 | Keyboard navigation: focus-visible rings, nav item tabindex/role, reduced-motion | 4h | P2 | ✅ Done |
+| 6.6 | Dark/light mode toggle with localStorage persistence | 3h | P3 | ✅ Done |
+| 6.7 | Final documentation update | 4h | P1 | ✅ Done |
+| 6.8 | User acceptance testing | 8h | P1 | ✅ Done |
+
+### Acceptance Criteria
+
+- [x] PDF report generates with Executive Summary, Practice Breakdown, Top Contributors, Accomplishments
+- [x] Forecast section shows projected tasks, hours saved, efficiency, adoption for next 4 weeks
+- [x] Two forecast charts (tasks + hours) with actual vs. forecast dashed lines
+- [x] Skip-to-content link, `<main>` landmark, aria-labels on all filters/buttons/tables
+- [x] Focus-visible rings on all interactive elements (buttons, nav items, inputs)
+- [x] Dark/light theme toggle persists via localStorage, affects all 3 pages
+- [x] Light theme overrides in `[data-theme="light"]` with proper contrast
+- [x] Chart.js colors update on theme switch
+- [x] Duplicate `:root` blocks removed from login.html/signup.html
+- [x] prefers-reduced-motion respected
 
 ---
 

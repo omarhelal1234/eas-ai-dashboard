@@ -32,6 +32,27 @@
 
   /* Layout */
   --sidebar-width: 260px;
+
+  /* Theme-aware transparencies */
+  --bg-translucent: rgba(255,255,255,0.05);
+  --bg-translucent-hover: rgba(255,255,255,0.1);
+  --bg-overlay: rgba(0,0,0,0.6);
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #e2e8f0;
+  --border: #cbd5e1;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --bg-translucent: rgba(0,0,0,0.04);
+  --bg-translucent-hover: rgba(0,0,0,0.08);
+  --bg-overlay: rgba(0,0,0,0.4);
 }
 
 /* ============================================================
