@@ -1,9 +1,9 @@
 /**
  * EAS AI Dashboard — Phase 1: Database Migration
  * 
- * Creates Supabase schema + migrates all data from data.js
+ * Migrates all data from data.js to Supabase
  * 
- * Usage: node run-migration.mjs
+ * Usage: SUPABASE_URL=xxx SUPABASE_SERVICE_ROLE_KEY=xxx node scripts/run-migration.mjs
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -15,15 +15,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // ============ CONFIG ============
-const SUPABASE_URL = 'https://apcfnzbiylhgiutcjigg.supabase.co';
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwY2ZuemJpeWxoZ2l1dGNqaWdnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTc2MjY4NiwiZXhwIjoyMDkxMzM4Njg2fQ.Q7PNAAqj0NYL9zR5AAbrrlsFOArBlZhda2CPPNxmxEM';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('Error: Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
+  process.exit(1);
+}
 
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
 // ============ LOAD DATA.JS ============
-const dataJsContent = readFileSync(join(__dirname, 'data.js'), 'utf8');
+const dataJsContent = readFileSync(join(__dirname, '..', 'data.js'), 'utf8');
 // Execute data.js in a safe way to extract APP_DATA
 let APP_DATA;
 const wrappedCode = dataJsContent.replace('const APP_DATA', 'APP_DATA');

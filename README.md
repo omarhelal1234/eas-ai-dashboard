@@ -1,39 +1,87 @@
 # EAS AI Adoption Dashboard
 
-A web-based dashboard for tracking AI adoption across Ejada's EAS department.
+Enterprise AI adoption tracking platform for Ejada Advanced Solutions (EAS), covering 6 practices and 120+ licensed users across GitHub Copilot, Claude, ChatGPT, and other AI tools.
 
-## Features
+## Live URLs
 
-- **Dashboard** — KPI cards, 6 interactive charts (tasks by practice, time saved, efficiency, AI tools usage, categories, weekly trend)
-- **Practice Tracking** — Click into any of 6 practices to see detailed task logs
-- **All Tasks** — Filterable/searchable table of all logged AI tasks
-- **AI Accomplishments** — Notable wins, POCs, and value-adds with impact details
-- **Copilot Access** — GitHub Copilot user management across practices
-- **Projects** — Full project portfolio view
-- **Excel Upload** — Import fresh data from your .xlsx tracker
-- **Excel Export** — Export all data back to Excel format
+| Page | URL |
+|------|-----|
+| **Dashboard** | https://omarhelal1234.github.io/eas-ai-dashboard/ |
+| **Login** | https://omarhelal1234.github.io/eas-ai-dashboard/login.html |
+| **Admin Panel** | https://omarhelal1234.github.io/eas-ai-dashboard/admin.html |
 
-## Quick Start
+## Tech Stack
 
-1. Open `index.html` in any modern browser
-2. Data is pre-loaded from the latest tracker
+- **Frontend:** Vanilla HTML/CSS/JS, Chart.js, SheetJS (Excel)
+- **Backend:** Supabase (PostgreSQL + Auth + RLS)
+- **Hosting:** GitHub Pages (static site)
+- **Design:** Dark theme, Inter font, responsive sidebar navigation
 
-## Deploy to GitHub Pages
+## Project Structure
 
-1. Create a new GitHub repo
-2. Push these files (`index.html`, `data.js`, `README.md`)
-3. Go to Settings > Pages > Deploy from `main` branch
-4. Your dashboard will be live at `https://yourusername.github.io/repo-name/`
+```
+eas-ai-dashboard/
+├── index.html              # Main dashboard (6 pages)
+├── login.html              # Authentication page
+├── admin.html              # Admin panel (CRUD)
+├── migrate.html            # Browser-based migration tool
+├── data.js                 # Static data backup (legacy)
+│
+├── css/
+│   └── variables.css       # Shared design tokens & base styles
+│
+├── js/
+│   ├── config.js           # Supabase client configuration
+│   ├── auth.js             # Authentication & session management
+│   ├── db.js               # Quarter-aware data layer
+│   └── utils.js            # Shared utilities (formatting, sanitize)
+│
+├── sql/
+│   └── 001_schema.sql      # Complete database schema
+│
+├── scripts/                # Node.js dev/admin scripts
+│   ├── create-auth-users.mjs
+│   ├── run-migration.mjs
+│   └── create-schema.mjs
+│
+├── docs/                   # Project documentation
+│   ├── CODE_ARCHITECTURE.md
+│   ├── BRD.md
+│   ├── HLD.md
+│   ├── IMPLEMENTATION_PLAN.md
+│   └── ONBOARDING_GUIDE.md
+│
+├── .env.example            # Environment variable template
+├── .gitignore
+├── package.json
+└── README.md
+```
 
-## Tech Stack (All Free)
+## Getting Started
 
-- **HTML/CSS/JS** — No framework, no build step
-- **Chart.js** — Interactive charts (CDN)
-- **SheetJS** — Excel read/write (CDN)
-- **Google Fonts (Inter)** — Typography
+1. Clone the repository
+2. Copy `.env.example` to `.env` and add your Supabase keys
+3. Run `npm install`
+4. Open `login.html` in browser (or serve via local server)
 
-## Updating Data
+See [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md) for full setup instructions.
 
-- **Upload**: Click "Upload Excel" in the sidebar to import a new tracker
-- **Manual**: Use the "+ Log Task" and "+ Add Win" buttons
-- **Export**: Click "Export to Excel" to download current data
+## Documentation
+
+- [Code Architecture](docs/CODE_ARCHITECTURE.md) — System design and file structure
+- [Business Requirements (BRD)](docs/BRD.md) — Full feature requirements
+- [High-Level Design (HLD)](docs/HLD.md) — Technical architecture
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) — Phased delivery roadmap
+- [Onboarding Guide](docs/ONBOARDING_GUIDE.md) — Setup, URLs, credentials
+
+## Roles
+
+| Role | Access | Example User |
+|------|--------|-------------|
+| **Admin** | Full access, all practices, user management | Omar Ibrahim |
+| **SPOC** | Own practice CRUD, program-level aggregates | Norah Al Wabel (CES) |
+| **Contributor** | Log own tasks, view personal stats | (Future Phase 5) |
+
+## License
+
+Internal — Ejada Advanced Solutions © 2026

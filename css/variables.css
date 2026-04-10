@@ -1,0 +1,167 @@
+/* ============================================================
+   EAS AI Dashboard — Design System Variables
+   Shared across: index.html, login.html, admin.html
+   ============================================================ */
+
+:root {
+  /* Background */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --bg-card-hover: #334155;
+
+  /* Borders & Surfaces */
+  --border: #334155;
+  --radius: 12px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Accent / Semantic */
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #06b6d4;
+  --purple: #8b5cf6;
+  --pink: #ec4899;
+
+  /* Layout */
+  --sidebar-width: 260px;
+}
+
+/* ============================================================
+   Base Reset & Typography
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ============================================================
+   Shared Buttons
+   ============================================================ */
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  border-color: var(--accent);
+}
+
+.btn-danger {
+  background: rgba(239,68,68,0.15);
+  color: var(--danger);
+}
+.btn-danger:hover {
+  background: rgba(239,68,68,0.25);
+}
+
+/* ============================================================
+   Shared Status Badges
+   ============================================================ */
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-completed { background: rgba(16,185,129,0.15); color: var(--success); }
+.status-inprogress { background: rgba(59,130,246,0.15); color: var(--accent); }
+.status-pending { background: rgba(245,158,11,0.15); color: var(--warning); }
+.status-testing { background: rgba(139,92,246,0.15); color: var(--purple); }
+
+/* ============================================================
+   Toast / Notifications
+   ============================================================ */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s;
+  z-index: 10000;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast-success { background: var(--success); }
+.toast-error { background: var(--danger); }
+
+/* ============================================================
+   Utility Classes
+   ============================================================ */
+
+.hidden { display: none !important; }
+
+.text-center { text-align: center; }
+.text-muted { color: var(--text-muted); }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.text-accent { color: var(--accent); }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+
+/* ============================================================
+   Responsive / Mobile
+   ============================================================ */
+
+@media (max-width: 768px) {
+  :root { --sidebar-width: 0px; }
+}

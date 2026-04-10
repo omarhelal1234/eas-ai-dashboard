@@ -2,7 +2,7 @@
  * EAS AI Dashboard — Schema Creator
  * Executes schema SQL against Supabase using the pg_meta API
  * 
- * Usage: node create-schema.mjs
+ * Usage: SUPABASE_URL=xxx SUPABASE_SERVICE_ROLE_KEY=xxx node scripts/create-schema.mjs
  */
 
 import { readFileSync } from 'fs';
@@ -12,8 +12,13 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const SUPABASE_URL = 'https://apcfnzbiylhgiutcjigg.supabase.co';
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwY2ZuemJpeWxoZ2l1dGNqaWdnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTc2MjY4NiwiZXhwIjoyMDkxMzM4Njg2fQ.Q7PNAAqj0NYL9zR5AAbrrlsFOArBlZhda2CPPNxmxEM';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('Error: Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
+  process.exit(1);
+}
 
 async function execSQL(sql) {
   // Use Supabase's pg_meta endpoint to execute raw SQL

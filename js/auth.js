@@ -89,8 +89,9 @@ const EAS_Auth = (() => {
 
   /** Check auth on page load; redirect to login if not authenticated */
   async function requireAuth() {
-    const session = await getSession();
-    if (!session) {
+    // Use getUser() instead of getSession() — validates with server, not just local cache
+    const user = await getUser();
+    if (!user) {
       window.location.href = 'login.html';
       return false;
     }
