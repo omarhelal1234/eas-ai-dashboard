@@ -182,7 +182,7 @@ cd eas-ai-dashboard
 ### Project Structure
 
 ```
-eas-ai-dashboard/
+./
 ├── index.html          # Main dashboard (SPA)
 ├── login.html          # Authentication page
 ├── signup.html         # Contributor self-registration
@@ -205,6 +205,8 @@ eas-ai-dashboard/
 │   ├── HLD.md
 │   ├── IMPLEMENTATION_PLAN.md
 │   └── ONBOARDING_GUIDE.md
+├── .agents/            # Copilot agent skills
+├── .github/            # GitHub config
 └── README.md
 ```
 

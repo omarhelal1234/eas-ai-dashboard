@@ -48,7 +48,7 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 ## 2. File Structure
 
 ```
-eas-ai-dashboard/
+./
 │
 ├── index.html              # Main app shell — 6 in-page views
 │                           # Dashboard, Practices, Tasks,
@@ -80,6 +80,8 @@ eas-ai-dashboard/
 │
 ├── docs/                   # Project documentation
 │
+├── .agents/                # Copilot agent skills (Superpowers)
+├── .github/                # GitHub config (copilot-instructions.md)
 ├── .env.example            # Environment variable template
 ├── .gitignore              # Ignores: .env, node_modules, logs
 ├── package.json            # Only dep: @supabase/supabase-js (for scripts)

@@ -21,7 +21,7 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 ## Project Structure
 
 ```
-eas-ai-dashboard/
+./
 ├── index.html              # Main dashboard (6 pages)
 ├── login.html              # Authentication page
 ├── signup.html             # Contributor self-registration
@@ -53,6 +53,8 @@ eas-ai-dashboard/
 │   ├── IMPLEMENTATION_PLAN.md
 │   └── ONBOARDING_GUIDE.md
 │
+├── .agents/                # Copilot agent skills (Superpowers)
+├── .github/                # GitHub config (copilot-instructions.md)
 ├── .env.example            # Environment variable template
 ├── .gitignore
 ├── package.json
