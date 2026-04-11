@@ -1,6 +1,8 @@
 # Code Architecture — EAS AI Dashboard
 
 > **Last Updated:** April 11, 2026 | **Phase:** 8 (AI-Assisted Approval Workflow)
+>
+> **Layout note (2026-04-11):** All HTML entry points now live under `src/pages/`. Shared assets in `css/` and `js/` are referenced from those pages via `../../css/…` and `../../js/…`. See §2 for the updated tree and §6 for path examples.
 
 ---
 
@@ -51,16 +53,17 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 ```
 ./
 │
-├── index.html              # Main app shell — 10 in-page views (~2,253 lines)
-│                           # Dashboard, Practices, Tasks,
-│                           # Accomplishments, Copilot, Projects,
-│                           # SPOC Panel, Leaderboard, My Tasks, Use Cases
-│
-├── login.html              # Supabase Auth login (email/password)
-├── signup.html             # Contributor self-registration (2-step form)
-├── admin.html              # Admin CRUD panel + Approvals tab
-├── employee-status.html    # Employee task approval status tracker
-├── migrate.html            # One-time data migration tool
+├── src/
+│   └── pages/              # All HTML entry points (moved 2026-04-11)
+│       ├── index.html              # Main app shell — 10 in-page views (~2,253 lines)
+│       │                           # Dashboard, Practices, Tasks,
+│       │                           # Accomplishments, Copilot, Projects,
+│       │                           # SPOC Panel, Leaderboard, My Tasks, Use Cases
+│       ├── login.html              # Supabase Auth login (email/password)
+│       ├── signup.html             # Contributor self-registration (2-step form)
+│       ├── admin.html              # Admin CRUD panel + Approvals tab
+│       ├── employee-status.html    # Employee task approval status tracker
+│       └── migrate.html            # One-time data migration tool
 │
 ├── css/
 │   ├── variables.css       # Design tokens, dark/light theme definitions, base reset
@@ -83,14 +86,16 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │   └── create-schema.mjs       # Schema execution (superseded by MCP)
 │
 ├── docs/                   # Project documentation
-│   ├── PHASE_8_IMPLEMENTATION.md    # Phase 8 detailed specs
-│   ├── APPROVAL_WORKFLOW.md         # Workflow rules and guides
-│   ├── CODE_ARCHITECTURE.md         # This file
-│   ├── HLD.md                       # High-level design
 │   ├── BRD.md                       # Business requirements
+│   ├── HLD.md                       # High-level design
+│   ├── CODE_ARCHITECTURE.md         # This file
 │   ├── IMPLEMENTATION_NOTES.md      # Implementation details
 │   ├── IMPLEMENTATION_PLAN.md       # Phased delivery roadmap
-│   └── ONBOARDING_GUIDE.md          # Setup & usage guide
+│   ├── ONBOARDING_GUIDE.md          # Setup & usage guide
+│   ├── approval/                    # Approval workflow rules, setup, quickfix
+│   ├── deployment/                  # Deployment notes, READY.txt, Phase 8 release doc
+│   ├── phase8/                      # Phase 8 specs, test results, handover
+│   └── testing/                     # Test plans
 │
 ├── supabase/                # Supabase Edge Functions
 │   └── functions/
@@ -103,14 +108,28 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │   ├── README.md
 │   └── SETUP_GUIDE.md
 │
-├── .agents/                # Copilot agent skills (Superpowers)
-├── .github/                # GitHub config (copilot-instructions.md)
+├── deploy/                 # Deployment shell scripts (DEPLOYMENT_MIGRATION.sh)
+├── .github/                # Source-of-truth copilot-instructions.md, agents/, skills/
 ├── .env.example            # Environment variable template
 ├── .gitignore              # Ignores: .env, node_modules, logs
 ├── package.json            # Dependencies
-├── DEPLOYMENT_PHASE8_APPROVAL_WORKFLOW.md    # Phase 8 deployment report
+├── CHANGELOG.md            # Append-only change log — every task adds an entry
 └── README.md               # Project overview
 ```
+
+### Path convention after 2026-04-11
+
+HTML pages are at depth 2 (`src/pages/*.html`), so shared assets resolve as:
+
+```html
+<link rel="stylesheet" href="../../css/variables.css">
+<link rel="stylesheet" href="../../css/dashboard.css">
+<script src="../../js/config.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="../../js/db.js"></script>
+```
+
+Cross-page navigation stays flat (same directory): `window.location.href = 'login.html'` from `admin.html` still resolves correctly because both live in `src/pages/`.
 
 ---
 

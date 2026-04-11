@@ -272,3 +272,11 @@ The EAS AI Adoption Dashboard is a web-based platform to track, measure, and dri
 ---
 
 *All 6 implementation phases are complete. See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for delivery details and commit history.*
+
+---
+
+## Structural Update — 2026-04-11
+
+HTML entry points were relocated from the repository root into `src/pages/`. Shared assets in `css/` and `js/` now resolve via `../../css/…` and `../../js/…`. Cross-page navigation between pages in `src/pages/` stays flat (e.g. `window.location.href = 'login.html'`).
+
+See `docs/CODE_ARCHITECTURE.md` §2 for the authoritative tree and path convention, and `.github/copilot-instructions.md` for the mandatory workflow governing future changes (skills, Supabase MCP, full docs sweep, commit & push).

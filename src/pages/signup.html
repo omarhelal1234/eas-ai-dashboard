@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — EAS AI Adoption Tracker</title>
+<script>if(localStorage.getItem('eas-theme')==='light')document.documentElement.setAttribute('data-theme','light')</script>
+<link rel="stylesheet" href="../../css/variables.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Theme variables imported from css/variables.css */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.signup-container {
+  width: 100%;
+  max-width: 480px;
+}
+
+.signup-brand {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.signup-brand .logo-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.signup-brand .logo-icon svg {
+  width: 30px;
+  height: 30px;
+  color: white;
+}
+
+.signup-brand h1 {
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+
+.signup-brand p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.signup-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+}
+
+.signup-card h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.signup-card .subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+/* Step indicator */
+.steps {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.step-dot {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+
+.step-dot.active { background: var(--accent); }
+.step-dot.done   { background: var(--success); }
+
+/* Form */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.form-group label .required {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.form-group select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.form-group input::placeholder { color: var(--text-muted); }
+
+.form-group .hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Copilot toggle */
+.copilot-toggle {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.copilot-option {
+  flex: 1;
+  padding: 12px 16px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.copilot-option:hover {
+  border-color: var(--text-muted);
+}
+
+.copilot-option.selected {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.copilot-option .icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.copilot-option .label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.copilot-option .desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Password strength */
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input { padding-right: 40px; }
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.toggle-password:hover { color: var(--text-secondary); }
+
+.password-strength {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.strength-bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+
+.strength-bar.weak   { background: var(--danger); }
+.strength-bar.fair   { background: #f59e0b; }
+.strength-bar.good   { background: var(--success); }
+
+/* Buttons */
+.btn-signup {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-signup:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.btn-signup:active { transform: translateY(0); }
+.btn-signup:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.btn-signup .spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: none;
+}
+.btn-signup.loading .spinner { display: block; }
+.btn-signup.loading .btn-text { display: none; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.btn-back {
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.15s;
+}
+
+.btn-back:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
+
+/* Messages */
+.error-msg {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--danger);
+  margin-bottom: 16px;
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-msg.show { display: flex; }
+.error-msg svg { flex-shrink: 0; width: 16px; height: 16px; }
+
+.success-screen {
+  text-align: center;
+  padding: 40px 20px;
+  display: none;
+}
+
+.success-screen.show { display: block; }
+
+.success-screen .icon {
+  width: 64px;
+  height: 64px;
+  background: rgba(16, 185, 129, 0.15);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.success-screen .icon svg { width: 32px; height: 32px; color: var(--success); }
+
+.success-screen h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.success-screen p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.success-screen .btn-signup {
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+/* Step visibility */
+.step-panel { display: none; }
+.step-panel.active { display: block; }
+
+/* Footer */
+.signup-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.signup-footer a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.signup-footer a:hover { text-decoration: underline; }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .signup-card { padding: 24px 20px; }
+  .form-row { grid-template-columns: 1fr; }
+  .copilot-toggle { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<div class="signup-container">
+  <div class="signup-brand">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <h1>EAS AI Adoption</h1>
+    <p>Enterprise Application Solutions</p>
+  </div>
+
+  <div class="signup-card">
+    <!-- Step dots -->
+    <div class="steps">
+      <div class="step-dot active" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+    </div>
+
+    <div class="error-msg" id="error-msg">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <span id="error-text"></span>
+    </div>
+
+    <!-- STEP 1: Profile Information -->
+    <div class="step-panel active" id="step-1">
+      <h2>Create your account</h2>
+      <p class="subtitle">Join the EAS AI Adoption program</p>
+
+      <div class="form-group">
+        <label for="su-department">Department <span class="required">*</span></label>
+        <select id="su-department" required>
+          <option value="EAS" selected>EAS — Enterprise Application Solutions</option>
+        </select>
+        <p class="hint">Currently limited to EAS department</p>
+      </div>
+
+      <div class="form-group">
+        <label for="su-practice">Practice <span class="required">*</span></label>
+        <select id="su-practice" required>
+          <option value="" disabled selected>Select your practice...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="su-name">Resource Name <span class="required">*</span></label>
+        <input type="text" id="su-name" placeholder="e.g. Ahmed Mohamed" required>
+      </div>
+
+      <div class="form-group">
+        <label for="su-email">Resource Email ID <span class="required">*</span></label>
+        <input type="email" id="su-email" placeholder="you@ejada.com" required>
+        <p class="hint">Use your Ejada email address</p>
+      </div>
+
+      <div class="form-group">
+        <label for="su-skill">Skill / Title <span class="required">*</span></label>
+        <input type="text" id="su-skill" placeholder="e.g. Senior Java Developer">
+      </div>
+
+      <div class="form-group">
+        <label>Do you have GitHub Copilot access? <span class="required">*</span></label>
+        <div class="copilot-toggle">
+          <div class="copilot-option" id="copilot-yes" onclick="selectCopilot(true)">
+            <div class="icon">✅</div>
+            <div class="label">Yes</div>
+            <div class="desc">I have a license</div>
+          </div>
+          <div class="copilot-option" id="copilot-no" onclick="selectCopilot(false)">
+            <div class="icon">❌</div>
+            <div class="label">No</div>
+            <div class="desc">Not yet granted</div>
+          </div>
+        </div>
+        <input type="hidden" id="su-copilot" value="">
+      </div>
+
+      <button type="button" class="btn-signup" onclick="goToStep2()">
+        <span class="btn-text">Continue</span>
+      </button>
+    </div>
+
+    <!-- STEP 2: Account Credentials -->
+    <div class="step-panel" id="step-2">
+      <h2>Set your password</h2>
+      <p class="subtitle">Create a secure password for your account</p>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="su-email-display" disabled style="opacity:0.6">
+      </div>
+
+      <div class="form-group">
+        <label for="su-password">Password <span class="required">*</span></label>
+        <div class="password-wrapper">
+          <input type="password" id="su-password" placeholder="Minimum 8 characters" required autocomplete="new-password">
+          <button type="button" class="toggle-password" onclick="togglePassword('su-password', 'eye-1')" tabindex="-1" aria-label="Toggle password visibility">
+            <svg id="eye-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="password-strength" id="pw-strength">
+          <div class="strength-bar" id="str-1"></div>
+          <div class="strength-bar" id="str-2"></div>
+          <div class="strength-bar" id="str-3"></div>
+          <div class="strength-bar" id="str-4"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="su-password-confirm">Confirm Password <span class="required">*</span></label>
+        <div class="password-wrapper">
+          <input type="password" id="su-password-confirm" placeholder="Re-enter your password" required autocomplete="new-password">
+          <button type="button" class="toggle-password" onclick="togglePassword('su-password-confirm', 'eye-2')" tabindex="-1" aria-label="Toggle password visibility">
+            <svg id="eye-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="button" class="btn-signup" id="btn-signup" onclick="handleSignup()">
+        <span class="btn-text">Create Account</span>
+        <div class="spinner"></div>
+      </button>
+
+      <button type="button" class="btn-back" onclick="goToStep1()">
+        ← Back to profile
+      </button>
+    </div>
+
+    <!-- SUCCESS SCREEN -->
+    <div class="success-screen" id="success-screen">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h3>Welcome aboard!</h3>
+      <p id="success-msg">Your account has been created and you've been registered in the AI Adoption program.</p>
+      <button type="button" class="btn-signup" onclick="window.location.href='index.html'">
+        <span class="btn-text">Go to Dashboard</span>
+      </button>
+    </div>
+
+    <!-- EMAIL CONFIRMATION SCREEN (if Supabase requires it) -->
+    <div class="success-screen" id="confirm-screen">
+      <div class="icon" style="background:rgba(59,130,246,0.15)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+      </div>
+      <h3>Check your email</h3>
+      <p>We sent a confirmation link to <strong id="confirm-email"></strong>. Click the link to activate your account, then sign in.</p>
+      <button type="button" class="btn-signup" onclick="window.location.href='login.html'">
+        <span class="btn-text">Go to Sign In</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="signup-footer">
+    <p>Already have an account? <a href="login.html">Sign in</a></p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../../js/config.js"></script>
+<script>
+  const sb = getSupabaseClient();
+  let hasCopilot = null;
+
+  // ---- Redirect if already logged in ----
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) window.location.href = 'index.html';
+  })();
+
+  // ---- Load practices from DB ----
+  (async () => {
+    const sel = document.getElementById('su-practice');
+    const { data, error } = await sb.from('practices').select('name').order('name');
+    if (data && data.length) {
+      data.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
+    } else {
+      // Fallback if query fails
+      ['BFSI','CES','EPCS','EPS','ERP Solutions','GRC'].forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        sel.appendChild(opt);
+      });
+    }
+  })();
+
+  // ---- Copilot toggle ----
+  function selectCopilot(val) {
+    hasCopilot = val;
+    document.getElementById('su-copilot').value = val ? 'yes' : 'no';
+    document.getElementById('copilot-yes').classList.toggle('selected', val === true);
+    document.getElementById('copilot-no').classList.toggle('selected', val === false);
+  }
+
+  // ---- Step navigation ----
+  function goToStep2() {
+    hideError();
+    // Validate Step 1
+    const name     = document.getElementById('su-name').value.trim();
+    const email    = document.getElementById('su-email').value.trim();
+    const practice = document.getElementById('su-practice').value;
+    const skill    = document.getElementById('su-skill').value.trim();
+
+    if (!name)       { showError('Please enter your full name.');           return; }
+    if (!email)      { showError('Please enter your email address.');       return; }
+    if (!email.includes('@')) { showError('Please enter a valid email address.'); return; }
+    if (!practice)   { showError('Please select your practice.');           return; }
+    if (!skill)      { showError('Please enter your skill or title.');      return; }
+    if (hasCopilot === null) { showError('Please indicate if you have GitHub Copilot access.'); return; }
+
+    // Move to Step 2
+    document.getElementById('step-1').classList.remove('active');
+    document.getElementById('step-2').classList.add('active');
+    document.getElementById('dot-1').classList.replace('active', 'done');
+    document.getElementById('dot-2').classList.add('active');
+    document.getElementById('su-email-display').value = email;
+    document.getElementById('su-password').focus();
+  }
+
+  function goToStep1() {
+    hideError();
+    document.getElementById('step-2').classList.remove('active');
+    document.getElementById('step-1').classList.add('active');
+    document.getElementById('dot-2').classList.remove('active');
+    document.getElementById('dot-1').classList.replace('done', 'active');
+  }
+
+  // ---- Password strength ----
+  document.getElementById('su-password').addEventListener('input', (e) => {
+    const pw = e.target.value;
+    let score = 0;
+    if (pw.length >= 8)           score++;
+    if (/[A-Z]/.test(pw))         score++;
+    if (/[0-9]/.test(pw))         score++;
+    if (/[^A-Za-z0-9]/.test(pw))  score++;
+
+    for (let i = 1; i <= 4; i++) {
+      const bar = document.getElementById('str-' + i);
+      bar.className = 'strength-bar';
+      if (i <= score) {
+        bar.classList.add(score <= 1 ? 'weak' : score <= 2 ? 'fair' : 'good');
+      }
+    }
+  });
+
+  // ---- Toggle password visibility ----
+  function togglePassword(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon  = document.getElementById(iconId);
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+      input.type = 'password';
+      icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+  }
+
+  // ---- Helpers ----
+  function showError(msg) {
+    document.getElementById('error-text').textContent = msg;
+    document.getElementById('error-msg').classList.add('show');
+  }
+
+  function hideError() {
+    document.getElementById('error-msg').classList.remove('show');
+  }
+
+  // ---- Main signup handler ----
+  async function handleSignup() {
+    hideError();
+
+    const name     = document.getElementById('su-name').value.trim();
+    const email    = document.getElementById('su-email').value.trim().toLowerCase();
+    const practice = document.getElementById('su-practice').value;
+    const skill    = document.getElementById('su-skill').value.trim();
+    const pw       = document.getElementById('su-password').value;
+    const pwConfirm = document.getElementById('su-password-confirm').value;
+
+    // Validate passwords
+    if (!pw || pw.length < 8) {
+      showError('Password must be at least 8 characters.');
+      return;
+    }
+    if (pw !== pwConfirm) {
+      showError('Passwords do not match.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-signup');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+      // 1. Create auth user
+      const { data: authData, error: authError } = await sb.auth.signUp({
+        email,
+        password: pw,
+        options: {
+          data: {
+            full_name: name,
+            practice: practice,
+            skill: skill,
+            has_copilot: hasCopilot
+          }
+        }
+      });
+
+      if (authError) {
+        if (authError.message.includes('already registered')) {
+          showError('This email is already registered. Please sign in instead.');
+        } else {
+          showError(authError.message);
+        }
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        return;
+      }
+
+      // 2. Check if session was returned (auto-confirmed) or needs email confirmation
+      if (authData.session) {
+        // Auto-confirmed — call our RPC to create profile + copilot entry
+        const { data: rpcResult, error: rpcError } = await sb.rpc('signup_contributor', {
+          p_auth_id:     authData.user.id,
+          p_name:        name,
+          p_email:       email,
+          p_practice:    practice,
+          p_skill:       skill,
+          p_has_copilot: hasCopilot
+        });
+
+        if (rpcError) {
+          showError('Account created but profile setup failed: ' + rpcError.message);
+          btn.classList.remove('loading');
+          btn.disabled = false;
+          return;
+        }
+
+        if (rpcResult && rpcResult.success === false) {
+          showError(rpcResult.error || 'Profile setup failed.');
+          btn.classList.remove('loading');
+          btn.disabled = false;
+          return;
+        }
+
+        // Cache profile for quick access
+        localStorage.setItem('eas_user_profile', JSON.stringify({
+          id: rpcResult.user_id,
+          name: name,
+          email: email,
+          role: 'contributor',
+          practice: practice,
+          is_active: true
+        }));
+
+        // Show success
+        hideAllPanels();
+        const copilotNote = hasCopilot
+          ? 'Your Copilot access has been verified and linked.'
+          : 'You have been registered without Copilot access. Contact your SPOC to request a license.';
+        document.getElementById('success-msg').textContent =
+          'Your account has been created and you\'ve been enrolled in the AI Adoption program. ' + copilotNote;
+        document.getElementById('success-screen').classList.add('show');
+
+      } else {
+        // Email confirmation required — save form data so login page can complete profile
+        localStorage.setItem('eas_pending_signup', JSON.stringify({
+          name, email, practice, skill, has_copilot: hasCopilot
+        }));
+
+        hideAllPanels();
+        document.getElementById('confirm-email').textContent = email;
+        document.getElementById('confirm-screen').classList.add('show');
+      }
+
+    } catch (err) {
+      showError('An unexpected error occurred. Please try again.');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  function hideAllPanels() {
+    document.getElementById('step-1').classList.remove('active');
+    document.getElementById('step-2').classList.remove('active');
+    document.querySelector('.steps').style.display = 'none';
+    document.getElementById('error-msg').classList.remove('show');
+    document.querySelector('.signup-footer').style.display = 'none';
+  }
+
+  // Enter key handling
+  document.getElementById('su-password-confirm').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleSignup();
+  });
+</script>
+</body>
+</html>

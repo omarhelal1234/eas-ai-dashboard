@@ -6,9 +6,9 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 
 | Page | URL |
 |------|-----|
-| **Dashboard** | https://omarhelal1234.github.io/eas-ai-dashboard/ |
-| **Login** | https://omarhelal1234.github.io/eas-ai-dashboard/login.html |
-| **Signup** | https://omarhelal1234.github.io/eas-ai-dashboard/signup.html |
+| **Dashboard** | https://omarhelal1234.github.io/eas-ai-dashboard/src/pages/index.html |
+| **Login** | https://omarhelal1234.github.io/eas-ai-dashboard/src/pages/login.html |
+| **Signup** | https://omarhelal1234.github.io/eas-ai-dashboard/src/pages/signup.html |
 
 ## Tech Stack
 
@@ -24,50 +24,61 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 
 ```
 ./
-├── index.html              # Main dashboard (10 role-aware pages + inline CRUD)
-├── login.html              # Authentication page
-├── signup.html             # Contributor self-registration
-├── admin.html              # Admin CRUD panel + Approvals management tab
-├── employee-status.html    # Employee task approval status tracker
-├── migrate.html            # Browser-based migration tool
+├── src/
+│   └── pages/                      # All HTML entry points
+│       ├── index.html              # Main dashboard (10 role-aware pages + inline CRUD)
+│       ├── login.html              # Authentication page
+│       ├── signup.html             # Contributor self-registration
+│       ├── admin.html              # Admin CRUD panel + Approvals management tab
+│       ├── employee-status.html    # Employee task approval status tracker
+│       └── migrate.html            # Browser-based migration tool
 │
 ├── css/
-│   ├── variables.css       # Design tokens, dark/light theme definitions
-│   └── dashboard.css       # Dashboard component styles, accessibility, theme toggle
+│   ├── variables.css               # Design tokens, dark/light theme definitions
+│   └── dashboard.css               # Dashboard component styles, accessibility, theme toggle
 │
 ├── js/
-│   ├── config.js           # Supabase client configuration
-│   ├── auth.js             # Authentication & session management (EAS_Auth)
-│   ├── db.js               # Full Supabase data layer — reads, writes, RPCs, audit
-│   ├── phase8-submission.js # Phase 8 AI submission module (suggestions, validation, approval)
-│   └── utils.js            # Shared utilities (formatting, sanitize, colors)
+│   ├── config.js                   # Supabase client configuration
+│   ├── auth.js                     # Authentication & session management (EAS_Auth)
+│   ├── db.js                       # Full Supabase data layer — reads, writes, RPCs, audit
+│   ├── phase8-submission.js        # Phase 8 AI submission module
+│   └── utils.js                    # Shared utilities (formatting, sanitize, colors)
 │
 ├── sql/
-│   ├── 001_schema.sql      # Complete database schema
-│   └── 002_approval_workflow.sql # Phase 8 approval workflow schema
+│   ├── 001_schema.sql              # Complete database schema
+│   └── 002_approval_workflow.sql   # Phase 8 approval workflow schema
 │
 ├── supabase/
-│   └── functions/          # Supabase Edge Functions
-│       ├── ai-suggestions/ # GPT-4 suggestion generation
-│       └── ai-validate/    # AI validation of submissions
+│   └── functions/                  # Supabase Edge Functions
+│       ├── ai-suggestions/         # GPT-4 suggestion generation
+│       └── ai-validate/            # AI validation of submissions
 │
-├── scripts/                # Node.js dev/admin scripts
+├── scripts/                        # Node.js dev/admin scripts + verify-setup.sh
 │   ├── create-auth-users.mjs
 │   ├── run-migration.mjs
-│   └── create-schema.mjs
+│   ├── create-schema.mjs
+│   └── verify-setup.sh
 │
-├── docs/                   # Project documentation
-│   ├── PHASE_8_IMPLEMENTATION.md    # Phase 8 detailed specs
-│   ├── APPROVAL_WORKFLOW.md         # Workflow rules and user guides
-│   ├── CODE_ARCHITECTURE.md         # System design and file structure
-│   ├── HLD.md                       # High-level architecture
-│   ├── BRD.md                       # Business requirements
-│   ├── IMPLEMENTATION_NOTES.md      # Technical implementation details
-│   ├── IMPLEMENTATION_PLAN.md       # Phased delivery roadmap
-│   ├── EDGE_FUNCTIONS_DEPLOYED.md   # Edge Function deployment guide
-│   └── ONBOARDING_GUIDE.md          # Setup and usage guide
+├── deploy/                         # Deployment shell scripts
+│   └── DEPLOYMENT_MIGRATION.sh
 │
-├── server/                 # AI Adoption Agent backend
+├── docs/                           # Project documentation
+│   ├── BRD.md                      # Business requirements
+│   ├── HLD.md                      # High-level architecture
+│   ├── CODE_ARCHITECTURE.md        # System design and file structure
+│   ├── IMPLEMENTATION_PLAN.md      # Phased delivery roadmap
+│   ├── IMPLEMENTATION_NOTES.md     # Technical implementation details
+│   ├── ONBOARDING_GUIDE.md         # Setup and usage guide
+│   ├── EDGE_FUNCTIONS_DEPLOYED.md  # Edge Function deployment guide
+│   ├── SUPABASE_EDGE_FUNCTIONS.md  # Edge Function reference
+│   ├── QUICK_TEST_DEPLOY.md        # Quick testing guide
+│   ├── EAS_AI_Dashboard_Enhancement_Prompt.md
+│   ├── approval/                   # Approval workflow docs (setup, quickfix)
+│   ├── deployment/                 # Deployment notes (PHASE8, READY.txt)
+│   ├── phase8/                     # Phase 8 specs, test results, handover
+│   └── testing/                    # Test plans
+│
+├── server/                         # AI Adoption Agent backend
 │   ├── adoption-agent-endpoint.js  # Express API (Claude + Supabase)
 │   ├── package.json                # Backend dependencies
 │   ├── .env.example                # Environment template
@@ -75,10 +86,13 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 │   ├── SETUP_GUIDE.md              # Deployment guide
 │   └── QUICK_START.md              # 5-minute setup
 │
-├── .agents/                # Copilot agent skills (Superpowers)
-├── .github/                # GitHub config (copilot-instructions.md, AI Adoption Agent)
-├── .env.example            # Environment variable template
+├── .github/
+│   ├── copilot-instructions.md     # Source-of-truth instructions for Claude + Copilot
+│   ├── agents/                     # Agent definitions
+│   └── skills/                     # UI/UX Pro, Superpowers, Supabase skills
+├── .env.example                    # Environment variable template
 ├── .gitignore
+├── CHANGELOG.md                    # Append-only change log
 ├── package.json
 └── README.md
 ```
@@ -88,9 +102,9 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 1. Clone the repository
 2. Copy `.env.example` to `.env` and add your Supabase keys
 3. Run `npm install`
-4. Set up Supabase tables and RLS policies (see [docs/PHASE_8_SETUP.md](docs/PHASE_8_SETUP.md))
+4. Set up Supabase tables and RLS policies (see [docs/phase8/PHASE_8_SETUP.md](docs/phase8/PHASE_8_SETUP.md))
 5. Deploy Edge Functions via Supabase CLI
-6. Open `login.html` in browser (or serve via local server)
+6. Open `src/pages/login.html` in a browser (or serve the repo root via a local static server)
 
 ## Phase 8: AI-Assisted Approval Workflow
 
@@ -102,7 +116,7 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 - **Employee Status Page:** Track personal task approval progress
 - **Approval Analytics:** Dashboard KPIs showing approval metrics and time savings
 
-See [docs/PHASE_8_IMPLEMENTATION.md](docs/PHASE_8_IMPLEMENTATION.md) and [docs/APPROVAL_WORKFLOW.md](docs/APPROVAL_WORKFLOW.md) for complete details.
+See [docs/phase8/PHASE_8_IMPLEMENTATION.md](docs/phase8/PHASE_8_IMPLEMENTATION.md) and [docs/approval/APPROVAL_WORKFLOW.md](docs/approval/APPROVAL_WORKFLOW.md) for complete details.
 
 ### AI Adoption Agent (Chat Widget)
 
@@ -116,7 +130,7 @@ cp .env.example .env
 npm start
 ```
 
-Then open admin.html and click the 💬 button. See [server/QUICK_START.md](server/QUICK_START.md) for details.
+Then open `src/pages/admin.html` and click the 💬 button. See [server/QUICK_START.md](server/QUICK_START.md) for details.
 
 See [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md) for full setup instructions.
 
@@ -174,7 +188,7 @@ See [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md) for full setup instruct
 - **Employee Task Status page**: Employees can track approval progress and see who task is pending with
 - **Practice-SPOC mapping**: Database table links practices to SPOCs for proper routing
 - **Audit trail**: Full submission_approvals table with timestamps and decision history
-- **⚠️ IMPORTANT**: Run SQL migration `sql/002_approval_workflow.sql` in Supabase to enable this feature — see [SETUP_APPROVAL_WORKFLOW.md](SETUP_APPROVAL_WORKFLOW.md)
+- **⚠️ IMPORTANT**: Run SQL migration `sql/002_approval_workflow.sql` in Supabase to enable this feature — see [docs/approval/SETUP_APPROVAL_WORKFLOW.md](docs/approval/SETUP_APPROVAL_WORKFLOW.md)
 
 ### Phase 5 — SPOC Panel & Gamification
 - **My Practice** (SPOC): Practice-specific KPIs, team leaderboard, inactive member alerts with nudge button

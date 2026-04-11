@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — EAS AI Adoption Tracker</title>
+<script>if(localStorage.getItem('eas-theme')==='light')document.documentElement.setAttribute('data-theme','light')</script>
+<link rel="stylesheet" href="../../css/variables.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Theme variables imported from css/variables.css */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-brand {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.login-brand .logo-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.login-brand .logo-icon svg {
+  width: 36px;
+  height: 36px;
+  color: white;
+}
+
+.login-brand h1 {
+  font-size: 24px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.login-brand p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.login-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px;
+}
+
+.login-card h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.login-card .subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.form-group input::placeholder {
+  color: var(--text-muted);
+}
+
+.btn-login {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-login:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-login:active {
+  transform: translateY(0);
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-login .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: none;
+}
+
+.btn-login.loading .spinner { display: block; }
+.btn-login.loading .btn-text { display: none; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-msg {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--danger);
+  margin-bottom: 18px;
+  display: none;
+}
+
+.error-msg.show { display: flex; align-items: center; gap: 8px; }
+
+.error-msg svg { flex-shrink: 0; width: 16px; height: 16px; }
+
+.login-footer {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.login-footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.login-footer a:hover { text-decoration: underline; }
+
+/* Password visibility toggle */
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
+  padding-right: 40px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.toggle-password:hover { color: var(--text-secondary); }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .login-card { padding: 24px 20px; }
+  .login-brand { margin-bottom: 30px; }
+}
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-brand">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <h1>EAS AI Adoption</h1>
+    <p>Enterprise Application Solutions</p>
+  </div>
+
+  <div class="login-card">
+    <h2>Welcome back</h2>
+    <p class="subtitle">Sign in to access your AI adoption dashboard</p>
+
+    <div class="error-msg" id="error-msg">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      <span id="error-text"></span>
+    </div>
+
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label for="email">Email address</label>
+        <input type="email" id="email" placeholder="you@ejada.com" required autocomplete="email" autofocus>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password">
+          <button type="button" class="toggle-password" onclick="togglePassword()" tabindex="-1" aria-label="Toggle password visibility">
+            <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login" id="btn-login">
+        <span class="btn-text">Sign In</span>
+        <div class="spinner"></div>
+      </button>
+    </form>
+  </div>
+
+  <div class="login-footer">
+    <p>Don't have an account? <a href="signup.html">Sign up</a></p>
+    <p style="margin-top:8px">EAS AI Adoption Tracker &mdash; Ejada &copy; 2026</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../../js/config.js"></script>
+<script>
+  // ======== LOGIN LOGIC ========
+  const sb = getSupabaseClient();
+
+  // Check if user is already logged in
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      window.location.href = 'index.html';
+    }
+  })();
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    document.getElementById('error-text').textContent = msg;
+    el.classList.add('show');
+  }
+
+  function hideError() {
+    document.getElementById('error-msg').classList.remove('show');
+  }
+
+  function togglePassword() {
+    const input = document.getElementById('password');
+    const icon = document.getElementById('eye-icon');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+      input.type = 'password';
+      icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    hideError();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('btn-login');
+
+    if (!email || !password) {
+      showError('Please enter your email and password.');
+      return;
+    }
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        if (error.message.includes('Invalid login')) {
+          showError('Invalid email or password. Please try again.');
+        } else {
+          showError(error.message);
+        }
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        return;
+      }
+
+      // Fetch user role from users table
+      const { data: userProfile, error: profileErr } = await sb
+        .from('users')
+        .select('id, name, role, practice')
+        .eq('auth_id', data.user.id)
+        .single();
+
+      if (profileErr || !userProfile) {
+        // Check if there's a pending signup that needs profile completion
+        const pending = localStorage.getItem('eas_pending_signup');
+        if (pending) {
+          try {
+            const p = JSON.parse(pending);
+            const { data: rpcResult, error: rpcErr } = await sb.rpc('signup_contributor', {
+              p_auth_id:     data.user.id,
+              p_name:        p.name,
+              p_email:       p.email,
+              p_practice:    p.practice,
+              p_skill:       p.skill,
+              p_has_copilot: p.has_copilot
+            });
+
+            if (!rpcErr && rpcResult && rpcResult.success) {
+              localStorage.removeItem('eas_pending_signup');
+              localStorage.setItem('eas_user_profile', JSON.stringify({
+                id: rpcResult.user_id, name: p.name, email: p.email,
+                role: 'contributor', practice: p.practice, is_active: true
+              }));
+              window.location.href = 'index.html';
+              return;
+            }
+          } catch (_) { /* fall through to error */ }
+        }
+
+        showError('Account not found in the system. Contact your admin.');
+        await sb.auth.signOut();
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        return;
+      }
+
+      // Store user profile in localStorage for quick access
+      localStorage.setItem('eas_user_profile', JSON.stringify(userProfile));
+
+      // Update last_login
+      await sb.from('users').update({ last_login: new Date().toISOString() }).eq('id', userProfile.id);
+
+      // Clear any pending signup data
+      localStorage.removeItem('eas_pending_signup');
+
+      // Redirect to dashboard
+      window.location.href = 'index.html';
+
+    } catch (err) {
+      showError('An unexpected error occurred. Please try again.');
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  // Allow Enter key
+  document.getElementById('password').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('login-form').requestSubmit();
+  });
+</script>
+</body>
+</html>
