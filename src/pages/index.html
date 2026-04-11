@@ -90,7 +90,7 @@
     Accomplishments
     <span class="badge" id="nav-acc-count">4</span>
   </div>
-  <div class="nav-item" data-page="approvals">
+  <div class="nav-item" data-page="approvals" data-role="admin,spoc">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
     Approvals
     <span class="badge" id="nav-approval-count">0</span>
@@ -1496,7 +1496,8 @@ async function renderApprovals() {
   try {
     const userRole = EAS_Auth.getUserRole();
     const userPractice = EAS_Auth.getUserPractice();
-    const userId = EAS_Auth.getUserId();
+    const profile = await EAS_Auth.getUserProfile();
+    const userId = typeof EAS_Auth.getUserId === 'function' ? EAS_Auth.getUserId() : profile?.id;
     
     if (!userRole || !['admin', 'spoc'].includes(userRole)) {
       document.getElementById('approvals-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px">Access denied</td></tr>';
@@ -3158,7 +3159,8 @@ async function updateNavCounts() {
     const userRole = EAS_Auth.getUserRole();
     if (userRole && ['admin', 'spoc'].includes(userRole)) {
       const userPractice = EAS_Auth.getUserPractice();
-      const userId = EAS_Auth.getUserId();
+      const profile = await EAS_Auth.getUserProfile();
+      const userId = typeof EAS_Auth.getUserId === 'function' ? EAS_Auth.getUserId() : profile?.id;
       const pending = await EAS_DB.fetchPendingApprovals(userRole, userPractice, userId);
       document.getElementById('nav-approval-count').textContent = (pending || []).length;
     }

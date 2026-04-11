@@ -6,6 +6,11 @@
 
 ## Changes Made
 
+### 0. April 12, 2026 — Approvals UI Fix
+
+- Added `getUserId()` to the auth module to support approvals queries without runtime errors.
+- Scoped the Approvals nav item to admin/SPOC roles for consistent visibility.
+
 ### 1. Database Schema (sql/002_approval_workflow.sql)
 
 **New Tables:**

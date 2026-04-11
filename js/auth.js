@@ -56,6 +56,11 @@ const EAS_Auth = (() => {
     return data;
   }
 
+  /** Get cached user id (public.users.id) if available */
+  function getUserId() {
+    return _userProfile?.id || null;
+  }
+
   /** Sign out and redirect to login */
   async function signOut() {
     await sb.auth.signOut();
@@ -169,6 +174,7 @@ const EAS_Auth = (() => {
     getUserRole,
     getUserPractice,
     getUserName,
+    getUserId,
     requireAuth,
     applyRoleVisibility,
     updateUserDisplay,
