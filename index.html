@@ -1736,13 +1736,25 @@ function renderUseCases() {
 // ======== MODALS ========
 function openModal(type) {
   console.log('🔓 openModal called with type:', type);
-  try {
-    // Guard: Wait for Phase8 to load
-    if (typeof Phase8 === 'undefined') {
-      console.warn('⏳ Phase8 still loading, retrying in 50ms...');
-      setTimeout(() => openModal(type), 50);
+  
+  // Guard: Wait for Phase8 to load (max 2 seconds)
+  if (typeof Phase8 === 'undefined') {
+    const retries = window._modalRetries || 0;
+    if (retries > 20) {
+      console.error('❌ Phase8 failed to load after 2+ seconds');
+      showToast('Critical error: Phase8 module not loaded. Check console.', 'error');
       return;
     }
+    window._modalRetries = retries + 1;
+    console.warn(`⏳ Phase8 still loading (attempt ${retries + 1}/20), retrying in 100ms...`);
+    setTimeout(() => openModal(type), 100);
+    return;
+  }
+
+  // Reset modal retries on success
+  window._modalRetries = 0;
+  
+  try {
 
     // Reset editing state when opening via + button (not via editX functions)
     if (!_editingId) {
