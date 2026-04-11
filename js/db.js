@@ -933,7 +933,13 @@ const EAS_DB = (() => {
     };
     
     const { data, error } = await sb.from('submission_approvals').insert(payload).select().single();
-    if (error) { console.error('createSubmissionApproval error:', error.message); return null; }
+    if (error) { 
+      console.error('createSubmissionApproval error:', error);
+      if (error.message && error.message.includes('submission_approvals')) {
+        console.warn('⚠️ Approval workflow tables not found. Please run SQL migration: sql/002_approval_workflow.sql');
+      }
+      return null; 
+    }
     return data;
   }
 

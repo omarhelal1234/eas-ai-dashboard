@@ -1624,32 +1624,61 @@ async function renderApprovals() {
   const userPractice = profile?.practice || '';
   const userId = profile?.id;
 
-  // Fetch pending approvals
-  const pendingApprovals = await EAS_DB.fetchPendingApprovals(userRole, userPractice, userId);
-  
-  // Fetch approval history
-  const approvalHistory = await EAS_DB.fetchApprovalHistory(userRole, userPractice, 50);
+  try {
+    // Fetch pending approvals
+    const pendingApprovals = await EAS_DB.fetchPendingApprovals(userRole, userPractice, userId);
+    
+    // Fetch approval history
+    const approvalHistory = await EAS_DB.fetchApprovalHistory(userRole, userPractice, 50);
 
-  // Populate practices filter
-  const practiceSelect = document.getElementById('approval-filter-practice');
-  if (practiceSelect && data.practices && practiceSelect.options.length === 1) {
-    data.practices.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.name;
-      opt.textContent = p.name;
-      practiceSelect.appendChild(opt);
-    });
+    // Populate practices filter
+    const practiceSelect = document.getElementById('approval-filter-practice');
+    if (practiceSelect && data.practices && practiceSelect.options.length === 1) {
+      data.practices.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        practiceSelect.appendChild(opt);
+      });
+    }
+
+    // Render pending approvals
+    renderPendingApprovals(pendingApprovals);
+    
+    // Render approval history
+    renderApprovalHistory(approvalHistory);
+
+    // Update badges
+    document.getElementById('admin-approval-count').textContent = pendingApprovals?.length || 0;
+    document.getElementById('pending-approval-count').textContent = pendingApprovals?.length || 0;
+  } catch (err) {
+    console.error('Approvals render error:', err);
+    
+    // Check if it's a table not found error
+    if (err.message && err.message.includes('relation') && err.message.includes('submission_approvals')) {
+      const html = `
+        <tr>
+          <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">
+            <div style="font-size:16px;margin-bottom:16px">⚠️ Approval System Not Initialized</div>
+            <div style="font-size:13px;color:var(--text-primary);margin-bottom:16px">
+              The approval workflow tables haven't been created yet.
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;max-width:600px;margin-left:auto;margin-right:auto">
+              <strong>To enable the approval workflow:</strong><br/>
+              1. Open docs/APPROVAL_WORKFLOW.md <br/>
+              2. Run the SQL migration from sql/002_approval_workflow.sql in Supabase SQL Editor<br/>
+              3. Refresh this page
+            </div>
+            <button class="btn btn-primary" onclick="location.reload()">🔄 Refresh Page</button>
+          </td>
+        </tr>
+      `;
+      document.getElementById('pending-approvals-tbody').innerHTML = html;
+      document.getElementById('approval-history-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Run migration to see history</td></tr>';
+    } else {
+      showToast('Failed to load approvals: ' + err.message, 'error');
+    }
   }
-
-  // Render pending approvals
-  renderPendingApprovals(pendingApprovals);
-  
-  // Render approval history
-  renderApprovalHistory(approvalHistory);
-
-  // Update badges
-  document.getElementById('admin-approval-count').textContent = pendingApprovals?.length || 0;
-  document.getElementById('pending-approval-count').textContent = pendingApprovals?.length || 0;
 }
 
 function renderPendingApprovals(approvals = []) {

@@ -482,13 +482,43 @@ tbody tr:hover {
     if (!currentUserEmail) return;
     
     try {
-      const tasks = await EAS_DB.fetchEmployeeTaskApprovals(currentUserEmail);
+      // Check if migration has been applied
+      const profile = await EAS_Auth.getUserProfile();
+      
+      // Try to fetch tasks using the new approval view first
+      let tasks = [];
+      try {
+        tasks = await EAS_DB.fetchEmployeeTaskApprovals(currentUserEmail);
+      } catch (err) {
+        console.warn('Approval workflow view not found - migration may not be applied:', err.message);
+        
+        // Fallback: Get regular tasks and try to match with approvals
+        const allTasks = await EAS_DB.fetchTasks();
+        tasks = (allTasks || []).filter(t => 
+          (t.employee_name || '').toLowerCase() === (profile?.name || '').toLowerCase() ||
+          (t.employee_email || '') === currentUserEmail
+        ).map(t => ({
+          task_id: t.id,
+          task_description: t.task,
+          time_saved: t.time_saved,
+          approval_status: t.approval_status || 'pending',
+          submitted_at: t.created_at,
+          practice: t.practice,
+          employee_name: t.employee_name,
+          employee_email: t.employee_email
+        }));
+
+        if (tasks.length === 0) {
+          showToast('⚠️ Approval workflow tables not yet created. Please run the SQL migration first.', 'warning');
+        }
+      }
+      
       allTasks = tasks || [];
       updateStats();
       reloadTaskStatus();
     } catch (err) {
       console.error('Error loading tasks:', err);
-      showToast('Failed to load your tasks', 'error');
+      showToast('❌ Failed to load your tasks. Make sure the SQL migration has been applied.', 'error');
     }
   }
 

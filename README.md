@@ -136,6 +136,18 @@ See [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md) for full setup instruct
 - **Performance**: Deferred loading of Chart.js, xlsx, jsPDF; font preconnect; optimized script order
 - **prefers-reduced-motion**: Animations disabled when user prefers reduced motion
 
+### Phase 8 — Approval Workflow (Apr 11, 2026)
+- **Multi-layer approval system**: Task submissions routed through AI validation → SPOC → Admin as needed
+- **Smart routing logic**: 
+  - High-value tasks (≥15 hours saved) → Admin (Omar Ibrahim)
+  - AI validation failures → SPOC for practice
+  - Standard tasks → AI validation first, then SPOC
+- **Admin Approvals tab**: Dashboard for managing pending/completed approvals with filters and actions
+- **Employee Task Status page**: Employees can track approval progress and see who task is pending with
+- **Practice-SPOC mapping**: Database table links practices to SPOCs for proper routing
+- **Audit trail**: Full submission_approvals table with timestamps and decision history
+- **⚠️ IMPORTANT**: Run SQL migration `sql/002_approval_workflow.sql` in Supabase to enable this feature — see [SETUP_APPROVAL_WORKFLOW.md](SETUP_APPROVAL_WORKFLOW.md)
+
 ### Phase 5 — SPOC Panel & Gamification
 - **My Practice** (SPOC): Practice-specific KPIs, team leaderboard, inactive member alerts with nudge button
 - **Leaderboard** (all roles): Practice rankings (weighted scoring) + employee rankings
