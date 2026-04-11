@@ -1,0 +1,13 @@
+{
+  "project_id": "apcfnzbiylhgiutcjigg",
+  "functions": [
+    {
+      "slug": "ai-suggestions",
+      "importmap_path": "functions/ai-suggestions/import_map.json"
+    },
+    {
+      "slug": "ai-validate",
+      "importmap_path": "functions/ai-validate/import_map.json"
+    }
+  ]
+}

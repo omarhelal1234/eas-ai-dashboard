@@ -6,7 +6,8 @@
  */
 
 const Phase8 = (() => {
-  const API_BASE = 'http://localhost:3001'; // Backend proxy
+  // Supabase Edge Functions - deployed live for all employees
+  const API_BASE = 'https://apcfnzbiylhgiutcjigg.supabase.co/functions/v1';
 
   // Global state for current submission being worked on
   let _currentSubmission = {
@@ -166,10 +167,10 @@ const Phase8 = (() => {
 
     try {
       showToast('Generating AI suggestions...', 'info');
-      const response = await fetch(`${API_BASE}/api/ai/generate-suggestions`, {
+      const response = await fetch(`${API_BASE}/ai-suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fieldType, currentText, context: JSON.stringify(context) }),
+        body: JSON.stringify({ fieldType, currentText, context }),
       });
 
       if (!response.ok) {
@@ -258,7 +259,7 @@ const Phase8 = (() => {
 
     try {
       showToast('Validating submission with AI...', 'info');
-      const response = await fetch(`${API_BASE}/api/ai/validate-submission`, {
+      const response = await fetch(`${API_BASE}/ai-validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ submissionType, savedHours, whyText, whatText, aiTool, category }),
