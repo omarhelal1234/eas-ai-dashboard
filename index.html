@@ -554,12 +554,14 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Employee Name</label>
-        <input type="text" id="f-employee">
+        <label>Employee Name <span class="required">*</span></label>
+        <input type="text" id="f-employee" required>
+        <span style="font-size:11px;color:var(--text-muted)">Type to search Copilot users</span>
       </div>
       <div class="form-group">
-        <label>Task / Activity</label>
-        <input type="text" id="f-task">
+        <label>Task / Activity <span class="required">*</span></label>
+        <input type="text" id="f-task" required>
+        <button type="button" class="btn btn-sm" style="margin-top:4px;font-size:12px" onclick="Phase8.getAISuggestions('what', document.getElementById('f-task').value, {category: document.getElementById('f-category').value, aiTool: document.getElementById('f-tool').value})">✨ AI Suggestions</button>
       </div>
     </div>
     <div class="form-row">
@@ -574,13 +576,21 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Time Without AI (hrs)</label>
-        <input type="number" id="f-time-without" step="0.25" min="0">
+        <label>Time Without AI (hrs) <span class="required">*</span></label>
+        <input type="number" id="f-time-without" step="0.25" min="0" required>
       </div>
       <div class="form-group">
-        <label>Time With AI (hrs)</label>
-        <input type="number" id="f-time-with" step="0.25" min="0">
+        <label>Time With AI (hrs) <span class="required">*</span></label>
+        <input type="number" id="f-time-with" step="0.25" min="0" required>
       </div>
+    </div>
+    <div style="background:var(--hover-bg);padding:12px;border-radius:4px;margin:12px 0;display:flex;align-items:center;gap:8px">
+      <div style="font-size:20px">⏱️</div>
+      <div>
+        <div style="font-size:13px;color:var(--text-muted)">Time Saved</div>
+        <div style="font-size:18px;font-weight:600;color:var(--success)" id="f-saved-hours-display">0.0h</div>
+      </div>
+      <div style="margin-left:auto;font-size:12px;color:var(--text-muted)" id="f-approval-tier">→ Will route to AI validator</div>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -597,12 +607,23 @@
       </div>
     </div>
     <div class="form-group">
+      <label>Why is this important? <span style="font-size:11px;color:var(--text-muted)">(context, helps AI validator)</span></label>
+      <textarea id="f-task-why" rows="2" placeholder="e.g. Reduced manual code review effort..."></textarea>
+      <button type="button" class="btn btn-sm" style="margin-top:4px;font-size:12px" onclick="Phase8.getAISuggestions('why', document.getElementById('f-task-why').value, {category: document.getElementById('f-category').value, task: document.getElementById('f-task').value})">✨ AI Suggestions</button>
+    </div>
+    <div class="form-group">
       <label>Notes / Learnings</label>
       <textarea id="f-notes" rows="2"></textarea>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('task')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+    <div class="modal-actions" style="display:flex;justify-content:space-between;align-items:center">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="checkbox" id="f-bypass-approval" style="width:16px;height:16px;cursor:pointer" onchange="toggleBypassApproval()">
+        <span id="f-bypass-label" style="display:none">Skip approval (admin only)</span>
+      </label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" onclick="closeModal('task')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1731,9 +1752,18 @@ function openModal(type) {
       if (userName && (!empField.value || empField.value === '')) {
         empField.value = userName;
       }
+      // Phase 8: Initialize AI features
+      Phase8.setCurrentSubmission('task');
+      Phase8.initEmployeeAutocomplete('f-employee', 'f-practice');
+      Phase8.initSavedHoursCalculation('f-time-without', 'f-time-with', 'f-saved-hours-display');
+      // Show/hide admin bypass based on user role
+      const role = EAS_Auth.getUserRole();
+      document.getElementById('f-bypass-label').style.display = role === 'admin' ? 'inline' : 'none';
     } else if (type === 'accomplishment') {
       document.querySelector('#modal-accomplishment .modal h3').textContent = 'Log Accomplishment';
       document.querySelector('#modal-accomplishment .btn-primary').textContent = 'Save';
+      // Phase 8: Initialize for accomplishments
+      Phase8.setCurrentSubmission('accomplishment');
     } else if (type === 'copilot') {
       document.querySelector('#modal-copilot .modal h3').textContent = 'Add Copilot User';
       document.querySelector('#modal-copilot .btn-primary').textContent = 'Save';
@@ -1755,34 +1785,70 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
 });
 
+// ======== PHASE 8 HELPERS ========
+
+function toggleBypassApproval() {
+  updateApprovalTierDisplay();
+}
+
+function updateApprovalTierDisplay() {
+  const savedDisplay = document.getElementById('f-saved-hours-display');
+  const tierDisplay = document.getElementById('f-approval-tier');
+  if (!savedDisplay || !tierDisplay) return;
+  
+  const savedHours = parseFloat(savedDisplay.textContent) || 0;
+  const bypassChecked = document.getElementById('f-bypass-approval')?.checked;
+  
+  if (bypassChecked) {
+    tierDisplay.textContent = '🔐 Skipping approval (admin)';
+    tierDisplay.style.color = 'var(--warning)';
+  } else if (savedHours >= 15) {
+    tierDisplay.textContent = '👤 → Will route to Admin/Omar only';
+    tierDisplay.style.color = 'var(--purple)';
+  } else if (savedHours >= 2) {
+    tierDisplay.textContent = '🤖 → Will route to AI validator first';
+    tierDisplay.style.color = 'var(--info)';
+  } else {
+    tierDisplay.textContent = '⚠️ → Min 2 hours saved required';
+    tierDisplay.style.color = 'var(--warning)';
+  }
+}
+
 async function saveTask() {
   const practice = document.getElementById('f-practice').value;
   if (!practice) { showToast('Please select a practice', 'error'); return; }
+  const employee = document.getElementById('f-employee').value;
+  if (!employee) { showToast('Please select or enter employee name', 'error'); return; }
+  const taskDesc = document.getElementById('f-task').value;
+  if (!taskDesc) { showToast('Please enter task description', 'error'); return; }
+  const timeWithout = parseFloat(document.getElementById('f-time-without').value) || 0;
+  const timeWith = parseFloat(document.getElementById('f-time-with').value) || 0;
+  if (timeWithout <= 0) { showToast('Time without AI must be greater than 0', 'error'); return; }
 
   // Apply week defaults: if not entered, use current week Sun-Thu
   const weekRange = EAS_Utils.getCurrentWeekRange();
   let weekStart = document.getElementById('f-weekstart').value || weekRange.start;
   let weekEnd = document.getElementById('f-weekend').value || weekRange.end;
-  // Auto-calculate quarter-relative week number from weekStart
   let weekNum = EAS_Utils.getQuarterWeekNumber(weekStart, EAS_DB.getQuarters());
 
-  const task = {
+  const taskData = {
     practice,
     week: weekNum,
     weekStart: weekStart,
     weekEnd: weekEnd,
     project: document.getElementById('f-project').value,
     projectCode: '',
-    employee: document.getElementById('f-employee').value,
-    task: document.getElementById('f-task').value,
+    employee: employee,
+    task: taskDesc,
     category: document.getElementById('f-category').value,
     aiTool: document.getElementById('f-tool').value,
     prompt: '',
-    timeWithout: parseFloat(document.getElementById('f-time-without').value) || 0,
-    timeWith: parseFloat(document.getElementById('f-time-with').value) || 0,
+    timeWithout: timeWithout,
+    timeWith: timeWith,
     quality: parseFloat(document.getElementById('f-quality').value) || 0,
     status: document.getElementById('f-status').value,
-    notes: document.getElementById('f-notes').value
+    notes: document.getElementById('f-notes').value,
+    bypassApproval: document.getElementById('f-bypass-approval') ? document.getElementById('f-bypass-approval').checked : false
   };
   closeModal('task');
 
@@ -1791,20 +1857,22 @@ async function saveTask() {
   if (_editingId && _editingType === 'task') {
     isEdit = true;
     showToast('Updating task...');
-    result = await EAS_DB.updateTask(_editingId, task);
+    result = await EAS_DB.updateTask(_editingId, taskData);
     _editingId = null; _editingType = null;
     document.querySelector('#modal-task .modal h3').textContent = 'Log AI Task';
     document.querySelector('#modal-task .btn-primary').textContent = 'Save Task';
   } else {
-    showToast('Saving task...');
-    result = await EAS_DB.insertTask(task);
+    showToast('Saving task with approval workflow...');
+    // Phase 8: Submit with approval workflow
+    result = await Phase8.submitWithApproval('task', taskData);
   }
   if (!result) { showToast('Failed to save task — check console', 'error'); return; }
   // Refresh data from Supabase
   const selectedQuarter = EAS_DB.getSelectedQuarter();
   data = await EAS_DB.fetchAllData(selectedQuarter);
   EAS_Utils.sanitizeDataset(data);
-  showToast(isEdit ? 'Task updated!' : 'Task logged successfully!');
+  const resultMsg = isEdit ? 'Task updated!' : 'Task logged successfully with approval workflow!';
+  showToast(resultMsg);
   renderDashboard();
   renderTasks();
   updateNavCounts();
@@ -1817,10 +1885,12 @@ async function saveTask() {
   document.getElementById('f-weekend').value = resetWeek.end;
   document.getElementById('f-employee').value = '';
   document.getElementById('f-task').value = '';
+  document.getElementById('f-task-why').value = '';
   document.getElementById('f-time-without').value = '';
   document.getElementById('f-time-with').value = '';
   document.getElementById('f-quality').value = '';
   document.getElementById('f-notes').value = '';
+  document.getElementById('f-bypass-approval').checked = false;
   // Also re-render My Tasks if contributor
   renderMyTasks();
 }

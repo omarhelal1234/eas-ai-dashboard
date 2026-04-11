@@ -133,8 +133,12 @@ const Phase8 = (() => {
       const without = parseFloat(withoutInput.value) || 0;
       const with_ = parseFloat(withInput.value) || 0;
       const saved = Math.max(0, without - with_);
-      savedDisplay.textContent = saved.toFixed(1);
+      savedDisplay.textContent = saved.toFixed(1) + 'h';
       savedDisplay.className = saved > 0 ? 'success' : '';
+      // Trigger approval tier display update if function exists
+      if (typeof updateApprovalTierDisplay === 'function') {
+        updateApprovalTierDisplay();
+      }
       return saved;
     }
 
