@@ -167,18 +167,30 @@ const Phase8 = (() => {
 
     try {
       showToast('Generating AI suggestions...', 'info');
+      console.log('Calling:', `${API_BASE}/ai-suggestions`, { fieldType, currentText });
+      
       const response = await fetch(`${API_BASE}/ai-suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fieldType, currentText, context }),
       });
 
+      console.log('Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to generate suggestions');
+        const text = await response.text();
+        console.error('Error response:', text);
+        try {
+          const err = JSON.parse(text);
+          throw new Error(err.error || `HTTP ${response.status}`);
+        } catch (e) {
+          throw new Error(`HTTP ${response.status}: ${text}`);
+        }
       }
 
       const result = await response.json();
+      console.log('Suggestions received:', result);
+      
       _currentSubmission.fieldType = fieldType;
       _currentSubmission.currentText = currentText;
       _currentSubmission.suggestions = result.suggestions || [];
@@ -188,7 +200,7 @@ const Phase8 = (() => {
       return result.suggestions;
     } catch (err) {
       console.error('AI suggestions error:', err);
-      showToast('AI suggestions unavailable: ' + err.message, 'error');
+      showToast('AI suggestions error: ' + (err.message || 'Network error - check console'), 'error');
       return [];
     }
   }
