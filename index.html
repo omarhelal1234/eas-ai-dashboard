@@ -1735,41 +1735,58 @@ function renderUseCases() {
 
 // ======== MODALS ========
 function openModal(type) {
-  // Reset editing state when opening via + button (not via editX functions)
-  if (!_editingId) {
-    if (type === 'task') {
-      document.querySelector('#modal-task .modal h3').textContent = 'Log AI Task';
-      document.querySelector('#modal-task .btn-primary').textContent = 'Save Task';
-      // Auto-populate week fields for new tasks
-      const weekRange = EAS_Utils.getCurrentWeekRange();
-      const weekNum = EAS_Utils.getQuarterWeekNumber(new Date(), EAS_DB.getQuarters());
-      document.getElementById('f-week').value = weekNum;
-      document.getElementById('f-weekstart').value = weekRange.start;
-      document.getElementById('f-weekend').value = weekRange.end;
-      // Auto-fill employee name for contributors
-      const userName = EAS_Auth.getUserName();
-      const empField = document.getElementById('f-employee');
-      if (userName && (!empField.value || empField.value === '')) {
-        empField.value = userName;
+  console.log('🔓 openModal called with type:', type);
+  try {
+    // Reset editing state when opening via + button (not via editX functions)
+    if (!_editingId) {
+      if (type === 'task') {
+        console.log('  → Setting up task modal...');
+        document.querySelector('#modal-task .modal h3').textContent = 'Log AI Task';
+        document.querySelector('#modal-task .btn-primary').textContent = 'Save Task';
+        // Auto-populate week fields for new tasks
+        const weekRange = EAS_Utils.getCurrentWeekRange();
+        const weekNum = EAS_Utils.getQuarterWeekNumber(new Date(), EAS_DB.getQuarters());
+        document.getElementById('f-week').value = weekNum;
+        document.getElementById('f-weekstart').value = weekRange.start;
+        document.getElementById('f-weekend').value = weekRange.end;
+        // Auto-fill employee name for contributors
+        const userName = EAS_Auth.getUserName();
+        const empField = document.getElementById('f-employee');
+        if (userName && (!empField.value || empField.value === '')) {
+          empField.value = userName;
+        }
+        // Phase 8: Initialize AI features
+        console.log('  → Initializing Phase8...');
+        Phase8.setCurrentSubmission('task');
+        Phase8.initEmployeeAutocomplete('f-employee', 'f-practice');
+        Phase8.initSavedHoursCalculation('f-time-without', 'f-time-with', 'f-saved-hours-display');
+        // Show/hide admin bypass based on user role
+        const role = EAS_Auth.getUserRole();
+        document.getElementById('f-bypass-label').style.display = role === 'admin' ? 'inline' : 'none';
+        console.log('  → Task modal ready, role:', role);
+      } else if (type === 'accomplishment') {
+        console.log('  → Setting up accomplishment modal...');
+        document.querySelector('#modal-accomplishment .modal h3').textContent = 'Log Accomplishment';
+        document.querySelector('#modal-accomplishment .btn-primary').textContent = 'Save';
+        // Phase 8: Initialize for accomplishments
+        Phase8.setCurrentSubmission('accomplishment');
+      } else if (type === 'copilot') {
+        console.log('  → Setting up copilot modal...');
+        document.querySelector('#modal-copilot .modal h3').textContent = 'Add Copilot User';
+        document.querySelector('#modal-copilot .btn-primary').textContent = 'Save';
       }
-      // Phase 8: Initialize AI features
-      Phase8.setCurrentSubmission('task');
-      Phase8.initEmployeeAutocomplete('f-employee', 'f-practice');
-      Phase8.initSavedHoursCalculation('f-time-without', 'f-time-with', 'f-saved-hours-display');
-      // Show/hide admin bypass based on user role
-      const role = EAS_Auth.getUserRole();
-      document.getElementById('f-bypass-label').style.display = role === 'admin' ? 'inline' : 'none';
-    } else if (type === 'accomplishment') {
-      document.querySelector('#modal-accomplishment .modal h3').textContent = 'Log Accomplishment';
-      document.querySelector('#modal-accomplishment .btn-primary').textContent = 'Save';
-      // Phase 8: Initialize for accomplishments
-      Phase8.setCurrentSubmission('accomplishment');
-    } else if (type === 'copilot') {
-      document.querySelector('#modal-copilot .modal h3').textContent = 'Add Copilot User';
-      document.querySelector('#modal-copilot .btn-primary').textContent = 'Save';
     }
+    const modal = document.getElementById('modal-' + type);
+    if (!modal) {
+      console.error('❌ Modal not found:', 'modal-' + type);
+      return;
+    }
+    modal.classList.add('active');
+    console.log('✅ Modal opened:', 'modal-' + type);
+  } catch (err) {
+    console.error('❌ Error opening modal:', err);
+    console.error('Error stack:', err.stack);
   }
-  document.getElementById('modal-' + type).classList.add('active');
 }
 function closeModal(type) {
   document.getElementById('modal-' + type).classList.remove('active');
