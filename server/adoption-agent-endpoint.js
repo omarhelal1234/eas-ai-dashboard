@@ -18,6 +18,7 @@ const cors = require('cors');
 require('dotenv').config();
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
+const { OpenAI } = require('openai');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -32,6 +33,10 @@ app.use(express.json({ limit: '100kb' }));
 // Initialize clients
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // MUST be set in .env file
 });
 
 const supabase = createClient(
@@ -242,6 +247,148 @@ app.post('/api/adoption-agent', async (req, res) => {
 });
 
 /**
+ * AI Suggestions Generator Endpoint
+ * POST /api/ai/generate-suggestions
+ * Generate 3 AI-powered suggestions for task/accomplishment "why" and "what" fields
+ */
+app.post('/api/ai/generate-suggestions', async (req, res) => {
+  try {
+    const { fieldType, currentText, context } = req.body;
+
+    if (!fieldType || !['why', 'what'].includes(fieldType)) {
+      return res.status(400).json({ error: 'fieldType must be "why" or "what"' });
+    }
+
+    if (!currentText || typeof currentText !== 'string' || currentText.trim().length === 0) {
+      return res.status(400).json({ error: 'currentText is required and must be non-empty' });
+    }
+
+    const contextStr = context ? `\nContext: ${context}` : '';
+    
+    const prompt = fieldType === 'why'
+      ? `You are an expert business analyst helping employees articulate the impact and reasoning behind their AI adoption activities. 
+
+Existing text: "${currentText}"${contextStr}
+
+Generate exactly 3 alternative, professional suggestions for explaining WHY this task/accomplishment matters. Each should:
+- Be 1-2 sentences (15-50 words)
+- Focus on business impact or productivity gain
+- Be specific and measurable where possible
+- Avoid generic phrases like "to improve efficiency"
+
+Format as JSON: { "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"] }`
+      : `You are an expert business analyst helping employees describe their AI adoption activities clearly and measurably.
+
+Existing text: "${currentText}"${contextStr}
+
+Generate exactly 3 alternative, professional suggestions for describing WHAT was accomplished. Each should:
+- Be 1-2 sentences (15-50 words)
+- Include specific AI tools/techniques used
+- Mention quantifiable outcomes (time saved, quality improvement, etc.)
+- Be professional and concise
+
+Format as JSON: { "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"] }`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 500,
+    });
+
+    const content = completion.choices[0].message.content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { suggestions: [currentText] };
+
+    res.json({
+      fieldType,
+      suggestions: result.suggestions || [currentText],
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (err) {
+    console.error('AI suggestions error:', err);
+    res.status(500).json({
+      error: `Failed to generate suggestions: ${err.message || 'Internal error'}`,
+    });
+  }
+});
+
+/**
+ * AI Validation Endpoint
+ * POST /api/ai/validate-submission
+ * Validates task/accomplishment submission against quality rules
+ */
+app.post('/api/ai/validate-submission', async (req, res) => {
+  try {
+    const { submissionType, savedHours, whyText, whatText, aiTool, category } = req.body;
+
+    if (!submissionType || !['task', 'accomplishment'].includes(submissionType)) {
+      return res.status(400).json({ error: 'submissionType must be "task" or "accomplishment"' });
+    }
+
+    if (typeof savedHours !== 'number' || savedHours < 0) {
+      return res.status(400).json({ error: 'savedHours must be a non-negative number' });
+    }
+
+    // Define validation rules based on project requirements
+    // Min 2 hrs saved, mentions AI tool, mentions metrics, quality assessment
+    const validationRules = `Check the following submission for quality:
+    
+Saved Hours: ${savedHours}
+Why (Context): "${whyText || ''}"
+What (Accomplishment): "${whatText || ''}"
+AI Tool Used: "${aiTool || ''}"
+Category: "${category || ''}"
+
+Validate against these STRICT rules:
+1. **Min 2 hours saved**: ${savedHours >= 2 ? '✓ PASS' : '✗ FAIL'} (provided: ${savedHours}h)
+2. **Mentions AI tool**: Check if "${aiTool || ''}" is a real AI tool (ChatGPT, Copilot, Claude, etc.)
+3. **Meaningful explanation (50+ words total)**: Check combined length of why+what texts
+4. **Mentions quantifiable metrics**: Check if "why" or "what" mentions numbers, percentages, time, or specific outcomes
+5. **Quality assessment**: Overall coherence and professional tone
+
+Respond in JSON format:
+{
+  "isValid": true|false,
+  "passedRules": ["rule 1", "rule 2"],
+  "failedRules": ["rule 3"],
+  "overallScore": 0-100,
+  "reason": "Brief explanation",
+  "suggestions": ["suggestion 1", "suggestion 2"]
+}`;
+
+    const validation = await openai.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: validationRules }],
+      temperature: 0.5,
+      max_tokens: 400,
+    });
+
+    const content = validation.choices[0].message.content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const result = jsonMatch ? JSON.parse(jsonMatch[0]) : {
+      isValid: savedHours >= 2,
+      overallScore: savedHours >= 2 ? 70 : 40,
+      reason: 'Could not parse AI response',
+    };
+
+    res.json({
+      submissionType,
+      validation: result,
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (err) {
+    console.error('AI validation error:', err);
+    res.status(500).json({
+      error: `Validation failed: ${err.message || 'Internal error'}`,
+      fallback: { isValid: false, overallScore: 0, reason: 'AI service temporarily unavailable' },
+    });
+  }
+});
+
+/**
  * Health check endpoint
  */
 app.get('/api/adoption-agent/health', (req, res) => {
@@ -252,9 +399,12 @@ app.get('/api/adoption-agent/health', (req, res) => {
 app.listen(port, () => {
   console.log(`✅ AI Adoption Agent endpoint running on http://localhost:${port}`);
   console.log(`   POST /api/adoption-agent — Submit query`);
+  console.log(`   POST /api/ai/generate-suggestions — Generate AI suggestions for task/accomplishment fields`);
+  console.log(`   POST /api/ai/validate-submission — Validate task/accomplishment submission`);
   console.log(`   GET /api/adoption-agent/health — Health check`);
   console.log(`\n📋 Make sure these env vars are set:`);
   console.log(`   - ANTHROPIC_API_KEY`);
+  console.log(`   - OPENAI_API_KEY`);
   console.log(`   - SUPABASE_URL`);
   console.log(`   - SUPABASE_ANON_KEY`);
 });

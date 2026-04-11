@@ -817,6 +817,117 @@ const EAS_DB = (() => {
     return data;
   }
 
+  /**
+   * Get Copilot users by practice for autocomplete
+   */
+  async function fetchCopilotUsersByPractice(practice) {
+    if (!practice) {
+      const { data, error } = await sb
+        .from('copilot_users')
+        .select('id, name, email, practice, role_skill, status')
+        .eq('status', 'access granted')
+        .order('name');
+      if (error) { console.error('fetchCopilotUsersByPractice error:', error.message); return []; }
+      return data || [];
+    }
+    const { data, error } = await sb
+      .from('copilot_users')
+      .select('id, name, email, practice, role_skill, status')
+      .eq('practice', practice)
+      .eq('status', 'access granted')
+      .order('name');
+    if (error) { console.error('fetchCopilotUsersByPractice error:', error.message); return []; }
+    return data || [];
+  }
+
+  /**
+   * Create a submission approval workflow entry
+   */
+  async function createSubmissionApproval(submissionType, submissionId, savedHours, aiValidationResult = null) {
+    const profile = await EAS_Auth.getUserProfile();
+    const payload = {
+      submission_type: submissionType,
+      submission_id: submissionId,
+      approval_status: savedHours >= 15 ? 'pending' : 'ai_review',
+      approval_layer: savedHours >= 15 ? 'admin' : 'ai',
+      saved_hours: savedHours,
+      ai_validation_result: aiValidationResult || null
+    };
+    const { data, error } = await sb.from('submission_approvals').insert(payload).select().single();
+    if (error) { console.error('createSubmissionApproval error:', error.message); return null; }
+    return data;
+  }
+
+  /**
+   * Fetch submission approval status
+   */
+  async function fetchSubmissionApproval(submissionId, submissionType) {
+    const { data, error } = await sb
+      .from('submission_approvals')
+      .select('*')
+      .eq('submission_id', submissionId)
+      .eq('submission_type', submissionType)
+      .single();
+    if (error && error.code !== 'PGRST116') { console.error('fetchSubmissionApproval error:', error); }
+    return data || null;
+  }
+
+  /**
+   * Update submission approval status
+   */
+  async function updateSubmissionApproval(approvalId, updates) {
+    const payload = {};
+    if (updates.approvalStatus !== undefined) payload.approval_status = updates.approvalStatus;
+    if (updates.aiValidationResult !== undefined) payload.ai_validation_result = updates.aiValidationResult;
+    if (updates.approverName !== undefined) payload.approver_name = updates.approverName;
+    if (updates.approvalNotes !== undefined) payload.approval_notes = updates.approvalNotes;
+    if (updates.rejectedReason !== undefined) payload.rejected_reason = updates.rejectedReason;
+
+    const { data, error } = await sb.from('submission_approvals').update(payload).eq('id', approvalId).select().single();
+    if (error) { console.error('updateSubmissionApproval error:', error.message); return null; }
+    return data;
+  }
+
+  /**
+   * Submit task with approval workflow
+   */
+  async function submitTaskWithApproval(taskData) {
+    // Insert task
+    const task = await insertTask(taskData);
+    if (!task) return null;
+
+    // Create approval workflow
+    const savedHours = (taskData.timeWithout || 0) - (taskData.timeWith || 0);
+    const approval = await createSubmissionApproval('task', task.id, savedHours);
+    
+    // Update task with approval ID
+    if (approval) {
+      await sb.from('tasks').update({ approval_id: approval.id }).eq('id', task.id);
+    }
+
+    return { task, approval };
+  }
+
+  /**
+   * Submit accomplishment with approval workflow
+   */
+  async function submitAccomplishmentWithApproval(accData) {
+    // Insert accomplishment
+    const acc = await insertAccomplishment(accData);
+    if (!acc) return null;
+
+    // Create approval workflow
+    const savedHours = accData.effortSaved || 0;
+    const approval = await createSubmissionApproval('accomplishment', acc.id, savedHours);
+    
+    // Update accomplishment with approval ID
+    if (approval) {
+      await sb.from('accomplishments').update({ approval_id: approval.id }).eq('id', acc.id);
+    }
+
+    return { acc, approval };
+  }
+
   // ===========================================================
   // Public API
   // ===========================================================
@@ -841,6 +952,7 @@ const EAS_DB = (() => {
     fetchQuarterSummary,
     fetchAccomplishments,
     fetchCopilotUsers,
+    fetchCopilotUsersByPractice,
     fetchProjects,
     fetchLovs,
     fetchAllData,
@@ -862,6 +974,13 @@ const EAS_DB = (() => {
     insertCopilotUser,
     updateCopilotUser,
     deleteCopilotUser,
+    submitTaskWithApproval,
+    submitAccomplishmentWithApproval,
+
+    // Approval workflow (Phase 8)
+    createSubmissionApproval,
+    fetchSubmissionApproval,
+    updateSubmissionApproval,
 
     // Audit & dumps
     logActivity,
