@@ -1025,9 +1025,16 @@
           </button>
         </div>
 
-        <!-- Prompt cards container -->
+        <!-- Prompt cards container (rendered dynamically from DB) -->
         <div class="prompt-library-grid" id="prompt-library-container">
+          <div class="prompt-loading" id="prompt-loading" style="text-align:center;padding:40px;color:var(--text-muted)">
+            <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" style="animation:spin 1s linear infinite;margin-bottom:8px"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>
+            <p>Loading prompts…</p>
+          </div>
+        </div><!-- /prompt-library-grid -->
 
+        <!-- LEGACY: hardcoded prompts removed; now fetched from prompt_library table -->
+        <template id="prompt-legacy-removed">
           <!-- ===== PROJECT MANAGER ===== -->
           <div class="prompt-role-section" data-role="pm">
             <div class="prompt-role-header">
@@ -1423,7 +1430,7 @@
             </div>
           </div>
 
-        </div><!-- /prompt-library-grid -->
+        </template><!-- /prompt-legacy-removed (hidden, kept for ref only) -->
       </div><!-- /guide-prompts -->
 
     </div>
@@ -3184,22 +3191,121 @@ function renderGuideMe() {
       });
     });
   }
-  // Update prompt counts on render
-  updatePromptCounts();
+  // Load prompts from DB
+  loadPromptLibrary();
 }
 
-// ======== PROMPT LIBRARY ========
+// ======== PROMPT LIBRARY (DB-powered) ========
+
+/** Cache for loaded prompts */
+let _promptLibraryCache = null;
+
+/** Role badge abbreviations */
+const ROLE_BADGES = { pm: 'PM', sa: 'SA', ba: 'BA', dev: 'DEV', dba: 'DBA', admin: 'ADM', dm: 'DM' };
+
+/** Copy SVG icon reused by cards */
+const COPY_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+const CHECK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>';
+
+/** Load prompts from DB and render */
+async function loadPromptLibrary() {
+  const container = document.getElementById('prompt-library-container');
+  if (!container) return;
+
+  // Use cache if available
+  if (_promptLibraryCache) {
+    renderPromptCards(_promptLibraryCache, container);
+    return;
+  }
+
+  try {
+    const prompts = await EAS_DB.fetchPromptLibrary();
+    _promptLibraryCache = prompts;
+    renderPromptCards(prompts, container);
+  } catch (err) {
+    console.error('Failed to load prompt library:', err);
+    container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--danger)">Failed to load prompts. Please refresh the page.</p>';
+  }
+}
+
+/** Render prompt cards grouped by role + category */
+function renderPromptCards(prompts, container) {
+  if (!prompts || prompts.length === 0) {
+    container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--text-muted)">No prompts available.</p>';
+    return;
+  }
+
+  // Group by role, then by category
+  const grouped = {};
+  prompts.forEach(p => {
+    if (!grouped[p.role]) grouped[p.role] = { label: p.roleLabel, categories: {} };
+    if (!grouped[p.role].categories[p.category]) grouped[p.role].categories[p.category] = [];
+    grouped[p.role].categories[p.category].push(p);
+  });
+
+  // Desired role ordering
+  const roleOrder = ['pm', 'sa', 'ba', 'dev', 'dba', 'admin', 'dm'];
+  const sortedRoles = Object.keys(grouped).sort((a, b) => {
+    const ia = roleOrder.indexOf(a), ib = roleOrder.indexOf(b);
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+  });
+
+  let html = '';
+  sortedRoles.forEach(role => {
+    const { label, categories } = grouped[role];
+    const badge = ROLE_BADGES[role] || role.toUpperCase();
+    const catEntries = Object.entries(categories);
+    const totalCount = catEntries.reduce((sum, [, arr]) => sum + arr.length, 0);
+
+    html += `<div class="prompt-role-section" data-role="${role}">
+      <div class="prompt-role-header">
+        <div class="prompt-role-badge ${role}">${badge}</div>
+        <h3>${label}</h3>
+        <span class="prompt-count">${totalCount} prompt${totalCount !== 1 ? 's' : ''}</span>
+      </div>`;
+
+    catEntries.forEach(([catName, catPrompts]) => {
+      html += `<div class="prompt-category">
+        <h5 class="prompt-category-title">${catName}</h5>`;
+
+      catPrompts.forEach(p => {
+        html += `<div class="prompt-card" data-prompt-id="${p.id}" onclick="copyPrompt(this)">
+          <div class="prompt-text">${escapeHtml(p.text)}</div>
+          <button class="prompt-copy-btn" title="Copy prompt">${COPY_ICON_SVG}</button>
+        </div>`;
+      });
+
+      html += '</div>';
+    });
+
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+}
+
+/** Escape HTML entities for safe rendering */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 function copyPrompt(card) {
   const text = card.querySelector('.prompt-text').textContent.trim();
+  const promptId = card.dataset.promptId;
   navigator.clipboard.writeText(text).then(() => {
     card.classList.add('prompt-copied');
     const btn = card.querySelector('.prompt-copy-btn');
-    const origSVG = btn.innerHTML;
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>';
+    btn.innerHTML = CHECK_ICON_SVG;
     if (typeof showToast === 'function') showToast('Prompt copied to clipboard!', 'success');
+    // Track copy in DB (fire-and-forget)
+    if (promptId && typeof EAS_DB !== 'undefined') {
+      EAS_DB.incrementPromptCopy(promptId);
+    }
     setTimeout(() => {
       card.classList.remove('prompt-copied');
-      btn.innerHTML = origSVG;
+      btn.innerHTML = COPY_ICON_SVG;
     }, 2000);
   }).catch(() => {
     // Fallback for older browsers
@@ -3212,6 +3318,9 @@ function copyPrompt(card) {
     document.execCommand('copy');
     document.body.removeChild(ta);
     if (typeof showToast === 'function') showToast('Prompt copied!', 'success');
+    if (promptId && typeof EAS_DB !== 'undefined') {
+      EAS_DB.incrementPromptCopy(promptId);
+    }
   });
 }
 

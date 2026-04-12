@@ -66,6 +66,18 @@
 - Tab switching handled via `renderGuideMe()` function with event delegation.
 - No database changes required — all content is static HTML.
 
+### 0b-1. April 12, 2026 — Prompt Library → Database Migration
+
+- **Migrated 55 hardcoded prompts to Supabase `prompt_library` table** — prompts are now admin-editable, analytics-tracked, and dynamically rendered.
+- **New DB objects:** `prompt_library` table, RLS policies (`prompt_library_select`, `prompt_library_admin_all`), `increment_prompt_copy()` RPC, auto `updated_at` trigger, 3 indexes.
+- **Migration file:** `sql/005_prompt_library.sql`.
+- **js/db.js additions:** `fetchPromptLibrary()` fetches active prompts ordered by role + sort_order; `incrementPromptCopy(promptId)` calls the RPC fire-and-forget.
+- **Dynamic rendering in Guide Me:** `loadPromptLibrary()` fetches from DB and renders via `renderPromptCards(prompts, container)`. Cards are grouped by role then category. Loading spinner shown while fetching. Cache used (`_promptLibraryCache`) to avoid re-fetching on tab switch.
+- **Copy tracking:** `copyPrompt(card)` now reads `data-prompt-id` from the card and calls `EAS_DB.incrementPromptCopy(id)` so admins can see which prompts are most used.
+- **Admin CRUD panel:** New "Prompt Library" nav item in Admin Panel → renders table with search + role filter; modal for add/edit with fields: role, category, prompt_text, sort_order, is_active. Delete with confirmation. All operations go direct to Supabase.
+- **Trade-off:** Kept old hardcoded HTML inside a `<template>` tag (hidden, not rendered) as a reference fallback; can be removed after validation.
+- **Escape:** `escapeHtml()` function used when rendering prompt text to prevent XSS.
+
 ### 0. April 12, 2026 — Approvals UI Fix
 
 - Added `getUserId()` to the auth module to support approvals queries without runtime errors.

@@ -1377,6 +1377,45 @@ const EAS_DB = (() => {
   }
 
   // ===========================================================
+  // Prompt Library (Guide Me)
+  // ===========================================================
+
+  /**
+   * Fetch all active prompts from the prompt_library table.
+   * Returns array grouped-friendly objects sorted by role + sort_order.
+   */
+  async function fetchPromptLibrary() {
+    const { data, error } = await sb
+      .from('prompt_library')
+      .select('*')
+      .eq('is_active', true)
+      .order('role', { ascending: true })
+      .order('sort_order', { ascending: true });
+    if (error) {
+      console.error('fetchPromptLibrary error:', error.message);
+      return [];
+    }
+    return (data || []).map(p => ({
+      id:        p.id,
+      role:      p.role,
+      roleLabel: p.role_label,
+      category:  p.category,
+      text:      p.prompt_text,
+      sortOrder: p.sort_order,
+      copyCount: p.copy_count
+    }));
+  }
+
+  /**
+   * Increment the copy count for a prompt via the DB RPC.
+   * Fire-and-forget — does not block the UI.
+   */
+  async function incrementPromptCopy(promptId) {
+    const { error } = await sb.rpc('increment_prompt_copy', { p_prompt_id: promptId });
+    if (error) console.error('incrementPromptCopy error:', error.message);
+  }
+
+  // ===========================================================
   // Public API
   // ===========================================================
 
@@ -1445,6 +1484,10 @@ const EAS_DB = (() => {
 
     // Audit & dumps
     logActivity,
-    createDump
+    createDump,
+
+    // Prompt Library (Guide Me)
+    fetchPromptLibrary,
+    incrementPromptCopy
   };
 })();
