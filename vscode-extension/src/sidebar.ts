@@ -6,12 +6,14 @@
 import * as vscode from 'vscode';
 import { getSession, onDidChangeAuth } from './auth';
 import { fetchContext, submitTask, fetchMyTasks, EasContext, MyTask } from './api';
+import { gatherIdeContext, matchToolToLov, IdeContext } from './contextDetector';
 
 export class TaskLoggerViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'eas.taskLoggerView';
 
   private _view?: vscode.WebviewView;
   private _context: EasContext | null = null;
+  private _ideContext: IdeContext | null = null;
 
   constructor(private readonly _extensionUri: vscode.Uri) {
     // Listen for auth changes to refresh the view
@@ -81,9 +83,14 @@ export class TaskLoggerViewProvider implements vscode.WebviewViewProvider {
   private async _loadContext(): Promise<void> {
     if (!this._view) return;
     try {
-      this._context = await fetchContext();
+      const [serverCtx, ideCtx] = await Promise.all([
+        fetchContext(),
+        gatherIdeContext(),
+      ]);
+      this._context = serverCtx;
+      this._ideContext = ideCtx;
       const tasks = await fetchMyTasks(10);
-      this._view.webview.html = this._getMainHtml(this._context, tasks.tasks);
+      this._view.webview.html = this._getMainHtml(this._context, tasks.tasks, this._ideContext);
     } catch (err) {
       this._view.webview.html = this._getErrorHtml((err as Error).message);
     }
@@ -93,7 +100,7 @@ export class TaskLoggerViewProvider implements vscode.WebviewViewProvider {
     if (!this._view || !this._context) return;
     try {
       const tasks = await fetchMyTasks(10);
-      this._view.webview.html = this._getMainHtml(this._context, tasks.tasks);
+      this._view.webview.html = this._getMainHtml(this._context, tasks.tasks, this._ideContext);
     } catch (err) {
       vscode.window.showErrorMessage(`Failed to refresh tasks: ${(err as Error).message}`);
     }
@@ -194,20 +201,44 @@ export class TaskLoggerViewProvider implements vscode.WebviewViewProvider {
 </html>`;
   }
 
-  private _getMainHtml(ctx: EasContext, tasks: MyTask[]): string {
-    const categoryOptions = ctx.categories.map(c => `<option value="${this._escapeHtml(c)}">${this._escapeHtml(c)}</option>`).join('');
+  private _getMainHtml(ctx: EasContext, tasks: MyTask[], ideCtx?: IdeContext | null): string {
+    // Auto-detect best matches from IDE context
+    const autoTool = ideCtx ? matchToolToLov(ideCtx.detectedAiTools, ctx.aiTools) : null;
+    const autoCategory = ideCtx?.suggestedCategory || null;
+    const autoProject = this._matchProject(ctx, ideCtx);
+
+    const categoryOptions = ctx.categories.map(c => {
+      const selected = autoCategory === c ? ' selected' : '';
+      return `<option value="${this._escapeHtml(c)}"${selected}>${this._escapeHtml(c)}</option>`;
+    }).join('');
     const aiToolOptions = ctx.aiTools.map(t => {
       const label = t.isLicensed ? `${t.value} ⭐` : t.value;
-      return `<option value="${this._escapeHtml(t.value)}">${this._escapeHtml(label)}</option>`;
+      const detected = autoTool === t.value ? ' 🔍' : '';
+      const selected = autoTool === t.value ? ' selected' : '';
+      return `<option value="${this._escapeHtml(t.value)}"${selected}>${this._escapeHtml(label)}${detected}</option>`;
     }).join('');
-    const projectOptions = ctx.projects.map(p =>
-      `<option value="${this._escapeHtml(p.name)}" data-code="${this._escapeHtml(p.code || '')}">${this._escapeHtml(p.name)}</option>`
-    ).join('');
+    const projectOptions = ctx.projects.map(p => {
+      const selected = autoProject === p.name ? ' selected' : '';
+      return `<option value="${this._escapeHtml(p.name)}" data-code="${this._escapeHtml(p.code || '')}"${selected}>${this._escapeHtml(p.name)}</option>`;
+    }).join('');
 
     const quarterLabel = ctx.activeQuarter?.label || 'No active quarter';
     const tasksHtml = tasks.length > 0
       ? tasks.map(t => this._renderTaskCard(t)).join('')
       : '<p class="empty-state">No tasks logged yet. Submit your first task above!</p>';
+
+    // Build context detection banner
+    const contextParts: string[] = [];
+    if (autoTool) contextParts.push(`🔧 ${autoTool}`);
+    if (ideCtx?.git.branch) contextParts.push(`🌿 ${ideCtx.git.branch}`);
+    if (ideCtx?.editor.language) contextParts.push(`📄 ${ideCtx.editor.language}`);
+    if (ideCtx?.datetime.weekNumber) contextParts.push(`📅 W${ideCtx.datetime.weekNumber}`);
+    const contextBannerHtml = contextParts.length > 0
+      ? `<div class="context-banner"><span class="context-label">Auto-detected:</span> ${contextParts.map(p => `<span class="context-chip">${p}</span>`).join('')}</div>`
+      : '';
+
+    // Auto-fill description suggestion
+    const suggestedDesc = ideCtx?.suggestedDescription || '';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -225,6 +256,8 @@ export class TaskLoggerViewProvider implements vscode.WebviewViewProvider {
     <span class="quarter-badge">${this._escapeHtml(quarterLabel)}</span>
   </div>
 
+  ${contextBannerHtml}
+
   <!-- Tab Navigation -->
   <div class="tabs">
     <button class="tab active" data-tab="submit" onclick="switchTab('submit')">Log Task</button>
@@ -237,7 +270,7 @@ export class TaskLoggerViewProvider implements vscode.WebviewViewProvider {
       <div class="form-group">
         <label for="taskDescription">Task Description *</label>
         <textarea id="taskDescription" required minlength="10" rows="3"
-          placeholder="Describe what you accomplished using AI..."></textarea>
+          placeholder="Describe what you accomplished using AI...">${this._escapeHtml(suggestedDesc)}</textarea>
       </div>
 
       <div class="form-row">
@@ -422,6 +455,40 @@ export class TaskLoggerViewProvider implements vscode.WebviewViewProvider {
         <span class="task-date">${date}</span>
       </div>
     </div>`;
+  }
+
+  /** Match workspace/repo name to a project from the server context */
+  private _matchProject(ctx: EasContext, ideCtx?: IdeContext | null): string | null {
+    if (!ideCtx) return null;
+
+    const config = vscode.workspace.getConfiguration('eas');
+    const defaultProject = config.get<string>('defaultProject') || '';
+    if (defaultProject) {
+      const match = ctx.projects.find(p => p.name === defaultProject);
+      if (match) return match.name;
+    }
+
+    // Try repo name match
+    if (ideCtx.git.repoName) {
+      const repoMatch = ctx.projects.find(p =>
+        p.name.toLowerCase().includes(ideCtx.git.repoName!.toLowerCase()) ||
+        (p.code && p.code.toLowerCase() === ideCtx.git.repoName!.toLowerCase())
+      );
+      if (repoMatch) return repoMatch.name;
+    }
+
+    // Try workspace name match
+    if (ideCtx.editor.workspaceName) {
+      const wsMatch = ctx.projects.find(p =>
+        p.name.toLowerCase().includes(ideCtx.editor.workspaceName!.toLowerCase())
+      );
+      if (wsMatch) return wsMatch.name;
+    }
+
+    // If only one project, auto-select
+    if (ctx.projects.length === 1) return ctx.projects[0].name;
+
+    return null;
   }
 
   private _getStatusClass(status: string): string {
@@ -651,6 +718,30 @@ export class TaskLoggerViewProvider implements vscode.WebviewViewProvider {
         padding: 24px 16px;
         color: var(--vscode-descriptionForeground);
         font-size: 12px;
+      }
+      .context-banner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 8px;
+        margin-bottom: 8px;
+        border-radius: 4px;
+        background: var(--vscode-editor-inactiveSelectionBackground);
+        font-size: 11px;
+      }
+      .context-label {
+        font-weight: 600;
+        color: var(--vscode-foreground);
+        margin-right: 2px;
+      }
+      .context-chip {
+        padding: 1px 6px;
+        border-radius: 8px;
+        background: var(--vscode-badge-background);
+        color: var(--vscode-badge-foreground);
+        font-size: 10px;
+        white-space: nowrap;
       }
     `;
   }

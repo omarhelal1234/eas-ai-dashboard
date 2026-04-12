@@ -117,8 +117,9 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │   │   ├── extension.ts             # Entry point, command registration
 │   │   ├── auth.ts                  # Supabase Auth (email/password → JWT)
 │   │   ├── api.ts                   # Edge Function API client
+│   │   ├── contextDetector.ts       # Phase 10.1: IDE context auto-detection (git, AI tools, dates)
 │   │   ├── sidebar.ts               # Webview sidebar panel (task form + My Tasks)
-│   │   ├── quickLog.ts              # Command Palette 5-step wizard
+│   │   ├── quickLog.ts              # Command Palette 5-step wizard (context-aware)
 │   │   └── statusBar.ts             # Status bar item
 │   ├── media/sidebar-icon.svg
 │   ├── package.json             # Extension manifest + settings

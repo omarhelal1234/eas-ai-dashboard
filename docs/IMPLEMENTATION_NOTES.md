@@ -39,6 +39,39 @@
 - `vscode-extension/package.json` — Extension manifest
 - `vscode-extension/tsconfig.json` — TypeScript config
 
+### 0g1. April 13, 2026 — Phase 10.1: IDE Context Auto-Detection
+
+**Objective:** Make the task logging experience near-zero-friction by auto-detecting developer work context from the VS Code environment and pre-filling form fields.
+
+**Key Decisions:**
+
+1. **Context detector as a separate module** (`contextDetector.ts`) — keeps detection logic isolated from UI code; easy to extend with new signal sources.
+
+2. **Parallel context gathering** — `gatherIdeContext()` fetches git info, editor context, and AI tool detection simultaneously via `Promise.all()`, adding negligible latency.
+
+3. **20+ AI extension IDs mapped** — covers GitHub Copilot (3 variants), Tabnine, Amazon Q/CodeWhisperer, Cody, Continue, Codeium, Cursor, Supermaven, Claude Dev, Cline, Windsurf, Pieces, IntelliCode, and more. The `matchToolToLov()` function handles exact and fuzzy matching against the server's LOV list.
+
+4. **Language → Category heuristic** — maps `languageId` to task categories (e.g., `typescript` → "Code Generation", `sql` → "Data Analysis"). Shown as "💡 Suggested" in the UI; user can override.
+
+5. **Project auto-matching** — workspace name and Git repo name are fuzzy-matched against the user's EAS project list. Falls back to single-project auto-select.
+
+6. **Auto-detected values in QuickLog** — detected tool and suggested category are promoted to the top of their respective dropdown lists with markers. The description field is pre-filled with a context-aware suggestion (e.g., "Used GitHub Copilot working on auth.ts on branch feature/auth").
+
+7. **Sidebar context banner** — a chip-based banner at the top of the sidebar shows detected signals at a glance (tool, branch, language, week number).
+
+8. **Web dashboard install page** — new "VS Code Extension" page under Resources with: install CTA, feature grid, step-by-step installation guide, auto-detection reference table, and settings reference. Visible to all authenticated roles.
+
+**Files Created:**
+- `vscode-extension/src/contextDetector.ts` — Core context detection module
+- `.github/skills/ide-context/SKILL.md` — Skill documentation
+
+**Files Modified:**
+- `vscode-extension/src/extension.ts` — Imports `resetSessionTimer`, calls on activation
+- `vscode-extension/src/quickLog.ts` — Gathers IDE context, pre-fills all wizard steps
+- `vscode-extension/src/sidebar.ts` — Gathers IDE context, pre-fills sidebar form, adds context banner
+- `vscode-extension/package.json` — `autoDetectTool` setting now defaults to `true`
+- `src/pages/index.html` — New "VS Code Extension" nav item + page + `copyVsixInstallCmd()` function
+
 ### 0f. April 12, 2026 — Skills Library → skills.sh Integration
 
 - **What changed:** Replaced the static "Skills Library" page (6 learning-path cards linking to MS Learn) with a full skills.sh marketplace integration — searchable, filterable, with IDE-specific install commands.

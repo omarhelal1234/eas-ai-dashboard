@@ -10,9 +10,13 @@ import { initAuth, signIn, signOut, restoreSession, getSession } from './auth';
 import { TaskLoggerViewProvider } from './sidebar';
 import { quickLogTask } from './quickLog';
 import { createStatusBarItem, disposeStatusBarItem } from './statusBar';
+import { resetSessionTimer } from './contextDetector';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   console.log('EAS Task Logger: activating...');
+
+  // Start session timer for time tracking
+  resetSessionTimer();
 
   // Initialize auth with VS Code SecretStorage
   initAuth(context.secrets);

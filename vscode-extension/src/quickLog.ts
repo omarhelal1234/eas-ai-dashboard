@@ -1,11 +1,13 @@
 // ============================================================
 // EAS Task Logger — Quick Log Command
 // Step-through Command Palette wizard for rapid task logging
+// Auto-fills context from IDE: AI tools, project, dates, etc.
 // ============================================================
 
 import * as vscode from 'vscode';
 import { getSession } from './auth';
 import { fetchContext, submitTask, EasContext } from './api';
+import { gatherIdeContext, matchToolToLov, IdeContext } from './contextDetector';
 
 /**
  * Run the quick-log wizard via Command Palette.
@@ -23,14 +25,21 @@ export async function quickLogTask(): Promise<void> {
     return;
   }
 
-  // Fetch context to get LOV values
+  // Fetch server context and IDE context in parallel
   let ctx: EasContext;
+  let ideCtx: IdeContext;
   try {
-    ctx = await fetchContext();
+    [ctx, ideCtx] = await Promise.all([
+      fetchContext(),
+      gatherIdeContext(),
+    ]);
   } catch (err) {
     vscode.window.showErrorMessage(`EAS: Failed to load context — ${(err as Error).message}`);
     return;
   }
+
+  // Auto-detect AI tool from installed extensions
+  const autoDetectedTool = matchToolToLov(ideCtx.detectedAiTools, ctx.aiTools);
 
   if (!ctx.activeQuarter) {
     vscode.window.showErrorMessage('EAS: No active quarter found. Contact an administrator.');
@@ -42,10 +51,11 @@ export async function quickLogTask(): Promise<void> {
     return;
   }
 
-  // Step 1: Task Description
+  // Step 1: Task Description (pre-filled with IDE context suggestion)
   const taskDescription = await vscode.window.showInputBox({
     title: 'EAS Quick Log — Step 1/5',
     prompt: 'Describe what you accomplished using AI',
+    value: ideCtx.suggestedDescription || '',
     placeHolder: 'e.g., Used GitHub Copilot to generate unit tests for the payment module...',
     ignoreFocusOut: true,
     validateInput: (value) => {
@@ -57,25 +67,56 @@ export async function quickLogTask(): Promise<void> {
   });
   if (taskDescription === undefined) return; // Cancelled
 
-  // Step 2: AI Tool
-  const aiToolItems: vscode.QuickPickItem[] = ctx.aiTools.map(t => ({
-    label: t.value,
-    description: t.isLicensed ? '⭐ Licensed' : '',
-  }));
+  // Step 2: AI Tool (auto-detected tool shown first)
+  const aiToolItems: vscode.QuickPickItem[] = ctx.aiTools.map(t => {
+    const isDetected = autoDetectedTool === t.value;
+    return {
+      label: t.value,
+      description: [
+        isDetected ? '🔍 Detected' : '',
+        t.isLicensed ? '⭐ Licensed' : '',
+      ].filter(Boolean).join(' '),
+      picked: isDetected,
+    };
+  });
+
+  // Move detected tool to the top of the list
+  if (autoDetectedTool) {
+    const idx = aiToolItems.findIndex(i => i.label === autoDetectedTool);
+    if (idx > 0) {
+      const [item] = aiToolItems.splice(idx, 1);
+      aiToolItems.unshift(item);
+    }
+  }
 
   const aiToolPick = await vscode.window.showQuickPick(aiToolItems, {
-    title: 'EAS Quick Log — Step 2/5',
-    placeHolder: 'Which AI tool did you use?',
+    title: `EAS Quick Log — Step 2/5${autoDetectedTool ? ' (auto-detected: ' + autoDetectedTool + ')' : ''}`,
+    placeHolder: autoDetectedTool ? `Detected: ${autoDetectedTool} — press Enter to confirm` : 'Which AI tool did you use?',
     ignoreFocusOut: true,
   });
   if (!aiToolPick) return; // Cancelled
 
-  // Step 3: Category
-  const categoryItems: vscode.QuickPickItem[] = ctx.categories.map(c => ({ label: c }));
+  // Step 3: Category (auto-suggested from file language)
+  const categoryItems: vscode.QuickPickItem[] = ctx.categories.map(c => {
+    const isSuggested = ideCtx.suggestedCategory === c;
+    return {
+      label: c,
+      description: isSuggested ? '💡 Suggested' : '',
+    };
+  });
+
+  // Move suggested category to the top
+  if (ideCtx.suggestedCategory) {
+    const idx = categoryItems.findIndex(i => i.label === ideCtx.suggestedCategory);
+    if (idx > 0) {
+      const [item] = categoryItems.splice(idx, 1);
+      categoryItems.unshift(item);
+    }
+  }
 
   const categoryPick = await vscode.window.showQuickPick(categoryItems, {
-    title: 'EAS Quick Log — Step 3/5',
-    placeHolder: 'Select the task category',
+    title: `EAS Quick Log — Step 3/5${ideCtx.suggestedCategory ? ' (suggested: ' + ideCtx.suggestedCategory + ')' : ''}`,
+    placeHolder: ideCtx.suggestedCategory ? `Suggested: ${ideCtx.suggestedCategory} — press Enter to confirm` : 'Select the task category',
     ignoreFocusOut: true,
   });
   if (!categoryPick) return; // Cancelled
@@ -135,11 +176,32 @@ export async function quickLogTask(): Promise<void> {
     ? parseFloat(qualityPick.label)
     : undefined;
 
-  // Auto-resolve project if there's a default or only one
+  // Auto-resolve project: check config, workspace name match, or single project
   const config = vscode.workspace.getConfiguration('eas');
   const defaultProject = config.get<string>('defaultProject') || '';
   let project: string | undefined = defaultProject || undefined;
   let projectCode: string | undefined;
+
+  // Try to match workspace/repo name to a project
+  if (!project && ideCtx.git.repoName) {
+    const repoMatch = ctx.projects.find(p =>
+      p.name.toLowerCase().includes(ideCtx.git.repoName!.toLowerCase()) ||
+      (p.code && p.code.toLowerCase() === ideCtx.git.repoName!.toLowerCase())
+    );
+    if (repoMatch) {
+      project = repoMatch.name;
+      projectCode = repoMatch.code;
+    }
+  }
+  if (!project && ideCtx.editor.workspaceName) {
+    const wsMatch = ctx.projects.find(p =>
+      p.name.toLowerCase().includes(ideCtx.editor.workspaceName!.toLowerCase())
+    );
+    if (wsMatch) {
+      project = wsMatch.name;
+      projectCode = wsMatch.code;
+    }
+  }
 
   if (!project && ctx.projects.length === 1) {
     project = ctx.projects[0].name;
@@ -193,6 +255,7 @@ export async function quickLogTask(): Promise<void> {
       qualityRating,
       project,
       projectCode,
+      weekNumber: ideCtx.datetime.weekNumber,
     });
 
     if (result.success) {

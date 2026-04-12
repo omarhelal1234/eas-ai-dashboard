@@ -92,8 +92,8 @@
         },
         "eas.autoDetectTool": {
           "type": "boolean",
-          "default": false,
-          "description": "(Future) Auto-detect AI tool from active extensions (e.g., GitHub Copilot)"
+          "default": true,
+          "description": "Auto-detect AI tool from active extensions (e.g., GitHub Copilot, Tabnine, Cody)"
         }
       }
     },

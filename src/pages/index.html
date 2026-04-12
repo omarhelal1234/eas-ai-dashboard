@@ -131,6 +131,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
     AI News
   </div>
+  <div class="nav-item" data-page="vscode" data-role="admin,spoc,contributor">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    VS Code Extension
+  </div>
   </div>
 
   <div class="sidebar-footer">
@@ -1110,6 +1114,147 @@
       </div><!-- /guide-prompts -->
     </div>
   </div>
+
+  <!-- VS Code Extension Page -->
+  <div id="page-vscode" class="page hidden">
+    <div class="page-header">
+      <h2>VS Code Extension</h2>
+      <p>Log AI tasks directly from your IDE — context auto-detected, zero friction</p>
+    </div>
+    <div class="page-content">
+
+      <!-- Hero / Install CTA -->
+      <div class="guide-section" style="margin-bottom:24px">
+        <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:280px">
+            <h3 style="font-size:20px;margin-bottom:8px">📦 EAS AI Task Logger for VS Code</h3>
+            <p style="color:var(--text-muted);margin-bottom:16px;line-height:1.6">
+              Install the extension to log tasks without leaving your editor. It auto-detects your
+              AI tools (Copilot, Tabnine, Cody, etc.), current project, branch, file type, and
+              date — so most fields are pre-filled for you.
+            </p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <a href="#" onclick="copyVsixInstallCmd(); return false;" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Copy Install Command
+              </a>
+              <a href="https://github.com/ejada/E-AI-S/tree/master/vscode-extension" target="_blank" class="btn btn-secondary" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                View Source
+              </a>
+            </div>
+          </div>
+          <div style="flex:0 0 200px;text-align:center">
+            <div style="font-size:64px;line-height:1">🧩</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:8px">v1.0.0 &middot; Phase 10</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coppy command toast -->
+      <div id="vsix-toast" style="display:none;position:fixed;bottom:24px;right:24px;background:var(--bg-card);border:1px solid var(--success);color:var(--success);padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15)">
+        ✅ Copied! Run in terminal to install.
+      </div>
+
+      <!-- Features Grid -->
+      <h3 style="margin-bottom:12px">Key Features</h3>
+      <div class="kpi-grid" style="margin-bottom:24px">
+        <div class="kpi-card">
+          <div class="kpi-label">🔍 Auto-Detect AI Tools</div>
+          <div class="kpi-value" style="font-size:14px">GitHub Copilot, Tabnine, Cody, Amazon Q, and 15+ more</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">📋 Pre-Fill Task Form</div>
+          <div class="kpi-value" style="font-size:14px">Description, category, project, and dates auto-populated</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">⚡ Quick Log Wizard</div>
+          <div class="kpi-value" style="font-size:14px">5-step Command Palette flow — log a task in under 30 seconds</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">📊 Sidebar Panel</div>
+          <div class="kpi-value" style="font-size:14px">Full task form + "My Tasks" tab right in the Activity Bar</div>
+        </div>
+      </div>
+
+      <!-- Installation Steps -->
+      <h3 style="margin-bottom:12px">Installation Guide</h3>
+      <div class="guide-section">
+        <div class="guide-card">
+          <h4>Step 1: Download / Clone</h4>
+          <p>The extension lives in the <code>vscode-extension/</code> folder of this repository.</p>
+          <pre style="background:var(--bg-main);padding:10px;border-radius:6px;font-size:12px;overflow-x:auto;margin-top:8px"><code>git clone https://github.com/ejada/E-AI-S.git
+cd E-AI-S/vscode-extension</code></pre>
+        </div>
+        <div class="guide-card">
+          <h4>Step 2: Install Dependencies & Build</h4>
+          <pre style="background:var(--bg-main);padding:10px;border-radius:6px;font-size:12px;overflow-x:auto;margin-top:8px"><code>npm install
+npm run compile</code></pre>
+        </div>
+        <div class="guide-card">
+          <h4>Step 3: Package as VSIX</h4>
+          <pre style="background:var(--bg-main);padding:10px;border-radius:6px;font-size:12px;overflow-x:auto;margin-top:8px"><code>npm run package
+# Creates eas-task-logger-1.0.0.vsix</code></pre>
+        </div>
+        <div class="guide-card">
+          <h4>Step 4: Install in VS Code</h4>
+          <pre style="background:var(--bg-main);padding:10px;border-radius:6px;font-size:12px;overflow-x:auto;margin-top:8px"><code>code --install-extension eas-task-logger-1.0.0.vsix</code></pre>
+          <p style="margin-top:8px;color:var(--text-muted);font-size:12px">
+            Or: VS Code → Extensions → <code>⋯</code> → "Install from VSIX..." → select the file.
+          </p>
+        </div>
+        <div class="guide-card">
+          <h4>Step 5: Sign In & Start Logging</h4>
+          <p>Open Command Palette (<code>Ctrl+Shift+P</code>) → <code>EAS: Sign In</code> → enter your dashboard credentials.</p>
+          <p style="margin-top:6px">Then try <code>EAS: Quick Log Task</code> or click the EAS icon in the sidebar.</p>
+        </div>
+      </div>
+
+      <!-- Auto-Detection Details -->
+      <h3 style="margin:24px 0 12px">What Gets Auto-Detected?</h3>
+      <div style="overflow-x:auto">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr>
+              <th>Signal</th>
+              <th>Source</th>
+              <th>Auto-Fills</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>🔧 AI Tool</td><td>Installed VS Code extensions</td><td>AI Tool dropdown</td></tr>
+            <tr><td>📄 File Language</td><td>Active editor tab</td><td>Category (e.g. Code Generation)</td></tr>
+            <tr><td>🌿 Git Branch</td><td>Built-in Git extension</td><td>Task description hint</td></tr>
+            <tr><td>💬 Last Commit</td><td>Git log</td><td>Task description context</td></tr>
+            <tr><td>📂 Workspace / Repo</td><td>VS Code workspace + Git remote</td><td>Project selection</td></tr>
+            <tr><td>📅 Date / Week / Quarter</td><td>System clock</td><td>Quarter, week number</td></tr>
+            <tr><td>⏱️ Session Duration</td><td>Extension activation time</td><td>Time estimate hints</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Settings -->
+      <h3 style="margin:24px 0 12px">Extension Settings</h3>
+      <div style="overflow-x:auto">
+        <table class="data-table" style="width:100%">
+          <thead>
+            <tr>
+              <th>Setting</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>eas.supabaseUrl</code></td><td>Production URL</td><td>Supabase project URL</td></tr>
+            <tr><td><code>eas.supabaseAnonKey</code></td><td>Production key</td><td>Public anon key (RLS enforced)</td></tr>
+            <tr><td><code>eas.defaultProject</code></td><td><em>empty</em></td><td>Pre-select a project for all tasks</td></tr>
+            <tr><td><code>eas.autoDetectTool</code></td><td>true</td><td>Auto-detect AI tool from installed extensions</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
 </main>
 
 <!-- Add Task Modal -->
@@ -1509,6 +1654,21 @@ function toggleTheme() {
   }
   // Update Chart.js colors
   updateChartTheme();
+}
+
+// -- VS Code Extension install command copy --
+function copyVsixInstallCmd() {
+  const cmd = 'code --install-extension eas-task-logger-1.0.0.vsix';
+  navigator.clipboard.writeText(cmd).then(() => {
+    const toast = document.getElementById('vsix-toast');
+    if (toast) {
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+  }).catch(() => {
+    // Fallback: select text
+    window.prompt('Copy this command:', cmd);
+  });
 }
 function getThemeColor(varName) {
   return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();

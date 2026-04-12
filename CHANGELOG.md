@@ -10,6 +10,8 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-13 (copilot) — **Phase 10.1: IDE Context Auto-Detection** — New `contextDetector.ts` module auto-detects Git branch/commits, active file language, installed AI extensions (20+), workspace/project mapping, date/week/quarter, and session duration. Quick Log and sidebar forms now pre-fill description, AI tool, category, project, and weekNumber from IDE context. Added "VS Code Extension" page to web dashboard with install guide, feature cards, and auto-detection reference table. New `.github/skills/ide-context/` skill documentation. (feat)
+
 - 2026-04-13 (copilot) — **Phase 10: IDE Task Logger** — New Supabase Edge Function `ide-task-log` with JWT authentication, 4 endpoints (submit task, get context, get my tasks, health check), full approval workflow integration via service-to-service AI validation call. New VS Code extension `eas-task-logger` with sidebar webview panel (task form + My Tasks tab), 5-step Command Palette quick-log wizard, status bar item, and Supabase Auth via SecretStorage. New SQL migration `006_ide_api.sql` adds `source` column to tasks/accomplishments tables (`web`/`ide`/`api`). (feat)
 
 - 2026-04-13 (copilot) — **Move Use Case Library to Resources**: Moved the Use Case Library nav item from Management section into Resources section and reordered Resources tabs by relevance: Use Case Library → Prompt Library → Skills Library → Guidelines → Copilot Enablement → AI News. (refactor/ui)
