@@ -8,6 +8,10 @@
     {
       "slug": "ai-validate",
       "importmap_path": "functions/ai-validate/import_map.json"
+    },
+    {
+      "slug": "ide-task-log",
+      "importmap_path": "functions/ide-task-log/import_map.json"
     }
   ]
 }

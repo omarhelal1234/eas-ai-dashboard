@@ -6,6 +6,39 @@
 
 ## Changes Made
 
+### 0g. April 13, 2026 — Phase 10: IDE Task Logger
+
+**Objective:** Allow developers to log AI adoption tasks directly from VS Code without switching to the web dashboard.
+
+**Key Decisions:**
+
+1. **Single Edge Function with path routing** over multiple functions — reduces cold start surface, keeps related logic together. The `ide-task-log` Edge Function handles 4 routes (`POST /`, `GET /context`, `GET /my-tasks`, `GET /health`).
+
+2. **JWT auth on the Edge Function** — unlike existing Edge Functions (`ai-suggestions`, `ai-validate`) which are open CORS, `ide-task-log` validates the `Authorization: Bearer <jwt>` header using `supabase.auth.getUser(token)`. This is the first authenticated Edge Function in the project.
+
+3. **Email/password auth in IDE** (not full OAuth PKCE) — simpler to implement for v1. The extension prompts for credentials via `vscode.window.showInputBox`, calls the Supabase Auth REST API directly, and stores the JWT in `vscode.SecretStorage`. Tokens auto-refresh via the refresh token. Full browser-based OAuth can be added in v2.
+
+4. **`source` column on `tasks`** — `TEXT DEFAULT 'web'` with CHECK constraint for `'web'|'ide'|'api'`. Backwards-compatible (existing rows get `'web'`). Enables analytics on submission origin without schema disruption.
+
+5. **Service-to-service AI validation** — the Edge Function calls `ai-validate` internally using the service role key, so the AI validation flow is identical to web submissions. Approval routing mirrors `js/db.js → determineApprovalRouting()`.
+
+6. **Webview sidebar over TreeView** — a form-heavy UI needs HTML; TreeView is too limited for data entry. The webview renders arbitrary HTML/CSS inside VS Code using VS Code CSS variables for theme consistency.
+
+7. **Extension in-repo** — co-located in `vscode-extension/` with the API and schema for simpler versioning. Can be extracted to a separate repo later if needed.
+
+**Files Created:**
+- `sql/006_ide_api.sql` — Schema migration
+- `supabase/functions/ide-task-log/index.ts` — Edge Function API
+- `supabase/functions/ide-task-log/import_map.json` — Deno import map
+- `vscode-extension/src/extension.ts` — Entry point
+- `vscode-extension/src/auth.ts` — Auth module
+- `vscode-extension/src/api.ts` — API client
+- `vscode-extension/src/sidebar.ts` — Webview sidebar
+- `vscode-extension/src/quickLog.ts` — Command Palette wizard
+- `vscode-extension/src/statusBar.ts` — Status bar item
+- `vscode-extension/package.json` — Extension manifest
+- `vscode-extension/tsconfig.json` — TypeScript config
+
 ### 0f. April 12, 2026 — Skills Library → skills.sh Integration
 
 - **What changed:** Replaced the static "Skills Library" page (6 learning-path cards linking to MS Learn) with a full skills.sh marketplace integration — searchable, filterable, with IDE-specific install commands.

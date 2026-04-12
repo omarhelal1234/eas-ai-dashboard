@@ -32,3 +32,8 @@ supabase/.temp/
 
 # Python virtual env
 .venv/
+
+# VS Code extension build artifacts
+vscode-extension/out/
+vscode-extension/node_modules/
+vscode-extension/*.vsix

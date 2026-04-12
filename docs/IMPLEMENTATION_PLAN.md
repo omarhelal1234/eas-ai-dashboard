@@ -24,6 +24,7 @@
 | 2.3 | Apr 11, 2026 | Omar Ibrahim | Phase 8 Complete — AI-Assisted Approval Workflow: AI suggestions, validation, multi-layer routing |
 | 2.4 | Apr 12, 2026 | Omar Ibrahim | Approval gating: approved-only metrics/exports and re-approval on edits |
 | 2.5 | Apr 12, 2026 | Omar Ibrahim | Phase 9 — Licensed Tool Tracking: GitHub Copilot & M365 Copilot as primary adoption KPIs |
+| 2.6 | Apr 13, 2026 | Omar Ibrahim | Phase 10 — IDE Task Logger: VS Code extension + Edge Function API for logging tasks from IDE |
 
 ---
 
@@ -40,6 +41,7 @@
 | 7 | Export Center | ✅ Complete | `—` | Excel/PDF/PPT export, per-page buttons, role-based access |
 | 8 | AI-Assisted Approval Workflow | ✅ Complete | `—` | Edge Functions, AI validation, multi-layer routing, admin approvals tab |
 | 9 | Licensed Tool Tracking | ✅ Complete | `—` | Licensed vs Other tool KPIs, adoption by practice, form optgroups, badges |
+| 10 | IDE Task Logger | 🚧 In Progress | `—` | VS Code extension, Edge Function API, OAuth auth, sidebar + quick-log, approval workflow integration |
 
 ---
 
@@ -357,6 +359,45 @@ Ejada pays for two AI tools: **GitHub Copilot** and **M365 Copilot (Basic)**. Ot
 | `db.js` fetchLovs | Returns `licensedTools[]` and `otherTools[]` alongside `aiTools[]` |
 | `db.js` fetchAllData | Returns `licensedToolAdoption` and `licensedTotals` |
 | `index.html` populateFilters | Uses `<optgroup>` for tool dropdowns |
+
+---
+
+## Phase 10: IDE Task Logger 🚧
+
+**Status:** In Progress | **Dates:** Apr 13, 2026–
+
+### Objective
+Allow developers to log AI adoption tasks directly from their IDE (VS Code) without switching to the web dashboard.
+
+### Deliverables
+
+- [x] SQL migration `006_ide_api.sql` — adds `source` column to tasks/accomplishments (`web`/`ide`/`api`)
+- [x] Supabase Edge Function `ide-task-log` — JWT-authenticated API with 4 endpoints:
+  - `POST /` — Submit task with full approval workflow
+  - `GET /context` — Active quarter, LOVs, user's projects
+  - `GET /my-tasks` — User's recent tasks with approval status
+  - `GET /health` — Auth-free health check
+- [x] VS Code Extension `eas-task-logger`:
+  - `auth.ts` — Supabase Auth email/password login, JWT storage via SecretStorage, auto-refresh
+  - `api.ts` — Typed API client wrapping the Edge Function
+  - `sidebar.ts` — Webview sidebar panel with full task form + "My Tasks" tab
+  - `quickLog.ts` — 5-step Command Palette wizard for rapid task entry
+  - `statusBar.ts` — Status bar item showing login state
+  - `extension.ts` — Entry point, command registration, lifecycle
+- [ ] Deploy Edge Function to Supabase
+- [ ] Run SQL migration on Supabase
+- [ ] End-to-end testing (IDE → Edge Function → DB → Web Dashboard)
+
+### Architecture Changes
+
+| Component | Change |
+|-----------|--------|
+| `tasks` table | New `source TEXT DEFAULT 'web'` column |
+| `accomplishments` table | New `source TEXT DEFAULT 'web'` column |
+| `ide-task-log` Edge Function | New — JWT auth, task submission, context, user tasks |
+| `supabase.json` | Added `ide-task-log` function entry |
+| `vscode-extension/` | New — Full VS Code extension with sidebar, quick-log, auth |
+| `activity_log` | IDE submissions logged with `source: 'ide'` in details JSONB |
 
 ---
 

@@ -1,0 +1,138 @@
+{
+  "name": "eas-task-logger",
+  "displayName": "EAS AI Task Logger",
+  "description": "Log AI adoption tasks directly from VS Code to the EAS AI Dashboard. Part of the Ejada AI Adoption Tracker (E-AI-S).",
+  "version": "1.0.0",
+  "publisher": "ejada",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ejada/E-AI-S"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "eas",
+    "ai",
+    "adoption",
+    "task",
+    "logger",
+    "ejada"
+  ],
+  "icon": "media/icon.png",
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "eas.signIn",
+        "title": "EAS: Sign In",
+        "icon": "$(sign-in)"
+      },
+      {
+        "command": "eas.signOut",
+        "title": "EAS: Sign Out",
+        "icon": "$(sign-out)"
+      },
+      {
+        "command": "eas.quickLogTask",
+        "title": "EAS: Quick Log Task",
+        "icon": "$(add)"
+      },
+      {
+        "command": "eas.openSidebar",
+        "title": "EAS: Open Task Logger",
+        "icon": "$(tasklist)"
+      },
+      {
+        "command": "eas.refreshTasks",
+        "title": "EAS: Refresh My Tasks",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "eas-task-logger",
+          "title": "EAS Task Logger",
+          "icon": "media/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "eas-task-logger": [
+        {
+          "type": "webview",
+          "id": "eas.taskLoggerView",
+          "name": "Task Logger"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "EAS Task Logger",
+      "properties": {
+        "eas.supabaseUrl": {
+          "type": "string",
+          "default": "https://apcfnzbiylhgiutcjigg.supabase.co",
+          "description": "Supabase project URL for the EAS AI Dashboard"
+        },
+        "eas.supabaseAnonKey": {
+          "type": "string",
+          "default": "sb_publishable_fO29UdOY1Wa8_LOgjDj2Pg_iZ7bhKJ3",
+          "description": "Supabase anonymous/public key (safe to include — RLS enforced)"
+        },
+        "eas.defaultProject": {
+          "type": "string",
+          "default": "",
+          "description": "Default project name for quick-log submissions"
+        },
+        "eas.autoDetectTool": {
+          "type": "boolean",
+          "default": false,
+          "description": "(Future) Auto-detect AI tool from active extensions (e.g., GitHub Copilot)"
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "eas.signIn",
+          "when": "!eas.isSignedIn"
+        },
+        {
+          "command": "eas.signOut",
+          "when": "eas.isSignedIn"
+        },
+        {
+          "command": "eas.quickLogTask",
+          "when": "eas.isSignedIn"
+        },
+        {
+          "command": "eas.refreshTasks",
+          "when": "eas.isSignedIn"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "dependencies": {}
+}

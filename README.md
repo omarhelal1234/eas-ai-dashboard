@@ -1,6 +1,6 @@
 # EAS AI Adoption Dashboard
 
-Enterprise AI adoption tracking platform for Enterprise Application Solutions (EAS), covering 6 practices and 120+ licensed users across GitHub Copilot, Claude, ChatGPT, and other AI tools. **Phase 8 Complete:** Integrated AI-assisted task submissions with multi-layer approval workflow (AI validation → SPOC review → Admin oversight).
+Enterprise AI adoption tracking platform for Enterprise Application Solutions (EAS), covering 6 practices and 120+ licensed users across GitHub Copilot, Claude, ChatGPT, and other AI tools. **Phase 10 In Progress:** VS Code extension for logging AI tasks directly from the IDE, backed by a new Supabase Edge Function API.
 
 ## Live URLs
 
@@ -53,7 +53,13 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 ├── supabase/
 │   └── functions/                  # Supabase Edge Functions
 │       ├── ai-suggestions/         # GPT-4 suggestion generation
-│       └── ai-validate/            # AI validation of submissions
+│       ├── ai-validate/            # AI validation of submissions
+│       └── ide-task-log/           # Phase 10: IDE Task Logger API
+│
+├── vscode-extension/               # Phase 10: VS Code Extension
+│   ├── src/                        # TypeScript source (auth, api, sidebar, quickLog)
+│   ├── media/                      # Extension icons
+│   └── package.json                # Extension manifest
 │
 ├── scripts/                        # Node.js dev/admin scripts + verify-setup.sh
 │   ├── create-auth-users.mjs

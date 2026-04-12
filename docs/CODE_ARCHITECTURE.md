@@ -1,6 +1,6 @@
 # Code Architecture — EAS AI Dashboard
 
-> **Last Updated:** April 12, 2026 | **Phase:** 9 (Licensed Tool Tracking)
+> **Last Updated:** April 13, 2026 | **Phase:** 10 (IDE Task Logger)
 >
 > **Layout note (2026-04-11):** All HTML entry points now live under `src/pages/`. Shared assets in `css/` and `js/` are referenced from those pages via `../../css/…` and `../../js/…`. See §2 for the updated tree and §6 for path examples.
 
@@ -86,7 +86,8 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 ├── sql/
 │   ├── 001_schema.sql      # Full Supabase schema (core tables, views, RLS, triggers)
 │   ├── 002_approval_workflow.sql # Phase 8 approval workflow schema
-│   └── 003_use_cases.sql    # AI Innovation approved use cases seed data (40 EAS use cases)
+│   ├── 003_use_cases.sql    # AI Innovation approved use cases seed data (40 EAS use cases)
+│   └── 006_ide_api.sql      # Phase 10 IDE API schema (source column on tasks/accomplishments)
 │
 ├── scripts/                # Node.js admin/migration scripts
 │   ├── create-auth-users.mjs   # One-time auth user creation
@@ -108,7 +109,20 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 ├── supabase/                # Supabase Edge Functions
 │   └── functions/
 │       ├── ai-suggestions/          # GPT-4 suggestion generation
-│       └── ai-validate/             # AI submission validation
+│       ├── ai-validate/             # AI submission validation
+│       └── ide-task-log/            # Phase 10: IDE Task Logger API (JWT auth, task submission)
+│
+├── vscode-extension/        # Phase 10: VS Code Extension
+│   ├── src/
+│   │   ├── extension.ts             # Entry point, command registration
+│   │   ├── auth.ts                  # Supabase Auth (email/password → JWT)
+│   │   ├── api.ts                   # Edge Function API client
+│   │   ├── sidebar.ts               # Webview sidebar panel (task form + My Tasks)
+│   │   ├── quickLog.ts              # Command Palette 5-step wizard
+│   │   └── statusBar.ts             # Status bar item
+│   ├── media/sidebar-icon.svg
+│   ├── package.json             # Extension manifest + settings
+│   └── tsconfig.json
 │
 ├── server/                 # Node.js backend
 │   ├── adoption-agent-endpoint.js   # Express API + Claude integration

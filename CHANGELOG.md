@@ -10,6 +10,8 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-13 (copilot) — **Phase 10: IDE Task Logger** — New Supabase Edge Function `ide-task-log` with JWT authentication, 4 endpoints (submit task, get context, get my tasks, health check), full approval workflow integration via service-to-service AI validation call. New VS Code extension `eas-task-logger` with sidebar webview panel (task form + My Tasks tab), 5-step Command Palette quick-log wizard, status bar item, and Supabase Auth via SecretStorage. New SQL migration `006_ide_api.sql` adds `source` column to tasks/accomplishments tables (`web`/`ide`/`api`). (feat)
+
 - 2026-04-13 (copilot) — **Move Use Case Library to Resources**: Moved the Use Case Library nav item from Management section into Resources section and reordered Resources tabs by relevance: Use Case Library → Prompt Library → Skills Library → Guidelines → Copilot Enablement → AI News. (refactor/ui)
 
 - 2026-04-12 (copilot) — **Skills Library → skills.sh Integration**: Replaced static skills learning cards with a full skills.sh marketplace integration. New page features: searchable catalog of 18 curated skills from the skills.sh leaderboard (vercel-labs, anthropics, microsoft, obra), category filter pills (Frontend, Backend, DevOps & Cloud, Design & UX, Productivity, Official), per-skill install modal with copy-to-clipboard commands for multiple IDEs (GitHub Copilot, Cursor, Windsurf, Claude Code, Global), supported agents grid showing 15+ IDEs with their skill paths, and a how-to installation guide. Added ~300 lines of CSS for marketplace UI components (skill cards, search bar, filter pills, install modals, agent badges). (feat)
