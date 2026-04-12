@@ -804,81 +804,134 @@
     <div class="page-header">
       <div>
         <h2>Skills Library</h2>
-        <div class="subtitle">Master AI tools and techniques with curated learning paths</div>
+        <div class="subtitle">Discover, search &amp; install agent skills from <a href="https://skills.sh/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:600">skills.sh</a> — the open agent skills ecosystem</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <a href="https://skills.sh/" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align:middle;margin-right:4px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          skills.sh
+        </a>
       </div>
     </div>
     <div class="page-content">
-      <div class="guide-section" id="guide-skills">
-        <div class="guide-grid">
-          <div class="guide-card guide-card-highlight">
-            <div class="guide-card-icon" style="background:rgba(139,92,246,0.15);color:var(--purple)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            </div>
-            <h4>Build Your AI Skills</h4>
-            <p>Master AI tools and techniques with curated learning paths — from beginner to advanced, for developers and non-developers alike.</p>
+
+      <!-- Hero banner -->
+      <div class="skills-hero">
+        <div class="skills-hero-content">
+          <div class="skills-hero-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="32" height="32"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
           </div>
-          <!-- Skill: Prompt Engineering -->
-          <div class="guide-card guide-skill-card">
-            <div class="guide-skill-level beginner">Beginner</div>
-            <h4>Prompt Engineering Fundamentals</h4>
-            <p>Learn how to write effective prompts for Copilot and AI chat tools. Understand context setting, few-shot examples, and iterative refinement.</p>
-            <div class="guide-skill-tags">
-              <span>Copilot</span><span>Chat</span><span>All Roles</span>
-            </div>
-            <a href="https://learn.microsoft.com/en-us/training/modules/introduction-prompt-engineering-with-github-copilot/" target="_blank" rel="noopener" class="guide-link">Start Learning</a>
+          <div>
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:6px">The Open Agent Skills Ecosystem</h3>
+            <p style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin:0">Skills are reusable capabilities for AI agents. Install them with a single command to enhance your IDE with procedural knowledge — works with <strong>GitHub Copilot</strong>, <strong>Cursor</strong>, <strong>Windsurf</strong>, <strong>Claude Code</strong>, <strong>VS Code</strong>, and <strong>40+ more agents</strong>.</p>
           </div>
-          <!-- Skill: Copilot in VS Code -->
-          <div class="guide-card guide-skill-card">
-            <div class="guide-skill-level intermediate">Intermediate</div>
-            <h4>GitHub Copilot in VS Code</h4>
-            <p>Deep dive into Copilot features — inline suggestions, chat, slash commands, context variables, and workspace agents.</p>
-            <div class="guide-skill-tags">
-              <span>VS Code</span><span>Developers</span>
-            </div>
-            <a href="https://code.visualstudio.com/docs/copilot/overview" target="_blank" rel="noopener" class="guide-link">VS Code Copilot Docs</a>
-          </div>
-          <!-- Skill: Copilot for CLI -->
-          <div class="guide-card guide-skill-card">
-            <div class="guide-skill-level intermediate">Intermediate</div>
-            <h4>GitHub Copilot CLI</h4>
-            <p>Use AI directly in your terminal — get command suggestions, explain complex commands, and automate routine tasks.</p>
-            <div class="guide-skill-tags">
-              <span>Terminal</span><span>DevOps</span><span>Developers</span>
-            </div>
-            <a href="https://docs.github.com/en/copilot/using-github-copilot/using-github-copilot-in-the-command-line" target="_blank" rel="noopener" class="guide-link">CLI Documentation</a>
-          </div>
-          <!-- Skill: Copilot Chat for PMs -->
-          <div class="guide-card guide-skill-card">
-            <div class="guide-skill-level beginner">Beginner</div>
-            <h4>Microsoft Copilot Chat for Non-Devs</h4>
-            <p>Use Copilot Chat in Microsoft 365 to draft documents, analyze data, summarize meetings, and create presentations.</p>
-            <div class="guide-skill-tags">
-              <span>M365</span><span>PMs</span><span>BAs</span><span>Non-Dev</span>
-            </div>
-            <a href="https://m365.cloud.microsoft/chat" target="_blank" rel="noopener" class="guide-link">Open Copilot Chat</a>
-          </div>
-          <!-- Skill: AI Code Review -->
-          <div class="guide-card guide-skill-card">
-            <div class="guide-skill-level advanced">Advanced</div>
-            <h4>AI-Assisted Code Review</h4>
-            <p>Leverage Copilot to review pull requests, identify bugs, suggest improvements, and maintain code quality standards.</p>
-            <div class="guide-skill-tags">
-              <span>GitHub</span><span>PR Review</span><span>Quality</span>
-            </div>
-            <a href="https://docs.github.com/en/copilot/using-github-copilot/code-review/using-copilot-code-review" target="_blank" rel="noopener" class="guide-link">Code Review Docs</a>
-          </div>
-          <!-- Skill: AI Testing -->
-          <div class="guide-card guide-skill-card">
-            <div class="guide-skill-level advanced">Advanced</div>
-            <h4>AI-Powered Testing</h4>
-            <p>Generate unit tests, integration tests, and test data using Copilot. Improve test coverage with AI suggestions.</p>
-            <div class="guide-skill-tags">
-              <span>Testing</span><span>QA</span><span>Developers</span>
-            </div>
-            <a href="https://learn.microsoft.com/en-us/training/modules/develop-unit-tests-using-github-copilot-tools/" target="_blank" rel="noopener" class="guide-link">Testing with Copilot</a>
+        </div>
+        <div class="skills-hero-quickstart">
+          <span style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Quick Install</span>
+          <div class="skills-cmd-block" onclick="copySkillCmd(this, 'npx skills add vercel-labs/agent-skills')">
+            <code><span style="color:var(--text-muted)">$</span> npx skills add vercel-labs/agent-skills</code>
+            <button class="skills-copy-btn" aria-label="Copy command" title="Copy command">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
           </div>
         </div>
       </div>
+
+      <!-- Search + filter bar -->
+      <div class="skills-search-bar">
+        <div class="skills-search-input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="skills-search" placeholder="Search skills by name, description, or tag…" oninput="filterSkillCards()" autocomplete="off">
+          <button class="skills-search-clear" id="skills-search-clear" onclick="clearSkillSearch()" title="Clear search" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="skills-filter-pills" role="tablist" aria-label="Filter by category">
+          <button class="skills-pill active" data-skills-cat="all" onclick="filterSkillCategory('all')">All</button>
+          <button class="skills-pill" data-skills-cat="frontend" onclick="filterSkillCategory('frontend')">Frontend</button>
+          <button class="skills-pill" data-skills-cat="backend" onclick="filterSkillCategory('backend')">Backend</button>
+          <button class="skills-pill" data-skills-cat="devops" onclick="filterSkillCategory('devops')">DevOps &amp; Cloud</button>
+          <button class="skills-pill" data-skills-cat="design" onclick="filterSkillCategory('design')">Design &amp; UX</button>
+          <button class="skills-pill" data-skills-cat="productivity" onclick="filterSkillCategory('productivity')">Productivity</button>
+          <button class="skills-pill" data-skills-cat="official" onclick="filterSkillCategory('official')">Official</button>
+        </div>
+      </div>
+
+      <!-- Results count -->
+      <div class="skills-results-bar" id="skills-results-bar">
+        <span id="skills-result-count"></span>
+        <a href="https://skills.sh/" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent);text-decoration:none;font-weight:500">Browse full catalog on skills.sh &rarr;</a>
+      </div>
+
+      <!-- Skills grid -->
+      <div class="skills-grid" id="skills-grid">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Supported agents section -->
+      <div class="skills-agents-section">
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Supported Agents &amp; IDEs
+        </h3>
+        <div class="skills-agents-grid">
+          <div class="skills-agent-badge"><strong>GitHub Copilot</strong><code>.agents/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Cursor</strong><code>.agents/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Windsurf</strong><code>.windsurf/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Claude Code</strong><code>.claude/skills/</code></div>
+          <div class="skills-agent-badge"><strong>VS Code</strong><code>.agents/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Codex</strong><code>.agents/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Gemini CLI</strong><code>.agents/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Cline</strong><code>.agents/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Roo Code</strong><code>.roo/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Trae</strong><code>.trae/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Kilo Code</strong><code>.kilocode/skills/</code></div>
+          <div class="skills-agent-badge"><strong>JetBrains (Junie)</strong><code>.junie/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Amp</strong><code>.agents/skills/</code></div>
+          <div class="skills-agent-badge"><strong>OpenCode</strong><code>.agents/skills/</code></div>
+          <div class="skills-agent-badge"><strong>Goose</strong><code>.goose/skills/</code></div>
+          <div class="skills-agent-badge" style="background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(59,130,246,0.08));border-color:var(--accent)"><strong style="color:var(--accent)">+ 30 more agents</strong><a href="https://skills.sh/docs" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:none">View all &rarr;</a></div>
+        </div>
+      </div>
+
+      <!-- How to install section -->
+      <div class="skills-howto">
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          How to Install Skills
+        </h3>
+        <div class="skills-howto-grid">
+          <div class="skills-howto-step">
+            <div class="skills-howto-num">1</div>
+            <div>
+              <h4>Open your terminal</h4>
+              <p>Navigate to your project directory in VS Code, Cursor, or any terminal.</p>
+            </div>
+          </div>
+          <div class="skills-howto-step">
+            <div class="skills-howto-num">2</div>
+            <div>
+              <h4>Run the install command</h4>
+              <p>Use <code>npx skills add owner/repo</code> — no global install required.</p>
+            </div>
+          </div>
+          <div class="skills-howto-step">
+            <div class="skills-howto-num">3</div>
+            <div>
+              <h4>Choose your agents</h4>
+              <p>Select which AI agents to install to (Copilot, Cursor, Windsurf, etc.).</p>
+            </div>
+          </div>
+          <div class="skills-howto-step">
+            <div class="skills-howto-num">4</div>
+            <div>
+              <h4>Start using the skill</h4>
+              <p>The skill is auto-loaded by your agent. Reference it in chat or let it activate automatically.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1514,6 +1567,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
     if (item.dataset.page === 'leaderboard') renderLeaderboard();
     if (item.dataset.page === 'mytasks') renderMyTasks();
     if (item.dataset.page === 'usecases') renderUseCases();
+    if (item.dataset.page === 'skills') renderSkillsLibrary();
     if (item.dataset.page === 'prompts') loadPromptLibrary();
   });
 });
@@ -2801,6 +2855,398 @@ let _promptLibraryCache = null;
 
 /** Role badge abbreviations */
 const ROLE_BADGES = { pm: 'PM', sa: 'SA', ba: 'BA', dev: 'DEV', dba: 'DBA', admin: 'ADM', dm: 'DM' };
+
+// ======== SKILLS LIBRARY (skills.sh integration) ========
+
+/** Curated skills catalog from skills.sh leaderboard + popular repos */
+const SKILLS_CATALOG = [
+  {
+    name: 'find-skills',
+    repo: 'vercel-labs/skills',
+    desc: 'Helps users discover and install agent skills. Search for skills by keyword, browse the leaderboard, and install with a single command.',
+    downloads: '731K',
+    tags: ['meta', 'discovery', 'cli'],
+    cat: 'productivity',
+    icon: '🔍',
+    iconBg: 'rgba(59,130,246,0.15)',
+    official: true,
+    url: 'https://skills.sh/vercel-labs/skills/find-skills'
+  },
+  {
+    name: 'frontend-design',
+    repo: 'anthropics/skills',
+    desc: 'Expert frontend design guidance — UI patterns, component architecture, accessibility best practices, and responsive design.',
+    downloads: '214K',
+    tags: ['frontend', 'react', 'css', 'a11y'],
+    cat: 'frontend',
+    icon: '🎨',
+    iconBg: 'rgba(236,72,153,0.15)',
+    official: true,
+    url: 'https://skills.sh/anthropics/skills/frontend-design'
+  },
+  {
+    name: 'web-design-guidelines',
+    repo: 'vercel-labs/agent-skills',
+    desc: 'Comprehensive web design guidelines covering layout, typography, color systems, spacing, animation, and modern CSS patterns.',
+    downloads: '199K',
+    tags: ['design', 'css', 'ux', 'a11y'],
+    cat: 'design',
+    icon: '🖌️',
+    iconBg: 'rgba(139,92,246,0.15)',
+    official: true,
+    url: 'https://skills.sh/vercel-labs/agent-skills/web-design-guidelines'
+  },
+  {
+    name: 'vercel-react-best-practices',
+    repo: 'vercel-labs/agent-skills',
+    desc: 'React + Next.js best practices from Vercel — server components, data fetching, routing, caching, and deployment patterns.',
+    downloads: '230K',
+    tags: ['react', 'nextjs', 'vercel'],
+    cat: 'frontend',
+    icon: '⚛️',
+    iconBg: 'rgba(6,182,212,0.15)',
+    official: true,
+    url: 'https://skills.sh/vercel-labs/agent-skills/vercel-react-best-practices'
+  },
+  {
+    name: 'agent-browser',
+    repo: 'vercel-labs/agent-browser',
+    desc: 'Enable your AI agent to browse the web, fetch pages, extract content, and interact with web applications programmatically.',
+    downloads: '155K',
+    tags: ['browser', 'web', 'scraping'],
+    cat: 'productivity',
+    icon: '🌐',
+    iconBg: 'rgba(59,130,246,0.15)',
+    official: true,
+    url: 'https://skills.sh/vercel-labs/agent-browser/agent-browser'
+  },
+  {
+    name: 'skill-creator',
+    repo: 'anthropics/skills',
+    desc: 'Create new agent skills from scratch. Generates SKILL.md files with proper frontmatter, instructions, and best practices.',
+    downloads: '106K',
+    tags: ['meta', 'authoring', 'skill'],
+    cat: 'productivity',
+    icon: '✏️',
+    iconBg: 'rgba(245,158,11,0.15)',
+    official: true,
+    url: 'https://skills.sh/anthropics/skills/skill-creator'
+  },
+  {
+    name: 'entra-app-registration',
+    repo: 'microsoft/azure-skills',
+    desc: 'Azure Entra ID app registration — configure authentication, permissions, OAuth flows, and service principals.',
+    downloads: '135K',
+    tags: ['azure', 'auth', 'entra', 'microsoft'],
+    cat: 'devops',
+    icon: '🔐',
+    iconBg: 'rgba(59,130,246,0.15)',
+    official: true,
+    url: 'https://skills.sh/microsoft/azure-skills/entra-app-registration'
+  },
+  {
+    name: 'azure-cost-optimization',
+    repo: 'microsoft/azure-skills',
+    desc: 'Optimize Azure costs — right-sizing, reserved instances, spot VMs, storage tiers, and cost management best practices.',
+    downloads: '132K',
+    tags: ['azure', 'cost', 'finops', 'microsoft'],
+    cat: 'devops',
+    icon: '💰',
+    iconBg: 'rgba(16,185,129,0.15)',
+    official: true,
+    url: 'https://skills.sh/microsoft/azure-skills/azure-cost-optimization'
+  },
+  {
+    name: 'microsoft-foundry',
+    repo: 'microsoft/github-copilot-for-azure',
+    desc: 'Build AI apps with Azure AI Foundry — model catalog, prompt flow, evaluations, and deployment to Azure.',
+    downloads: '121K',
+    tags: ['azure', 'ai', 'foundry', 'microsoft'],
+    cat: 'devops',
+    icon: '🏗️',
+    iconBg: 'rgba(139,92,246,0.15)',
+    official: true,
+    url: 'https://skills.sh/microsoft/github-copilot-for-azure/microsoft-foundry'
+  },
+  {
+    name: 'brainstorming',
+    repo: 'obra/superpowers',
+    desc: 'Structured brainstorming skill — ideation frameworks, mind mapping, SCAMPER, Six Thinking Hats, and creative problem solving.',
+    downloads: '86K',
+    tags: ['brainstorm', 'ideation', 'planning'],
+    cat: 'productivity',
+    icon: '💡',
+    iconBg: 'rgba(245,158,11,0.15)',
+    url: 'https://skills.sh/obra/superpowers/brainstorming'
+  },
+  {
+    name: 'using-superpowers',
+    repo: 'obra/superpowers',
+    desc: 'Meta-skill that teaches agents how to discover and use skills — skill routing, priority, and invocation best practices.',
+    downloads: '81K',
+    tags: ['meta', 'skills', 'routing'],
+    cat: 'productivity',
+    icon: '⚡',
+    iconBg: 'rgba(245,158,11,0.15)',
+    url: 'https://skills.sh/obra/superpowers/using-superpowers'
+  },
+  {
+    name: 'remotion-best-practices',
+    repo: 'remotion-dev/skills',
+    desc: 'Create programmatic videos with Remotion — React-based video rendering, animations, audio sync, and rendering pipelines.',
+    downloads: '181K',
+    tags: ['video', 'react', 'remotion'],
+    cat: 'frontend',
+    icon: '🎬',
+    iconBg: 'rgba(236,72,153,0.15)',
+    url: 'https://skills.sh/remotion-dev/skills/remotion-best-practices'
+  },
+  {
+    name: 'ui-ux-pro-max',
+    repo: 'nicepkg/nice-skills',
+    desc: 'UI/UX design intelligence — 50+ styles, 161 color palettes, 57 font pairings, 99 UX guidelines, and 25 chart types.',
+    downloads: '45K',
+    tags: ['design', 'ux', 'ui', 'css'],
+    cat: 'design',
+    icon: '🎯',
+    iconBg: 'rgba(139,92,246,0.15)',
+    url: 'https://skills.sh/'
+  },
+  {
+    name: 'supabase',
+    repo: 'nicepkg/nice-skills',
+    desc: 'Supabase expertise — Database, Auth, Edge Functions, Realtime, Storage, RLS policies, migrations, and client libraries.',
+    downloads: '38K',
+    tags: ['supabase', 'database', 'auth', 'postgres'],
+    cat: 'backend',
+    icon: '⚡',
+    iconBg: 'rgba(16,185,129,0.15)',
+    url: 'https://skills.sh/'
+  },
+  {
+    name: 'azure-observability',
+    repo: 'microsoft/github-copilot-for-azure',
+    desc: 'Azure monitoring and observability — Application Insights, Log Analytics, alerts, dashboards, and diagnostic settings.',
+    downloads: '86K',
+    tags: ['azure', 'monitoring', 'logs', 'microsoft'],
+    cat: 'devops',
+    icon: '📊',
+    iconBg: 'rgba(6,182,212,0.15)',
+    official: true,
+    url: 'https://skills.sh/microsoft/github-copilot-for-azure/azure-observability'
+  },
+  {
+    name: 'azure-messaging',
+    repo: 'microsoft/github-copilot-for-azure',
+    desc: 'Azure messaging services — Service Bus, Event Grid, Event Hubs, queues, topics, and messaging patterns.',
+    downloads: '106K',
+    tags: ['azure', 'messaging', 'events', 'microsoft'],
+    cat: 'devops',
+    icon: '📨',
+    iconBg: 'rgba(59,130,246,0.15)',
+    official: true,
+    url: 'https://skills.sh/microsoft/github-copilot-for-azure/azure-messaging'
+  },
+  {
+    name: 'vercel-composition-patterns',
+    repo: 'vercel-labs/agent-skills',
+    desc: 'Advanced React composition patterns — compound components, render props, HOCs, hooks patterns, and server/client boundaries.',
+    downloads: '95K',
+    tags: ['react', 'patterns', 'architecture'],
+    cat: 'frontend',
+    icon: '🧩',
+    iconBg: 'rgba(6,182,212,0.15)',
+    official: true,
+    url: 'https://skills.sh/vercel-labs/agent-skills/vercel-composition-patterns'
+  },
+  {
+    name: 'memory-merger',
+    repo: 'obra/superpowers',
+    desc: 'Merge mature lessons from domain memory files into instruction files. Automated knowledge management for agent workflows.',
+    downloads: '52K',
+    tags: ['memory', 'knowledge', 'workflow'],
+    cat: 'productivity',
+    icon: '🧠',
+    iconBg: 'rgba(139,92,246,0.15)',
+    url: 'https://skills.sh/obra/superpowers/memory-merger'
+  }
+];
+
+let _skillsActiveCat = 'all';
+let _skillsSearchTerm = '';
+let _skillsRendered = false;
+
+function renderSkillsLibrary() {
+  if (_skillsRendered) return;
+  _skillsRendered = true;
+  renderSkillCards();
+}
+
+function renderSkillCards() {
+  const grid = document.getElementById('skills-grid');
+  if (!grid) return;
+
+  const term = _skillsSearchTerm.toLowerCase().trim();
+  const cat = _skillsActiveCat;
+
+  const filtered = SKILLS_CATALOG.filter(s => {
+    const matchCat = cat === 'all' || s.cat === cat || (cat === 'official' && s.official);
+    const matchSearch = !term || s.name.toLowerCase().includes(term)
+      || s.desc.toLowerCase().includes(term)
+      || s.repo.toLowerCase().includes(term)
+      || s.tags.some(t => t.toLowerCase().includes(term));
+    return matchCat && matchSearch;
+  });
+
+  const countEl = document.getElementById('skills-result-count');
+  if (countEl) countEl.textContent = filtered.length + ' skill' + (filtered.length !== 1 ? 's' : '') + ' found';
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="skills-no-results">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <h4>No skills found</h4>
+        <p>Try a different search term or category.<br>Or <a href="https://skills.sh/" target="_blank" rel="noopener">browse the full catalog on skills.sh</a></p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map((s, i) => `
+    <div class="skill-card" data-skill-idx="${i}" style="animation:guideFadeIn 0.3s ease ${i * 0.03}s both">
+      <div class="skill-card-header">
+        <div class="skill-card-icon" style="background:${s.iconBg}">${s.icon}</div>
+        <div class="skill-card-meta">
+          <div class="skill-card-name">
+            <a href="${s.url}" target="_blank" rel="noopener">${s.name}</a>
+            ${s.official ? '<span class="skill-card-official">OFFICIAL</span>' : ''}
+          </div>
+          <div class="skill-card-repo">${s.repo}</div>
+        </div>
+        <div class="skill-card-downloads">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          ${s.downloads}
+        </div>
+      </div>
+      <div class="skill-card-desc">${DOMPurify.sanitize(s.desc)}</div>
+      <div class="skill-card-tags">${s.tags.map(t => '<span>' + t + '</span>').join('')}</div>
+      <div class="skill-card-actions">
+        <button class="skill-install-btn" onclick="toggleSkillInstall(this, ${i})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Install
+        </button>
+        <a href="${s.url}" target="_blank" rel="noopener" class="skill-browse-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          View
+        </a>
+      </div>
+      <div class="skill-install-modal" id="skill-modal-${i}">
+        <div class="skill-install-modal-header">
+          <h4>Install "${s.name}"</h4>
+          <button class="skill-install-modal-close" onclick="closeSkillInstall(${i})" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="skill-install-options">
+          <div class="skill-install-option" onclick="copySkillCmd(this, 'npx skills add ${s.repo} --skill ${s.name}')">
+            <span class="skill-install-label">All IDEs</span>
+            <code>npx skills add ${s.repo} --skill ${s.name}</code>
+            <button class="skills-copy-btn" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+          </div>
+          <div class="skill-install-option" onclick="copySkillCmd(this, 'npx skills add ${s.repo} --skill ${s.name} -a github-copilot')">
+            <span class="skill-install-label">Copilot</span>
+            <code>npx skills add ${s.repo} --skill ${s.name} -a github-copilot</code>
+            <button class="skills-copy-btn" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+          </div>
+          <div class="skill-install-option" onclick="copySkillCmd(this, 'npx skills add ${s.repo} --skill ${s.name} -a cursor')">
+            <span class="skill-install-label">Cursor</span>
+            <code>npx skills add ${s.repo} --skill ${s.name} -a cursor</code>
+            <button class="skills-copy-btn" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+          </div>
+          <div class="skill-install-option" onclick="copySkillCmd(this, 'npx skills add ${s.repo} --skill ${s.name} -a windsurf')">
+            <span class="skill-install-label">Windsurf</span>
+            <code>npx skills add ${s.repo} --skill ${s.name} -a windsurf</code>
+            <button class="skills-copy-btn" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+          </div>
+          <div class="skill-install-option" onclick="copySkillCmd(this, 'npx skills add ${s.repo} --skill ${s.name} -a claude-code')">
+            <span class="skill-install-label">Claude</span>
+            <code>npx skills add ${s.repo} --skill ${s.name} -a claude-code</code>
+            <button class="skills-copy-btn" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+          </div>
+          <div class="skill-install-option" onclick="copySkillCmd(this, 'npx skills add ${s.repo} --skill ${s.name} -g')">
+            <span class="skill-install-label">Global</span>
+            <code>npx skills add ${s.repo} --skill ${s.name} -g</code>
+            <button class="skills-copy-btn" aria-label="Copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterSkillCards() {
+  const input = document.getElementById('skills-search');
+  const clearBtn = document.getElementById('skills-search-clear');
+  _skillsSearchTerm = input ? input.value : '';
+  if (clearBtn) clearBtn.style.display = _skillsSearchTerm ? 'flex' : 'none';
+  renderSkillCards();
+}
+
+function clearSkillSearch() {
+  const input = document.getElementById('skills-search');
+  if (input) { input.value = ''; input.focus(); }
+  _skillsSearchTerm = '';
+  document.getElementById('skills-search-clear').style.display = 'none';
+  renderSkillCards();
+}
+
+function filterSkillCategory(cat) {
+  _skillsActiveCat = cat;
+  document.querySelectorAll('.skills-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.skillsCat === cat);
+  });
+  renderSkillCards();
+}
+
+function toggleSkillInstall(btn, idx) {
+  // Close any other open modals
+  document.querySelectorAll('.skill-install-modal.show').forEach(m => m.classList.remove('show'));
+  const modal = document.getElementById('skill-modal-' + idx);
+  if (modal) modal.classList.add('show');
+}
+
+function closeSkillInstall(idx) {
+  const modal = document.getElementById('skill-modal-' + idx);
+  if (modal) modal.classList.remove('show');
+}
+
+function copySkillCmd(el, cmd) {
+  navigator.clipboard.writeText(cmd).then(() => {
+    // Visual feedback
+    const block = el.closest('.skills-cmd-block') || el.closest('.skill-install-option');
+    if (block) {
+      block.classList.add('copied');
+      const copyBtn = block.querySelector('.skills-copy-btn');
+      if (copyBtn) {
+        const origHTML = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>';
+        setTimeout(() => {
+          block.classList.remove('copied');
+          copyBtn.innerHTML = origHTML;
+        }, 2000);
+      }
+    }
+    if (typeof showToast === 'function') showToast('Command copied to clipboard!');
+  }).catch(() => {
+    if (typeof showToast === 'function') showToast('Failed to copy', 'error');
+  });
+}
+
+// Close skill install modals when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.skill-card')) {
+    document.querySelectorAll('.skill-install-modal.show').forEach(m => m.classList.remove('show'));
+  }
+});
 
 /** Copy SVG icon reused by cards */
 const COPY_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';

@@ -6,6 +6,22 @@
 
 ## Changes Made
 
+### 0f. April 12, 2026 — Skills Library → skills.sh Integration
+
+- **What changed:** Replaced the static "Skills Library" page (6 learning-path cards linking to MS Learn) with a full skills.sh marketplace integration — searchable, filterable, with IDE-specific install commands.
+- **Why:** The Copilot agent skills ecosystem (skills.sh by Vercel) has matured to 90K+ installs and 45+ supported agents. Integrating it directly into the dashboard gives adopters a discovery surface for useful agent skills without leaving the tracker.
+- **No API available:** skills.sh does not expose a public REST API. The catalog is implemented as a curated JS array (`SKILLS_CATALOG`, 18 skills) sourced from the leaderboard. This avoids runtime API dependencies and keeps the page functional offline.
+- **Architecture:**
+  - HTML: New `page-skills` section with hero, search bar, filter pills, card grid, agents section, and how-to steps.
+  - CSS: ~300 new lines in `dashboard.css` under `/* ===== SKILLS LIBRARY MARKETPLACE ===== */` — covers `.skill-card`, `.skills-hero`, `.skills-search-bar`, `.skill-install-modal`, `.skills-agents-grid`, `.skills-howto-*`.
+  - JS: `SKILLS_CATALOG` array, `renderSkillsLibrary()`, `renderSkillCards()`, `filterSkillCards()`, `filterSkillCategory()`, `toggleSkillInstall()`, `copySkillCmd()`.
+  - Navigation: Added `if (item.dataset.page === 'skills') renderSkillsLibrary();` to the nav handler.
+- **Install modal:** Each skill card has an "Install" button that opens a slide-up modal with copy-to-clipboard commands for: All IDEs, GitHub Copilot (`-a github-copilot`), Cursor (`-a cursor`), Windsurf (`-a windsurf`), Claude Code (`-a claude-code`), Global (`-g`).
+- **Trade-offs:**
+  - Client-side catalog means manual updates when new popular skills emerge. Acceptable since the leaderboard changes slowly and the "Browse full catalog" link sends users to skills.sh for the complete registry.
+  - DOMPurify is used to sanitize descriptions rendered from the catalog array.
+  - No server-side component needed.
+
 ### 0e. April 12, 2026 — Phase 9: Licensed Tool Tracking
 
 - **Business context:** Ejada pays for GitHub Copilot and M365 Copilot (Basic) as primary adoption tools. Other tools (Claude, ChatGPT, Gemini, Cursor, Codex) are allowed but not adoption targets.
