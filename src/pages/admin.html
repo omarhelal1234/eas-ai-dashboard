@@ -1369,6 +1369,21 @@ function initAdmin() {
   populateFilterDropdowns();
   populateFormDropdowns();
   updateNavCounts();
+
+  // Deep-link: if URL has a hash like #manage-users, navigate to that page
+  const hash = window.location.hash.replace('#', '');
+  if (hash) {
+    const navItem = document.querySelector('.nav-item[data-page="' + hash + '"]');
+    if (navItem) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      navItem.classList.add('active');
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      const page = document.getElementById('page-' + hash);
+      if (page) page.classList.remove('hidden');
+      renderCurrentPage(hash);
+      return;
+    }
+  }
   renderOverview();
 }
 
