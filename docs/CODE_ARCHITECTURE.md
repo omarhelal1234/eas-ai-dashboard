@@ -90,6 +90,7 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │   └── 006_ide_api.sql      # Phase 10 IDE API schema (source column on tasks/accomplishments)
 │   └── 007_role_view_permissions.sql  # Role-based sidebar view permissions (deny-list)
 │   └── 008_web_view_permissions.sql   # Web dashboard view permissions (17 views × 4 roles)
+│   └── 009_departments.sql  # Departments table + practice enhancements (department_id, description, status)
 │
 ├── scripts/                # Node.js admin/migration scripts
 │   ├── create-auth-users.mjs   # One-time auth user creation

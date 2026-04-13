@@ -6,6 +6,20 @@
 
 ## Changes Made
 
+### 0i. April 13, 2026 — Departments & Practices CRUD Enhancement
+
+**Problem:** Practices management in the admin panel was localStorage-based (editing head/spoc only), and there was no concept of organizational departments to group practices.
+
+**Solution:** New `departments` table with full Supabase-backed CRUD. Practices table enhanced with `department_id` FK, `description`, `is_active`, `updated_at` columns. Both admin pages rewritten for Supabase-direct operations with add/edit/delete, search, and filters.
+
+**Design Decisions:**
+- **1:N Department→Practice:** Each practice belongs to exactly one department. `department_id` FK with `ON DELETE SET NULL` — deleting a department unlinks practices rather than cascading deletes.
+- **Supabase-direct CRUD:** Replaced localStorage-based practice editing with Supabase queries (consistent with Users management pattern). Uses local cache (`_adminPractices`, `_adminDepartments`) cleared on mutations.
+- **`is_active` on both tables:** Soft-delete pattern matching existing project conventions. Status filters in admin UI.
+- **Preserved `department` TEXT column:** Existing column kept for backward compatibility. New `department_id` UUID FK added alongside it. Seed migration links existing practices by matching `department` text to `departments.name`.
+- **RLS:** `departments_read` policy allows public read (needed for signup dropdowns). `departments_admin_write` restricts writes to admin role.
+- **Nested select:** `practices` query uses `select('*, departments(id, name)')` for efficient department name resolution without separate queries.
+
 ### 0h. April 13, 2026 — Role-Based Sidebar View Permissions
 
 **Problem:** All VS Code extension sidebar sections were visible to all roles. Admins had no way to control which sections each role could see, and no UI to manage user roles.

@@ -570,9 +570,15 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     </div>
 
     <div class="nav-section">Configuration</div>
+    <div class="nav-item" data-page="manage-departments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Departments
+      <span class="badge" id="admin-dept-count">0</span>
+    </div>
     <div class="nav-item" data-page="manage-practices">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Practices
+      <span class="badge" id="admin-practice-count">0</span>
     </div>
     <div class="nav-item" data-page="manage-lovs">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -789,20 +795,85 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       </div>
     </div>
 
+    <!-- Manage Departments Page -->
+    <div id="page-manage-departments" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Manage Departments</h2>
+          <div class="subtitle">Add, edit and manage organizational departments</div>
+        </div>
+        <button class="btn btn-primary" onclick="openDepartmentModal()">+ Add Department</button>
+      </div>
+      <div class="page-content">
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" id="admin-dept-search" placeholder="Search departments…" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" oninput="renderAdminDepartments()">
+          <select id="admin-dept-status-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" onchange="renderAdminDepartments()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:40px">#</th>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Head</th>
+                  <th>Practices</th>
+                  <th style="width:80px">Status</th>
+                  <th style="width:120px">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-depts-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Manage Practices Page -->
     <div id="page-manage-practices" class="page hidden">
       <div class="page-header">
         <div>
           <h2>Manage Practices</h2>
-          <div class="subtitle">Edit practice details, heads and SPOCs</div>
+          <div class="subtitle">Add, edit and manage practices linked to departments</div>
         </div>
+        <button class="btn btn-primary" onclick="openPracticeModal()">+ Add Practice</button>
       </div>
       <div class="page-content">
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" id="admin-practice-search" placeholder="Search practices…" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" oninput="renderAdminPractices()">
+          <select id="admin-practice-dept-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" onchange="renderAdminPractices()">
+            <option value="">All Departments</option>
+          </select>
+          <select id="admin-practice-status-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" onchange="renderAdminPractices()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
         <div class="table-card">
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>Practice</th><th>Head</th><th>SPOC</th><th>Tasks</th><th>Projects</th><th style="width:80px">Actions</th></tr></thead>
-              <tbody id="admin-practices-tbody"></tbody>
+              <thead>
+                <tr>
+                  <th style="width:40px">#</th>
+                  <th>Practice</th>
+                  <th>Department</th>
+                  <th>Head</th>
+                  <th>SPOC</th>
+                  <th style="width:80px">Status</th>
+                  <th style="width:120px">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-practices-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -1106,14 +1177,47 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 <!-- Edit Practice Modal -->
 <div class="modal-overlay" id="modal-edit-practice">
   <div class="modal">
-    <h3>Edit Practice</h3>
-    <input type="hidden" id="epr-index" value="-1">
-    <div class="form-group"><label>Practice Name</label><input type="text" id="epr-name" readonly style="opacity:0.6"></div>
-    <div class="form-group"><label>Head</label><input type="text" id="epr-head" placeholder="Practice head name"></div>
-    <div class="form-group"><label>SPOC</label><input type="text" id="epr-spoc" placeholder="SPOC name"></div>
+    <h3 id="practice-modal-title">Add Practice</h3>
+    <input type="hidden" id="epr-id" value="">
+    <div class="form-group"><label>Practice Name *</label><input type="text" id="epr-name" placeholder="Practice name"></div>
+    <div class="form-group"><label>Department</label><select id="epr-department"><option value="">— No Department —</option></select></div>
+    <div class="form-group"><label>Description</label><textarea id="epr-description" rows="2" placeholder="Brief description of the practice"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Head</label><input type="text" id="epr-head" placeholder="Practice head name"></div>
+      <div class="form-group"><label>SPOC</label><input type="text" id="epr-spoc" placeholder="SPOC name"></div>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="epr-status">
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-edit-practice')">Cancel</button>
-      <button class="btn btn-primary" onclick="savePractice()">Save</button>
+      <button class="btn btn-primary" onclick="savePractice()">Save Practice</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Department Modal -->
+<div class="modal-overlay" id="modal-edit-department">
+  <div class="modal" style="max-width:540px">
+    <h3 id="dept-modal-title">Add Department</h3>
+    <input type="hidden" id="ed-id" value="">
+    <div class="form-group"><label>Department Name *</label><input type="text" id="ed-name" placeholder="Department name"></div>
+    <div class="form-group"><label>Description</label><textarea id="ed-description" rows="2" placeholder="Brief description of the department"></textarea></div>
+    <div class="form-group"><label>Head</label><input type="text" id="ed-head" placeholder="Department head name"></div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="ed-status">
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-department')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDepartment()">Save Department</button>
     </div>
   </div>
 </div>
@@ -1313,6 +1417,7 @@ function renderCurrentPage(page) {
     case 'manage-copilot': renderAdminCopilot(); break;
     case 'manage-projects': renderAdminProjects(); break;
     case 'manage-approvals': renderApprovals(); break;
+    case 'manage-departments': renderAdminDepartments(); break;
     case 'manage-practices': renderAdminPractices(); break;
     case 'manage-lovs': renderLOVs(); break;
     case 'manage-data': renderDataMgmt(); break;
@@ -2042,41 +2147,304 @@ function openApprovalDetailModal(approvalId) {
   alert('Approval Detail: ' + approvalId + '\n\nFull detail modal to be implemented.');
 }
 
-// ============ PRACTICES ============
-function renderAdminPractices() {
+// ============ DEPARTMENTS (Supabase-based) ============
+let _adminDepartments = [];
+
+async function renderAdminDepartments() {
+  const sb = getSupabaseClient();
+  if (!_adminDepartments.length) {
+    const { data: depts, error } = await sb
+      .from('departments')
+      .select('*, practices(id, name)')
+      .order('name', { ascending: true });
+    if (error) {
+      showToast('Failed to load departments: ' + error.message, 'error');
+      return;
+    }
+    _adminDepartments = depts || [];
+  }
+
+  // Update count badge
+  const badge = document.getElementById('admin-dept-count');
+  if (badge) badge.textContent = _adminDepartments.length;
+
+  // Apply filters
+  const search = (document.getElementById('admin-dept-search')?.value || '').toLowerCase();
+  const statusFilter = document.getElementById('admin-dept-status-filter')?.value || '';
+
+  let filtered = _adminDepartments;
+  if (search) {
+    filtered = filtered.filter(d =>
+      (d.name || '').toLowerCase().includes(search) ||
+      (d.description || '').toLowerCase().includes(search) ||
+      (d.head || '').toLowerCase().includes(search)
+    );
+  }
+  if (statusFilter === 'active') filtered = filtered.filter(d => d.is_active);
+  if (statusFilter === 'inactive') filtered = filtered.filter(d => !d.is_active);
+
   let html = '';
-  data.summary.practices.forEach((p, i) => {
+  filtered.forEach((d, i) => {
+    const statusIcon = d.is_active ? '<span style="color:var(--success)">● Active</span>' : '<span style="color:var(--text-muted)">● Inactive</span>';
+    const practiceCount = d.practices ? d.practices.length : 0;
+    const practiceNames = d.practices ? d.practices.map(p => p.name).join(', ') : '—';
     html += `<tr>
-      <td style="font-weight:600;color:var(--text-primary)">${p.name}</td>
-      <td>${p.head}</td>
-      <td>${p.spoc}</td>
-      <td>${p.tasks}</td>
-      <td>${p.projects}</td>
+      <td>${i + 1}</td>
+      <td style="font-weight:600;color:var(--text-primary)">${escapeHtml(d.name)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(d.description || '')}">${escapeHtml(d.description || '—')}</td>
+      <td>${escapeHtml(d.head || '—')}</td>
+      <td><span title="${escapeHtml(practiceNames)}">${practiceCount}</span></td>
+      <td>${statusIcon}</td>
       <td>
-        <button class="btn-icon" onclick="editPractice(${i})" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon" onclick="editDepartment('${d.id}')" title="Edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon danger" onclick="deleteDepartment('${d.id}', '${escapeHtml(d.name)}')" title="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
       </td>
     </tr>`;
   });
-  document.getElementById('admin-practices-tbody').innerHTML = html;
+
+  document.getElementById('admin-depts-tbody').innerHTML = html || '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No departments found</td></tr>';
 }
 
-function editPractice(idx) {
-  document.getElementById('epr-index').value = idx;
-  const p = data.summary.practices[idx];
-  document.getElementById('epr-name').value = p.name;
-  document.getElementById('epr-head').value = p.head;
-  document.getElementById('epr-spoc').value = p.spoc;
+function openDepartmentModal(id = null) {
+  document.getElementById('ed-id').value = id || '';
+  document.getElementById('dept-modal-title').textContent = id ? 'Edit Department' : 'Add Department';
+  document.getElementById('ed-name').value = '';
+  document.getElementById('ed-description').value = '';
+  document.getElementById('ed-head').value = '';
+  document.getElementById('ed-status').value = 'true';
+
+  if (id) {
+    const dept = _adminDepartments.find(d => d.id === id);
+    if (dept) {
+      document.getElementById('ed-name').value = dept.name || '';
+      document.getElementById('ed-description').value = dept.description || '';
+      document.getElementById('ed-head').value = dept.head || '';
+      document.getElementById('ed-status').value = dept.is_active ? 'true' : 'false';
+    }
+  }
+  openModal('modal-edit-department');
+}
+
+function editDepartment(id) { openDepartmentModal(id); }
+
+async function saveDepartment() {
+  const id = document.getElementById('ed-id').value;
+  const name = document.getElementById('ed-name').value.trim();
+  const description = document.getElementById('ed-description').value.trim();
+  const head = document.getElementById('ed-head').value.trim();
+  const is_active = document.getElementById('ed-status').value === 'true';
+
+  if (!name) { showToast('Department name is required', 'error'); return; }
+
+  const sb = getSupabaseClient();
+  let error;
+
+  if (id) {
+    // Update
+    ({ error } = await sb.from('departments').update({ name, description, head, is_active }).eq('id', id));
+  } else {
+    // Insert
+    ({ error } = await sb.from('departments').insert({ name, description, head, is_active }));
+  }
+
+  if (error) {
+    showToast('Failed to save department: ' + error.message, 'error');
+    return;
+  }
+
+  closeModal('modal-edit-department');
+  showToast(id ? 'Department updated' : 'Department created', 'success');
+  _adminDepartments = []; // force refresh
+  _adminPractices = []; // refresh practices too (they include department)
+  renderAdminDepartments();
+}
+
+function deleteDepartment(id, name) {
+  confirmAction(`Delete department "${name}"? Practices linked to it will be unlinked.`, async () => {
+    const sb = getSupabaseClient();
+    // First unlink practices
+    await sb.from('practices').update({ department_id: null }).eq('department_id', id);
+    const { error } = await sb.from('departments').delete().eq('id', id);
+    if (error) {
+      showToast('Failed to delete department: ' + error.message, 'error');
+      return;
+    }
+    showToast('Department deleted', 'success');
+    _adminDepartments = [];
+    _adminPractices = [];
+    renderAdminDepartments();
+  });
+}
+
+// ============ PRACTICES (Supabase-based) ============
+let _adminPractices = [];
+
+async function renderAdminPractices() {
+  const sb = getSupabaseClient();
+  if (!_adminPractices.length) {
+    const { data: pracs, error } = await sb
+      .from('practices')
+      .select('*, departments(id, name)')
+      .order('name', { ascending: true });
+    if (error) {
+      showToast('Failed to load practices: ' + error.message, 'error');
+      return;
+    }
+    _adminPractices = pracs || [];
+  }
+
+  // Ensure departments are loaded for filter dropdown
+  if (!_adminDepartments.length) {
+    const { data: depts } = await sb.from('departments').select('id, name').order('name');
+    _adminDepartments = depts || [];
+  }
+
+  // Populate department filter if empty
+  const deptFilter = document.getElementById('admin-practice-dept-filter');
+  if (deptFilter && deptFilter.options.length <= 1) {
+    _adminDepartments.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name;
+      deptFilter.appendChild(opt);
+    });
+  }
+
+  // Update count badge
+  const badge = document.getElementById('admin-practice-count');
+  if (badge) badge.textContent = _adminPractices.length;
+
+  // Apply filters
+  const search = (document.getElementById('admin-practice-search')?.value || '').toLowerCase();
+  const deptFilterVal = document.getElementById('admin-practice-dept-filter')?.value || '';
+  const statusFilter = document.getElementById('admin-practice-status-filter')?.value || '';
+
+  let filtered = _adminPractices;
+  if (search) {
+    filtered = filtered.filter(p =>
+      (p.name || '').toLowerCase().includes(search) ||
+      (p.head || '').toLowerCase().includes(search) ||
+      (p.spoc || '').toLowerCase().includes(search)
+    );
+  }
+  if (deptFilterVal) filtered = filtered.filter(p => p.department_id === deptFilterVal);
+  if (statusFilter === 'active') filtered = filtered.filter(p => p.is_active !== false);
+  if (statusFilter === 'inactive') filtered = filtered.filter(p => p.is_active === false);
+
+  let html = '';
+  filtered.forEach((p, i) => {
+    const deptName = p.departments ? p.departments.name : (p.department || '—');
+    const statusIcon = (p.is_active !== false) ? '<span style="color:var(--success)">● Active</span>' : '<span style="color:var(--text-muted)">● Inactive</span>';
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600;color:var(--text-primary)">${escapeHtml(p.name)}</td>
+      <td>${escapeHtml(deptName)}</td>
+      <td>${escapeHtml(p.head || '—')}</td>
+      <td>${escapeHtml(p.spoc || '—')}</td>
+      <td>${statusIcon}</td>
+      <td>
+        <button class="btn-icon" onclick="editPractice('${p.id}')" title="Edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon danger" onclick="deletePractice('${p.id}', '${escapeHtml(p.name)}')" title="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  });
+
+  document.getElementById('admin-practices-tbody').innerHTML = html || '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No practices found</td></tr>';
+}
+
+async function openPracticeModal(id = null) {
+  const sb = getSupabaseClient();
+  document.getElementById('epr-id').value = id || '';
+  document.getElementById('practice-modal-title').textContent = id ? 'Edit Practice' : 'Add Practice';
+  document.getElementById('epr-name').value = '';
+  document.getElementById('epr-description').value = '';
+  document.getElementById('epr-head').value = '';
+  document.getElementById('epr-spoc').value = '';
+  document.getElementById('epr-status').value = 'true';
+
+  // Populate department dropdown
+  if (!_adminDepartments.length) {
+    const { data: depts } = await sb.from('departments').select('id, name').order('name');
+    _adminDepartments = depts || [];
+  }
+  const deptSelect = document.getElementById('epr-department');
+  deptSelect.innerHTML = '<option value="">— No Department —</option>';
+  _adminDepartments.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = d.name;
+    deptSelect.appendChild(opt);
+  });
+
+  if (id) {
+    const practice = _adminPractices.find(p => p.id === id);
+    if (practice) {
+      document.getElementById('epr-name').value = practice.name || '';
+      document.getElementById('epr-description').value = practice.description || '';
+      document.getElementById('epr-head').value = practice.head || '';
+      document.getElementById('epr-spoc').value = practice.spoc || '';
+      document.getElementById('epr-status').value = (practice.is_active !== false) ? 'true' : 'false';
+      document.getElementById('epr-department').value = practice.department_id || '';
+    }
+  }
   openModal('modal-edit-practice');
 }
 
-function savePractice() {
-  const idx = parseInt(document.getElementById('epr-index').value);
-  data.summary.practices[idx].head = document.getElementById('epr-head').value;
-  data.summary.practices[idx].spoc = document.getElementById('epr-spoc').value;
-  autoSave();
+function editPractice(id) { openPracticeModal(id); }
+
+async function savePractice() {
+  const id = document.getElementById('epr-id').value;
+  const name = document.getElementById('epr-name').value.trim();
+  const description = document.getElementById('epr-description').value.trim();
+  const head = document.getElementById('epr-head').value.trim();
+  const spoc = document.getElementById('epr-spoc').value.trim();
+  const is_active = document.getElementById('epr-status').value === 'true';
+  const department_id = document.getElementById('epr-department').value || null;
+
+  if (!name) { showToast('Practice name is required', 'error'); return; }
+
+  const sb = getSupabaseClient();
+  let error;
+
+  if (id) {
+    // Update
+    ({ error } = await sb.from('practices').update({ name, description, head, spoc, is_active, department_id }).eq('id', id));
+  } else {
+    // Insert
+    ({ error } = await sb.from('practices').insert({ name, description, head, spoc, is_active, department_id }));
+  }
+
+  if (error) {
+    showToast('Failed to save practice: ' + error.message, 'error');
+    return;
+  }
+
   closeModal('modal-edit-practice');
+  showToast(id ? 'Practice updated' : 'Practice created', 'success');
+  _adminPractices = []; // force refresh
   renderAdminPractices();
-  showToast('Practice updated');
+}
+
+function deletePractice(id, name) {
+  confirmAction(`Delete practice "${name}"? This will affect all linked tasks, users, and projects.`, async () => {
+    const sb = getSupabaseClient();
+    const { error } = await sb.from('practices').delete().eq('id', id);
+    if (error) {
+      showToast('Failed to delete practice: ' + error.message, 'error');
+      return;
+    }
+    showToast('Practice deleted', 'success');
+    _adminPractices = [];
+    renderAdminPractices();
+  });
 }
 
 // ============ LISTS OF VALUES ============
@@ -2970,9 +3338,14 @@ function editUser(userId) {
   document.getElementById('eu-role').value = user.role || 'contributor';
   document.getElementById('eu-active').value = user.is_active ? 'true' : 'false';
 
-  // Populate practice select
+  // Populate practice select from Supabase practices cache or from users
   const practiceSelect = document.getElementById('eu-practice');
-  const practices = [...new Set(_adminUsers.map(u => u.practice).filter(Boolean))].sort();
+  let practices;
+  if (_adminPractices.length) {
+    practices = _adminPractices.map(p => p.name).sort();
+  } else {
+    practices = [...new Set(_adminUsers.map(u => u.practice).filter(Boolean))].sort();
+  }
   practiceSelect.innerHTML = practices.map(p =>
     `<option value="${escapeHtml(p)}"${user.practice === p ? ' selected' : ''}>${escapeHtml(p)}</option>`
   ).join('');
