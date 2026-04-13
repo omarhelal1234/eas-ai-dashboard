@@ -3500,9 +3500,9 @@ async function renderAdminExecutives() {
   // Fetch executive users
   const { data: execUsers, error: uErr } = await sb
     .from('users')
-    .select('id, full_name, email, practice')
+    .select('id, name, email, practice')
     .eq('role', 'executive')
-    .order('full_name');
+    .order('name');
 
   if (uErr) {
     showToast('Failed to load executive users: ' + uErr.message, 'error');
@@ -3557,7 +3557,7 @@ async function renderAdminExecutives() {
       <div class="card" style="padding:20px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
           <div>
-            <h3 style="margin:0 0 4px">${u.full_name || 'Unnamed'}</h3>
+            <h3 style="margin:0 0 4px">${u.name || 'Unnamed'}</h3>
             <div style="font-size:0.85rem;color:var(--text-muted)">${u.email || '—'} · Home practice: <strong>${u.practice || '—'}</strong></div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="editExecPractices('${u.id}')">
@@ -3605,7 +3605,7 @@ async function editExecPractices(userId) {
   modal.innerHTML = `
     <div style="background:var(--bg-card);border-radius:16px;max-width:480px;width:100%;max-height:80vh;overflow:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
       <h3 style="margin:0 0 4px">Edit Practices</h3>
-      <p style="margin:0 0 16px;color:var(--text-muted);font-size:0.9rem">${user.full_name || 'Unnamed'}</p>
+      <p style="margin:0 0 16px;color:var(--text-muted);font-size:0.9rem">${user.name || 'Unnamed'}</p>
       <div style="display:flex;justify-content:space-between;margin-bottom:8px">
         <button class="btn btn-sm" onclick="document.querySelectorAll('.exec-assign-cb').forEach(c=>c.checked=true)" style="font-size:0.78rem">Select All</button>
         <button class="btn btn-sm" onclick="document.querySelectorAll('.exec-assign-cb').forEach(c=>c.checked=false)" style="font-size:0.78rem">Deselect All</button>

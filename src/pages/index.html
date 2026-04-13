@@ -14,7 +14,7 @@
 <script src="../../js/config.js?v=20260412b"></script>
 <script src="../../js/utils.js?v=20260412b"></script>
 <script src="../../js/auth.js?v=20260412b"></script>
-<script src="../../js/db.js?v=20260412b"></script>
+<script src="../../js/db.js?v=20260413a"></script>
 <script src="../../js/phase8-submission.js?v=20260412b"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
@@ -109,6 +109,11 @@
     Projects
     <span class="badge" id="nav-project-count">25</span>
   </div>
+  <div class="nav-item" data-page="issues" data-view-key="web.issues">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Issues / Blockers
+    <span class="badge" id="nav-issues-count">0</span>
+  </div>
   <div class="nav-item" data-role="admin" onclick="window.location.href='admin.html#manage-users'">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Manage Users
@@ -167,6 +172,10 @@
     <button class="upload-btn" style="margin-top:8px" onclick="EAS_DB.createDump('Manual Backup', ['tasks','accomplishments','copilot_users']).then(d => d ? showToast('Data backup created!') : showToast('Backup failed', 'error'))" data-role="admin">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       Backup Data
+    </button>
+    <button class="upload-btn" style="margin-top:8px" onclick="openModal('password')" aria-label="Change password">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Change Password
     </button>
     <button class="upload-btn theme-toggle" style="margin-top:8px" onclick="toggleTheme()" aria-label="Toggle light/dark mode">
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -423,10 +432,13 @@
         <h2>AI Projects</h2>
         <div class="subtitle">Projects tracked for AI adoption</div>
       </div>
-      <button class="btn btn-secondary" onclick="openExportModal('projects')" aria-label="Export projects" data-role="admin,spoc,viewer">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export
-      </button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary" onclick="openModal('project')" data-role="admin,spoc" data-hide-role="viewer,contributor,executive">+ Add Project</button>
+        <button class="btn btn-secondary" onclick="openExportModal('projects')" aria-label="Export projects" data-role="admin,spoc,viewer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
+      </div>
     </div>
     <div class="page-content">
       <div class="filters-bar">
@@ -438,7 +450,7 @@
       <div class="table-card">
         <div style="overflow-x:auto">
           <table aria-label="Projects">
-            <thead><tr><th>Practice</th><th>Project Name</th><th>Code</th><th>Customer</th><th>Value (SAR)</th><th>Start</th><th>End</th><th>Revenue Type</th><th>PM</th></tr></thead>
+            <thead><tr><th>Practice</th><th>Project Name</th><th>Code</th><th>Customer</th><th>Value (SAR)</th><th>Start</th><th>End</th><th>Revenue Type</th><th>PM</th><th data-role="admin,spoc">Actions</th></tr></thead>
             <tbody id="projects-tbody"></tbody>
           </table>
         </div>
@@ -1347,9 +1359,57 @@ npm run compile</code></pre>
       </div>
     </div>
   </div>
+
+  <!-- Issues / Blockers Page -->
+  <div id="page-issues" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2>Issues / Blockers</h2>
+        <div class="subtitle">Report and track AI adoption issues and blockers</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary" onclick="openModal('issue')" data-hide-role="viewer,executive">+ Report Issue</button>
+      </div>
+    </div>
+    <div class="page-content">
+      <div class="filters-bar">
+        <input type="text" class="search-input" id="issue-search" placeholder="Search issues..." aria-label="Search issues" oninput="renderIssues()">
+        <select class="filter-select" id="issue-filter-severity" aria-label="Filter by severity" onchange="renderIssues()">
+          <option value="">All Severities</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <select class="filter-select" id="issue-filter-status" aria-label="Filter by status" onchange="renderIssues()">
+          <option value="">All Statuses</option>
+          <option value="open">Open</option>
+          <option value="in_progress">In Progress</option>
+          <option value="resolved">Resolved</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select class="filter-select" id="issue-filter-practice" aria-label="Filter by practice" onchange="renderIssues()">
+          <option value="">All Practices</option>
+        </select>
+      </div>
+      <div class="kpi-grid" id="issues-kpis" style="margin-bottom:20px"></div>
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Reported Issues</h3>
+          <span id="issues-count-label" style="font-size:13px;color:var(--text-muted)"></span>
+        </div>
+        <div style="overflow-x:auto">
+          <table aria-label="Reported issues">
+            <thead><tr><th>Date</th><th>Title</th><th>Severity</th><th>AI Tool</th><th>Practice</th><th>Reported By</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="issues-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
-<!-- Add Task Modal -->
 <div class="modal-overlay" id="modal-task">
   <div class="modal">
     <h3>Log AI Task</h3>
@@ -1721,6 +1781,142 @@ npm run compile</code></pre>
   </div>
 </div>
 
+<!-- Report Issue Modal -->
+<div class="modal-overlay" id="modal-issue">
+  <div class="modal" style="max-width:560px">
+    <h3>Report Issue / Blocker</h3>
+    <div class="form-group">
+      <label>Title <span style="color:var(--error)">*</span></label>
+      <input type="text" id="fi-title" placeholder="Brief description of the issue" required>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="fi-description" rows="3" placeholder="Detailed description of the issue, steps to reproduce, impact..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Severity</label>
+        <select id="fi-severity">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>AI Tool (related)</label>
+        <select id="fi-tool">
+          <option value="">-- Select --</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Practice</label>
+      <select id="fi-practice"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('issue')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveIssue()">Submit Issue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Project Modal (Dashboard) -->
+<div class="modal-overlay" id="modal-project">
+  <div class="modal" style="max-width:560px">
+    <h3 id="project-modal-title-dash">Add Project</h3>
+    <input type="hidden" id="fp-id" value="">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Practice <span style="color:var(--error)">*</span></label>
+        <select id="fp-practice"></select>
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <input type="text" id="fp-department" placeholder="e.g., EAS" value="EAS">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Project Name <span style="color:var(--error)">*</span></label>
+      <input type="text" id="fp-name" placeholder="Project name">
+    </div>
+    <div class="form-group">
+      <label>Project Code</label>
+      <input type="text" id="fp-code" placeholder="PRJ-001 (optional)">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Customer</label>
+        <input type="text" id="fp-customer" placeholder="Customer name">
+      </div>
+      <div class="form-group">
+        <label>Project Manager</label>
+        <input type="text" id="fp-pm" placeholder="PM name">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Start Date</label><input type="date" id="fp-start"></div>
+      <div class="form-group"><label>End Date</label><input type="date" id="fp-end"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Value (SAR)</label><input type="number" id="fp-value" step="1000" min="0"></div>
+      <div class="form-group"><label>Revenue Type</label><input type="text" id="fp-revenue" placeholder="e.g. Fixed, T&M"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('project')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="modal-password">
+  <div class="modal" style="max-width:440px">
+    <h3>Change Password</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Enter your current password for verification, then set a new password.</p>
+    <div class="form-group">
+      <label>Current Password</label>
+      <input type="password" id="pw-current" placeholder="Enter current password" autocomplete="current-password">
+    </div>
+    <div class="form-group">
+      <label>New Password</label>
+      <input type="password" id="pw-new" placeholder="Min 6 characters" autocomplete="new-password" minlength="6">
+    </div>
+    <div class="form-group">
+      <label>Confirm New Password</label>
+      <input type="password" id="pw-confirm" placeholder="Repeat new password" autocomplete="new-password">
+    </div>
+    <div id="pw-error" style="color:var(--error);font-size:13px;margin-bottom:8px;display:none"></div>
+    <div id="pw-success" style="color:var(--success);font-size:13px;margin-bottom:8px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('password')">Cancel</button>
+      <button class="btn btn-primary" id="pw-submit-btn" onclick="handleChangePassword()">Change Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Reset Password Modal -->
+<div class="modal-overlay" id="modal-admin-reset-pw" data-role="admin">
+  <div class="modal" style="max-width:440px">
+    <h3>Reset User Password</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Set a temporary password for a user. They should change it after logging in.</p>
+    <input type="hidden" id="arp-user-id" value="">
+    <div class="form-group">
+      <label>User</label>
+      <input type="text" id="arp-user-display" readonly style="opacity:0.7">
+    </div>
+    <div class="form-group">
+      <label>New Password</label>
+      <input type="password" id="arp-new-password" placeholder="Min 6 characters" minlength="6">
+    </div>
+    <div id="arp-error" style="color:var(--error);font-size:13px;margin-bottom:8px;display:none"></div>
+    <div id="arp-info" style="color:var(--warning);font-size:13px;margin-bottom:8px">Note: Admin password reset is available via the Supabase dashboard. Self-service password change is available to all users.</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('admin-reset-pw')">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1819,6 +2015,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
     if (item.dataset.page === 'accomplishments') renderAccomplishments();
     if (item.dataset.page === 'copilot') renderCopilot();
     if (item.dataset.page === 'projects') renderProjects();
+    if (item.dataset.page === 'issues') loadIssues();
     if (item.dataset.page === 'approvals') renderApprovals();
     if (item.dataset.page === 'mypractice') renderMyPractice();
     if (item.dataset.page === 'leaderboard') renderLeaderboard();
@@ -2431,19 +2628,101 @@ function renderProjects() {
     return true;
   });
 
-  document.getElementById('projects-tbody').innerHTML = filtered.map(p => `
+  document.getElementById('projects-tbody').innerHTML = filtered.map(p => {
+    const canEdit = ['admin', 'spoc'].includes(EAS_Auth.getUserRole());
+    return `
     <tr>
       <td><span style="color:${practiceColors[p.practice] || '#94a3b8'};font-weight:600">${p.practice}</span></td>
       <td>${p.projectName}</td>
-      <td style="color:var(--text-muted)">${p.projectCode}</td>
-      <td>${p.customer}</td>
+      <td style="color:var(--text-muted)">${p.projectCode || '-'}</td>
+      <td>${p.customer || '-'}</td>
       <td>${p.contractValue ? Number(p.contractValue).toLocaleString() : '-'}</td>
       <td style="color:var(--text-muted)">${p.startDate ? p.startDate.split(' ')[0] : '-'}</td>
       <td style="color:var(--text-muted)">${p.endDate ? p.endDate.split(' ')[0] : '-'}</td>
-      <td>${p.revenueType}</td>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.projectManager}">${p.projectManager}</td>
-    </tr>
-  `).join('');
+      <td>${p.revenueType || '-'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.projectManager || ''}">${p.projectManager || '-'}</td>
+      ${canEdit ? `<td class="row-actions">
+        <button class="btn-icon btn-edit" onclick="editProject('${p.id}')" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon btn-delete" onclick="deleteProjectConfirm('${p.id}')" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </td>` : ''}
+    </tr>`;
+  }).join('');
+}
+
+// ======== ISSUES / BLOCKERS ========
+let _issuesData = [];
+
+async function loadIssues() {
+  _issuesData = await EAS_DB.fetchReportedIssues();
+  renderIssues();
+}
+
+function renderIssues() {
+  const search = (document.getElementById('issue-search').value || '').toLowerCase();
+  const fSeverity = document.getElementById('issue-filter-severity').value;
+  const fStatus = document.getElementById('issue-filter-status').value;
+  const fPractice = document.getElementById('issue-filter-practice').value;
+
+  let filtered = _issuesData.filter(i => {
+    if (fSeverity && i.severity !== fSeverity) return false;
+    if (fStatus && i.status !== fStatus) return false;
+    if (fPractice && i.practice !== fPractice) return false;
+    if (search) {
+      const hay = [i.title, i.description, i.aiTool, i.practice, i.reportedByName].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // KPIs
+  const open = _issuesData.filter(i => i.status === 'open').length;
+  const inProgress = _issuesData.filter(i => i.status === 'in_progress').length;
+  const resolved = _issuesData.filter(i => i.status === 'resolved' || i.status === 'closed').length;
+  const critical = _issuesData.filter(i => i.severity === 'critical' && i.status !== 'resolved' && i.status !== 'closed').length;
+
+  document.getElementById('issues-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-value" style="color:var(--warning)">${open}</div><div class="kpi-label">Open</div></div>
+    <div class="kpi-card"><div class="kpi-value" style="color:var(--accent)">${inProgress}</div><div class="kpi-label">In Progress</div></div>
+    <div class="kpi-card"><div class="kpi-value" style="color:var(--success)">${resolved}</div><div class="kpi-label">Resolved</div></div>
+    <div class="kpi-card"><div class="kpi-value" style="color:var(--error)">${critical}</div><div class="kpi-label">Critical (Active)</div></div>
+  `;
+
+  document.getElementById('issues-count-label').textContent = `${filtered.length} issue${filtered.length !== 1 ? 's' : ''}`;
+  document.getElementById('nav-issues-count').textContent = String(open + inProgress);
+
+  const severityBadge = (s) => {
+    const colors = { critical: 'var(--error)', high: 'var(--warning)', medium: 'var(--accent)', low: 'var(--text-muted)' };
+    return `<span style="color:${colors[s] || 'var(--text-muted)'};font-weight:600;text-transform:capitalize">${s}</span>`;
+  };
+  const statusBadge = (s) => {
+    const labels = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed' };
+    const colors = { open: 'var(--warning)', in_progress: 'var(--accent)', resolved: 'var(--success)', closed: 'var(--text-muted)' };
+    return `<span style="background:${colors[s] || 'var(--bg-tertiary)'};color:white;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600">${labels[s] || s}</span>`;
+  };
+
+  const userRole = EAS_Auth.getUserRole();
+  const myId = EAS_Auth.getUserId();
+
+  document.getElementById('issues-tbody').innerHTML = filtered.length === 0
+    ? '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)">No issues reported yet</td></tr>'
+    : filtered.map(i => {
+      const canEdit = userRole === 'admin' || userRole === 'spoc' || i.reportedBy === myId;
+      const canDelete = userRole === 'admin' || userRole === 'spoc';
+      return `
+      <tr>
+        <td style="color:var(--text-muted);white-space:nowrap">${i.createdAt ? new Date(i.createdAt).toLocaleDateString() : '-'}</td>
+        <td style="font-weight:500">${i.title}</td>
+        <td>${severityBadge(i.severity)}</td>
+        <td>${i.aiTool || '-'}</td>
+        <td><span style="color:${practiceColors[i.practice] || '#94a3b8'};font-weight:600">${i.practice}</span></td>
+        <td>${i.reportedByName || '-'}</td>
+        <td>${statusBadge(i.status)}</td>
+        <td class="row-actions">
+          ${canEdit ? `<button class="btn-icon btn-edit" onclick="editIssue('${i.id}')" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>` : ''}
+          ${canDelete ? `<button class="btn-icon btn-delete" onclick="deleteIssueConfirm('${i.id}')" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
 }
 
 // ======== APPROVALS ========
@@ -3710,6 +3989,27 @@ function openModal(type) {
         console.log('  → Setting up copilot modal...');
         document.querySelector('#modal-copilot .modal h3').textContent = 'Add Copilot User';
         document.querySelector('#modal-copilot .btn-primary').textContent = 'Save';
+      } else if (type === 'issue') {
+        console.log('  → Setting up issue modal...');
+        document.querySelector('#modal-issue .modal h3').textContent = 'Report Issue / Blocker';
+        document.querySelector('#modal-issue .btn-primary').textContent = 'Submit Issue';
+        // Auto-select user's practice
+        const userPractice = EAS_Auth.getUserPractice();
+        if (userPractice) document.getElementById('fi-practice').value = userPractice;
+      } else if (type === 'project') {
+        console.log('  → Setting up project modal...');
+        document.getElementById('project-modal-title-dash').textContent = 'Add Project';
+        document.getElementById('fp-id').value = '';
+        // Auto-select user's practice for SPOCs
+        const userPractice = EAS_Auth.getUserPractice();
+        if (userPractice && EAS_Auth.isSPOC()) document.getElementById('fp-practice').value = userPractice;
+      } else if (type === 'password') {
+        console.log('  → Setting up password modal...');
+        document.getElementById('pw-current').value = '';
+        document.getElementById('pw-new').value = '';
+        document.getElementById('pw-confirm').value = '';
+        document.getElementById('pw-error').style.display = 'none';
+        document.getElementById('pw-success').style.display = 'none';
       }
     }
     const modal = document.getElementById('modal-' + type);
@@ -3725,11 +4025,14 @@ function openModal(type) {
   }
 }
 function closeModal(type) {
-  document.getElementById('modal-' + type).classList.remove('active');
+  const modal = document.getElementById('modal-' + type);
+  if (modal) modal.classList.remove('active');
   // Reset edit state on close
   if ((type === 'task' && _editingType === 'task') ||
       (type === 'accomplishment' && _editingType === 'accomplishment') ||
-      (type === 'copilot' && _editingType === 'copilot')) {
+      (type === 'copilot' && _editingType === 'copilot') ||
+      (type === 'issue' && _editingType === 'issue') ||
+      (type === 'project' && _editingType === 'project')) {
     _editingId = null;
     _editingType = null;
   }
@@ -3950,6 +4253,215 @@ async function saveCopilotUser() {
   document.getElementById('fc-name').value = '';
   document.getElementById('fc-email').value = '';
   document.getElementById('fc-skill').value = '';
+}
+
+// ======== SAVE / EDIT / DELETE ISSUES ========
+
+async function saveIssue() {
+  const title = document.getElementById('fi-title').value.trim();
+  if (!title) { showToast('Please enter an issue title', 'error'); return; }
+
+  const issueData = {
+    title,
+    description: document.getElementById('fi-description').value.trim(),
+    severity: document.getElementById('fi-severity').value,
+    aiTool: document.getElementById('fi-tool').value || null,
+    practice: document.getElementById('fi-practice').value
+  };
+
+  if (!issueData.practice) { showToast('Please select a practice', 'error'); return; }
+
+  closeModal('issue');
+
+  let result;
+  if (_editingId && _editingType === 'issue') {
+    showToast('Updating issue...');
+    result = await EAS_DB.updateReportedIssue(_editingId, issueData);
+    _editingId = null; _editingType = null;
+    document.querySelector('#modal-issue .modal h3').textContent = 'Report Issue / Blocker';
+    document.querySelector('#modal-issue .btn-primary').textContent = 'Submit Issue';
+  } else {
+    showToast('Submitting issue...');
+    result = await EAS_DB.insertReportedIssue(issueData);
+  }
+
+  if (!result) { showToast('Failed to save issue — check console', 'error'); return; }
+  showToast('Issue saved!');
+  await loadIssues();
+
+  // Reset form
+  document.getElementById('fi-title').value = '';
+  document.getElementById('fi-description').value = '';
+  document.getElementById('fi-severity').value = 'medium';
+}
+
+function editIssue(id) {
+  const issue = _issuesData.find(i => i.id === id);
+  if (!issue) return;
+  _editingId = id;
+  _editingType = 'issue';
+  document.getElementById('fi-title').value = issue.title || '';
+  document.getElementById('fi-description').value = issue.description || '';
+  document.getElementById('fi-severity').value = issue.severity || 'medium';
+  document.getElementById('fi-tool').value = issue.aiTool || '';
+  document.getElementById('fi-practice').value = issue.practice || '';
+  document.querySelector('#modal-issue .modal h3').textContent = 'Edit Issue';
+  document.querySelector('#modal-issue .btn-primary').textContent = 'Update Issue';
+  openModal('issue');
+}
+
+function deleteIssueConfirm(id) {
+  confirmAction('Delete Issue', 'Are you sure you want to delete this issue?', async () => {
+    showToast('Deleting issue...');
+    const ok = await EAS_DB.deleteReportedIssue(id);
+    if (ok) { showToast('Issue deleted', 'warning'); await loadIssues(); }
+    else showToast('Failed to delete issue', 'error');
+  });
+}
+
+// ======== SAVE / EDIT / DELETE PROJECTS (Dashboard) ========
+
+async function saveProject() {
+  const name = document.getElementById('fp-name').value.trim();
+  const practice = document.getElementById('fp-practice').value;
+  if (!name) { showToast('Please enter a project name', 'error'); return; }
+  if (!practice) { showToast('Please select a practice', 'error'); return; }
+
+  const projData = {
+    practice,
+    projectName: name,
+    projectCode: document.getElementById('fp-code').value.trim() || null,
+    customer: document.getElementById('fp-customer').value.trim() || null,
+    projectManager: document.getElementById('fp-pm').value.trim() || null,
+    startDate: document.getElementById('fp-start').value || null,
+    endDate: document.getElementById('fp-end').value || null,
+    contractValue: parseFloat(document.getElementById('fp-value').value) || 0,
+    revenueType: document.getElementById('fp-revenue').value.trim() || null
+  };
+
+  closeModal('project');
+
+  const editId = document.getElementById('fp-id').value;
+  let result;
+  if (editId) {
+    showToast('Updating project...');
+    result = await EAS_DB.updateProject(editId, projData);
+  } else {
+    showToast('Adding project...');
+    result = await EAS_DB.insertProject(projData);
+  }
+
+  if (!result) { showToast('Failed to save project — check console', 'error'); return; }
+
+  const selectedQuarter = EAS_DB.getSelectedQuarter();
+  data = await EAS_DB.fetchAllData(selectedQuarter);
+  EAS_Utils.sanitizeDataset(data);
+  showToast(editId ? 'Project updated!' : 'Project added!');
+  renderProjects();
+  updateNavCounts();
+
+  // Reset form
+  document.getElementById('fp-id').value = '';
+  document.getElementById('fp-name').value = '';
+  document.getElementById('fp-code').value = '';
+  document.getElementById('fp-customer').value = '';
+  document.getElementById('fp-pm').value = '';
+  document.getElementById('fp-value').value = '';
+  document.getElementById('fp-revenue').value = '';
+}
+
+function editProject(id) {
+  const proj = data.projects.find(p => p.id === id);
+  if (!proj) return;
+  document.getElementById('fp-id').value = id;
+  document.getElementById('fp-practice').value = proj.practice || '';
+  document.getElementById('fp-name').value = proj.projectName || '';
+  document.getElementById('fp-code').value = proj.projectCode || '';
+  document.getElementById('fp-customer').value = proj.customer || '';
+  document.getElementById('fp-pm').value = proj.projectManager || '';
+  document.getElementById('fp-start').value = proj.startDate ? proj.startDate.split('T')[0] : '';
+  document.getElementById('fp-end').value = proj.endDate ? proj.endDate.split('T')[0] : '';
+  document.getElementById('fp-value').value = proj.contractValue || '';
+  document.getElementById('fp-revenue').value = proj.revenueType || '';
+  document.getElementById('project-modal-title-dash').textContent = 'Edit Project';
+  openModal('project');
+}
+
+function deleteProjectConfirm(id) {
+  confirmAction('Delete Project', 'Are you sure you want to delete this project?', async () => {
+    showToast('Deleting project...');
+    const ok = await EAS_DB.deleteProject(id);
+    if (ok) {
+      const selectedQuarter = EAS_DB.getSelectedQuarter();
+      data = await EAS_DB.fetchAllData(selectedQuarter);
+      EAS_Utils.sanitizeDataset(data);
+      showToast('Project deleted', 'warning');
+      renderProjects();
+      updateNavCounts();
+    } else showToast('Failed to delete project', 'error');
+  });
+}
+
+// ======== CHANGE PASSWORD ========
+
+async function handleChangePassword() {
+  const currentPw = document.getElementById('pw-current').value;
+  const newPw = document.getElementById('pw-new').value;
+  const confirmPw = document.getElementById('pw-confirm').value;
+  const errorEl = document.getElementById('pw-error');
+  const successEl = document.getElementById('pw-success');
+  const btn = document.getElementById('pw-submit-btn');
+
+  errorEl.style.display = 'none';
+  successEl.style.display = 'none';
+
+  // Validations
+  if (!currentPw) { errorEl.textContent = 'Please enter your current password.'; errorEl.style.display = 'block'; return; }
+  if (!newPw || newPw.length < 6) { errorEl.textContent = 'New password must be at least 6 characters.'; errorEl.style.display = 'block'; return; }
+  if (newPw !== confirmPw) { errorEl.textContent = 'New passwords do not match.'; errorEl.style.display = 'block'; return; }
+  if (currentPw === newPw) { errorEl.textContent = 'New password must be different from current password.'; errorEl.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Changing...';
+
+  try {
+    // Verify current password by re-authenticating
+    const profile = await EAS_Auth.getUserProfile();
+    const sb = getSupabaseClient();
+    const { error: authError } = await sb.auth.signInWithPassword({
+      email: profile.email,
+      password: currentPw
+    });
+
+    if (authError) {
+      errorEl.textContent = 'Current password is incorrect.';
+      errorEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Change Password';
+      return;
+    }
+
+    // Now change password
+    const result = await EAS_DB.changePassword(newPw);
+    if (result.success) {
+      successEl.textContent = 'Password changed successfully! You may need to log in again.';
+      successEl.style.display = 'block';
+      document.getElementById('pw-current').value = '';
+      document.getElementById('pw-new').value = '';
+      document.getElementById('pw-confirm').value = '';
+      showToast('Password changed successfully!');
+      setTimeout(() => closeModal('password'), 2000);
+    } else {
+      errorEl.textContent = result.error || 'Failed to change password.';
+      errorEl.style.display = 'block';
+    }
+  } catch (err) {
+    errorEl.textContent = 'An error occurred. Please try again.';
+    errorEl.style.display = 'block';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Change Password';
 }
 
 // ======== CONFIRM DIALOG ========
@@ -4858,7 +5370,7 @@ function populateFilters() {
   const tools = data.lovs?.aiTools || [];
 
   // Task filter dropdowns
-  const practiceSelects = ['task-filter-practice', 'acc-filter-practice', 'copilot-filter-practice', 'project-filter-practice', 'lb-filter-practice', 'uc-filter-practice', 'approvals-filter-practice'];
+  const practiceSelects = ['task-filter-practice', 'acc-filter-practice', 'copilot-filter-practice', 'project-filter-practice', 'lb-filter-practice', 'uc-filter-practice', 'approvals-filter-practice', 'issue-filter-practice'];
   practiceSelects.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -4893,7 +5405,7 @@ function populateFilters() {
   const formPractices = (userRole === 'contributor' || userRole === 'spoc') && userPractice
     ? practices.filter(p => p === userPractice)
     : practices;
-  ['f-practice', 'fa-practice', 'fc-practice'].forEach(id => {
+  ['f-practice', 'fa-practice', 'fc-practice', 'fi-practice', 'fp-practice'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     formPractices.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; el.appendChild(o); });
@@ -4912,7 +5424,7 @@ function populateFilters() {
   // Tool form dropdowns — group licensed tools first with visual distinction
   const licensedTools = data.lovs?.licensedTools || [];
   const otherTools = data.lovs?.otherTools || [];
-  ['f-tool', 'fa-tool'].forEach(id => {
+  ['f-tool', 'fa-tool', 'fi-tool'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     if (licensedTools.length > 0) {
@@ -4984,6 +5496,13 @@ async function updateNavCounts() {
       (t.employeeEmail && t.employeeEmail.toLowerCase() === userEmail.toLowerCase())
     ).length;
     mtEl.textContent = myCount;
+  }
+
+  // Issues count
+  const issuesCountEl = document.getElementById('nav-issues-count');
+  if (issuesCountEl) {
+    const openIssues = _issuesData.filter(i => i.status === 'open' || i.status === 'in_progress').length;
+    issuesCountEl.textContent = openIssues;
   }
 }
 
@@ -5313,6 +5832,8 @@ async function boot() {
   if (data) {
     populateFilters();
     await updateNavCounts();
+    // Pre-load issues data (not quarter-filtered)
+    loadIssues().catch(err => console.warn('Issues pre-load failed:', err));
   }
   
   // Role-aware default page

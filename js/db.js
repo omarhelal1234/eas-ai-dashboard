@@ -782,6 +782,212 @@ const EAS_DB = (() => {
   }
 
   // ===========================================================
+  // Projects CRUD — Phase 11
+  // ===========================================================
+
+  /**
+   * Insert a new project into Supabase.
+   * @param {object} projData — camelCase fields
+   * @returns {object|null} Inserted row or null on error.
+   */
+  async function insertProject(projData) {
+    const profile = await EAS_Auth.getUserProfile();
+    const payload = {
+      practice:        projData.practice,
+      project_name:    projData.projectName || projData.name || '',
+      project_code:    projData.projectCode || projData.code || null,
+      contract_number: projData.contractNumber || null,
+      customer:        projData.customer || null,
+      contract_value:  projData.contractValue || projData.value || 0,
+      start_date:      projData.startDate || projData.start || null,
+      end_date:        projData.endDate || projData.end || null,
+      revenue_type:    projData.revenueType || null,
+      line_type:       projData.lineType || null,
+      project_manager: projData.projectManager || projData.pm || null,
+      is_active:       projData.isActive !== undefined ? projData.isActive : true
+    };
+    const { data, error } = await sb.from('projects').insert(payload).select().single();
+    if (error) { console.error('insertProject error:', error.message); return null; }
+    await logActivity('INSERT', 'projects', data.id, { project: payload.project_name });
+    return data;
+  }
+
+  /**
+   * Update an existing project.
+   * @param {string} id — project UUID
+   * @param {object} projData — camelCase fields to update
+   */
+  async function updateProject(id, projData) {
+    const payload = {};
+    if (projData.practice !== undefined)       payload.practice        = projData.practice;
+    if (projData.projectName !== undefined || projData.name !== undefined)
+      payload.project_name = projData.projectName || projData.name;
+    if (projData.projectCode !== undefined || projData.code !== undefined)
+      payload.project_code = projData.projectCode || projData.code;
+    if (projData.contractNumber !== undefined)  payload.contract_number = projData.contractNumber;
+    if (projData.customer !== undefined)        payload.customer        = projData.customer;
+    if (projData.contractValue !== undefined || projData.value !== undefined)
+      payload.contract_value = projData.contractValue || projData.value;
+    if (projData.startDate !== undefined || projData.start !== undefined)
+      payload.start_date = projData.startDate || projData.start;
+    if (projData.endDate !== undefined || projData.end !== undefined)
+      payload.end_date = projData.endDate || projData.end;
+    if (projData.revenueType !== undefined)     payload.revenue_type    = projData.revenueType;
+    if (projData.lineType !== undefined)        payload.line_type       = projData.lineType;
+    if (projData.projectManager !== undefined || projData.pm !== undefined)
+      payload.project_manager = projData.projectManager || projData.pm;
+    if (projData.isActive !== undefined)        payload.is_active       = projData.isActive;
+
+    const { data, error } = await sb.from('projects').update(payload).eq('id', id).select().single();
+    if (error) { console.error('updateProject error:', error.message); return null; }
+    await logActivity('UPDATE', 'projects', id, payload);
+    return data;
+  }
+
+  /**
+   * Delete a project by ID.
+   */
+  async function deleteProject(id) {
+    const { error } = await sb.from('projects').delete().eq('id', id);
+    if (error) { console.error('deleteProject error:', error.message); return false; }
+    await logActivity('DELETE', 'projects', id);
+    return true;
+  }
+
+  // ===========================================================
+  // Reported Issues / Blockers — Phase 11
+  // ===========================================================
+
+  /**
+   * Fetch all reported issues/blockers.
+   * @returns {Array} issues in camelCase format
+   */
+  async function fetchReportedIssues() {
+    const { data, error } = await sb
+      .from('reported_issues')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('fetchReportedIssues error:', error.message);
+      return [];
+    }
+    return (data || []).map(i => ({
+      id:             i.id,
+      title:          i.title,
+      description:    i.description,
+      severity:       i.severity,
+      aiTool:         i.ai_tool,
+      practice:       i.practice,
+      reportedBy:     i.reported_by,
+      reportedByName: i.reported_by_name,
+      reportedByEmail:i.reported_by_email,
+      status:         i.status,
+      resolution:     i.resolution,
+      resolvedBy:     i.resolved_by,
+      resolvedAt:     i.resolved_at,
+      createdAt:      i.created_at,
+      updatedAt:      i.updated_at
+    }));
+  }
+
+  /**
+   * Insert a new reported issue / blocker.
+   * @param {object} issueData — camelCase fields
+   * @returns {object|null} Inserted row or null on error.
+   */
+  async function insertReportedIssue(issueData) {
+    const profile = await EAS_Auth.getUserProfile();
+    const payload = {
+      title:             issueData.title,
+      description:       issueData.description || '',
+      severity:          issueData.severity || 'medium',
+      ai_tool:           issueData.aiTool || null,
+      practice:          issueData.practice || profile?.practice || '',
+      reported_by:       profile?.id || null,
+      reported_by_name:  profile?.name || '',
+      reported_by_email: profile?.email || '',
+      status:            'open'
+    };
+    const { data, error } = await sb.from('reported_issues').insert(payload).select().single();
+    if (error) { console.error('insertReportedIssue error:', error.message); return null; }
+    await logActivity('INSERT', 'reported_issues', data.id, { title: payload.title });
+    return data;
+  }
+
+  /**
+   * Update an existing reported issue.
+   * @param {string} id — issue UUID
+   * @param {object} issueData — camelCase fields to update
+   */
+  async function updateReportedIssue(id, issueData) {
+    const payload = {};
+    if (issueData.title !== undefined)       payload.title       = issueData.title;
+    if (issueData.description !== undefined) payload.description = issueData.description;
+    if (issueData.severity !== undefined)    payload.severity    = issueData.severity;
+    if (issueData.aiTool !== undefined)      payload.ai_tool     = issueData.aiTool;
+    if (issueData.status !== undefined)      payload.status      = issueData.status;
+    if (issueData.resolution !== undefined)  payload.resolution  = issueData.resolution;
+
+    // If resolving, track who resolved it
+    if (issueData.status === 'resolved' || issueData.status === 'closed') {
+      const profile = await EAS_Auth.getUserProfile();
+      payload.resolved_by = profile?.id || null;
+      payload.resolved_at = new Date().toISOString();
+    }
+
+    const { data, error } = await sb.from('reported_issues').update(payload).eq('id', id).select().single();
+    if (error) { console.error('updateReportedIssue error:', error.message); return null; }
+    await logActivity('UPDATE', 'reported_issues', id, payload);
+    return data;
+  }
+
+  /**
+   * Delete a reported issue by ID.
+   */
+  async function deleteReportedIssue(id) {
+    const { error } = await sb.from('reported_issues').delete().eq('id', id);
+    if (error) { console.error('deleteReportedIssue error:', error.message); return false; }
+    await logActivity('DELETE', 'reported_issues', id);
+    return true;
+  }
+
+  // ===========================================================
+  // Password Management — Phase 11
+  // ===========================================================
+
+  /**
+   * Change the current user's password (requires being logged in).
+   * Uses Supabase Auth updateUser.
+   * @param {string} newPassword — the new password (min 6 chars)
+   * @returns {object} — { success: boolean, error?: string }
+   */
+  async function changePassword(newPassword) {
+    const { data, error } = await sb.auth.updateUser({ password: newPassword });
+    if (error) {
+      console.error('changePassword error:', error.message);
+      return { success: false, error: error.message };
+    }
+    await logActivity('UPDATE', 'auth', null, { action: 'password_changed' });
+    return { success: true };
+  }
+
+  /**
+   * Admin: reset another user's password via admin API.
+   * Note: This requires service_role key which is NOT available client-side.
+   * Instead, we use a workaround: admin updates the user's auth record.
+   * This only works if the admin has the service role or an Edge Function handles it.
+   * For now, returns guidance to use the Supabase dashboard.
+   * @param {string} userId — the auth.users.id to reset
+   * @param {string} newPassword — the new password to set
+   */
+  async function adminResetPassword(userId, newPassword) {
+    // Client-side Supabase cannot reset other users' passwords.
+    // This would require a service_role key Edge Function.
+    // For now, we'll rely on the change password self-service.
+    return { success: false, error: 'Admin password reset requires an Edge Function. Use Supabase dashboard for now.' };
+  }
+
+  // ===========================================================
   // Audit Logging — Phase 4
   // ===========================================================
 
@@ -1667,6 +1873,21 @@ const EAS_DB = (() => {
     resetRolePermissions,
 
     // View Permissions (Dashboard consumer)
-    fetchMyViewPermissions
+    fetchMyViewPermissions,
+
+    // Projects CRUD (Phase 11)
+    insertProject,
+    updateProject,
+    deleteProject,
+
+    // Reported Issues / Blockers (Phase 11)
+    fetchReportedIssues,
+    insertReportedIssue,
+    updateReportedIssue,
+    deleteReportedIssue,
+
+    // Password Management (Phase 11)
+    changePassword,
+    adminResetPassword
   };
 })();
