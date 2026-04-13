@@ -593,6 +593,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       Prompt Library
       <span class="badge" id="admin-prompt-count">0</span>
     </div>
+    <div class="nav-item" data-page="manage-executives">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/><circle cx="7" cy="16" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="19" cy="6" r="1.5"/></svg>
+      Executive Assignments
+      <span class="badge" id="admin-exec-count">0</span>
+    </div>
     <div class="nav-item" data-page="manage-permissions">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       View Permissions
@@ -1008,6 +1013,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             <option value="spoc">SPOC</option>
             <option value="contributor">Contributor</option>
             <option value="viewer">Viewer</option>
+            <option value="executive">Executive</option>
           </select>
           <select id="admin-user-practice-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary)" onchange="renderAdminUsers()">
             <option value="">All Practices</option>
@@ -1035,6 +1041,26 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       </div>
     </div>
 
+    <!-- Executive Assignments Page -->
+    <div id="page-manage-executives" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Executive Assignments</h2>
+          <div class="subtitle">Assign practices to executive users for cross-practice visibility</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div id="exec-assign-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="margin-bottom:16px;opacity:0.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <h3 style="color:var(--text-secondary)">No Executive Users</h3>
+          <p>To add an executive, go to <strong>Users</strong> and set a user's role to <strong>Executive</strong>.</p>
+        </div>
+        <div id="exec-assign-content">
+          <div id="exec-cards-container" style="display:flex;flex-direction:column;gap:20px"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Manage Permissions Page -->
     <div id="page-manage-permissions" class="page hidden">
       <div class="page-header">
@@ -1057,6 +1083,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
                 <th style="text-align:center">SPOC</th>
                 <th style="text-align:center">Contributor</th>
                 <th style="text-align:center">Viewer</th>
+                <th style="text-align:center">Executive</th>
               </tr>
             </thead>
             <tbody id="permissions-matrix-tbody">
@@ -1384,6 +1411,21 @@ document.getElementById('login-user').addEventListener('keydown', e => { if (e.k
 })();
 
 // ============ DATA LAYER ============
+const APP_DATA = {
+  tasks: [],
+  accomplishments: [],
+  copilotUsers: [],
+  projects: [],
+  summary: {
+    totals: { tasks: 0, timeWithout: 0, timeWith: 0, timeSaved: 0, efficiency: 0, quality: 0, completed: 0, projects: 0 },
+    practices: []
+  },
+  lovs: {
+    taskCategories: [],
+    aiTools: []
+  }
+};
+
 let data;
 
 function loadData() {
@@ -1429,6 +1471,7 @@ function renderCurrentPage(page) {
     case 'manage-data': renderDataMgmt(); break;
     case 'manage-prompts': renderAdminPrompts(); break;
     case 'manage-users': renderAdminUsers(); break;
+    case 'manage-executives': renderAdminExecutives(); break;
     case 'manage-permissions': renderAdminPermissions(); break;
   }
 }
@@ -3447,6 +3490,164 @@ async function saveUser() {
   showToast('User updated successfully', 'success');
   _adminUsers = []; // force refresh
   renderAdminUsers();
+}
+
+// ============ MANAGE EXECUTIVE ASSIGNMENTS ============
+let _execAssignData = [];
+
+async function renderAdminExecutives() {
+  const sb = getSupabaseClient();
+  // Fetch executive users
+  const { data: execUsers, error: uErr } = await sb
+    .from('users')
+    .select('id, full_name, email, practice')
+    .eq('role', 'executive')
+    .order('full_name');
+
+  if (uErr) {
+    showToast('Failed to load executive users: ' + uErr.message, 'error');
+    return;
+  }
+
+  // Update badge count
+  const badge = document.getElementById('admin-exec-count');
+  if (badge) badge.textContent = (execUsers || []).length;
+
+  const empty = document.getElementById('exec-assign-empty');
+  const content = document.getElementById('exec-assign-content');
+
+  if (!execUsers || execUsers.length === 0) {
+    empty.style.display = 'block';
+    content.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
+  // Fetch all executive_practices
+  const { data: epRows } = await sb
+    .from('executive_practices')
+    .select('user_id, practice');
+
+  // Fetch all practices for the picker
+  const { data: allPractices } = await sb
+    .from('practices')
+    .select('name')
+    .order('name');
+
+  const practiceList = (allPractices || []).map(p => p.name);
+  const epMap = {};
+  (epRows || []).forEach(r => {
+    if (!epMap[r.user_id]) epMap[r.user_id] = [];
+    epMap[r.user_id].push(r.practice);
+  });
+
+  _execAssignData = execUsers.map(u => ({
+    ...u,
+    practices: epMap[u.id] || []
+  }));
+
+  const container = document.getElementById('exec-cards-container');
+  container.innerHTML = _execAssignData.map(u => {
+    const tags = u.practices.length > 0
+      ? u.practices.map(p => `<span style="display:inline-block;padding:4px 10px;border-radius:12px;font-size:0.8rem;background:var(--accent-bg,rgba(99,102,241,0.12));color:var(--accent-primary,#6366f1);margin:3px 2px">${p}</span>`).join('')
+      : '<span style="color:var(--text-muted);font-style:italic">No practices assigned</span>';
+
+    return `
+      <div class="card" style="padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <div>
+            <h3 style="margin:0 0 4px">${u.full_name || 'Unnamed'}</h3>
+            <div style="font-size:0.85rem;color:var(--text-muted)">${u.email || '—'} · Home practice: <strong>${u.practice || '—'}</strong></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="editExecPractices('${u.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </button>
+        </div>
+        <div style="margin-top:12px">
+          <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px">Assigned Practices (${u.practices.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0">${tags}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function editExecPractices(userId) {
+  const sb = getSupabaseClient();
+  const user = _execAssignData.find(u => u.id === userId);
+  if (!user) return;
+
+  // Fetch all practices
+  const { data: allPractices } = await sb
+    .from('practices')
+    .select('name')
+    .order('name');
+  const practiceList = (allPractices || []).map(p => p.name);
+
+  const checkedSet = new Set(user.practices);
+  const checkboxes = practiceList.map(p =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background 0.15s"
+            onmouseover="this.style.background='var(--bg-hover,rgba(0,0,0,0.04))'"
+            onmouseout="this.style.background='transparent'">
+      <input type="checkbox" class="exec-assign-cb" value="${p}" ${checkedSet.has(p) ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--accent-primary,#6366f1)">
+      <span>${p}</span>
+    </label>`
+  ).join('');
+
+  // Build a small inline modal
+  const existing = document.getElementById('exec-assign-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'exec-assign-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;max-width:480px;width:100%;max-height:80vh;overflow:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+      <h3 style="margin:0 0 4px">Edit Practices</h3>
+      <p style="margin:0 0 16px;color:var(--text-muted);font-size:0.9rem">${user.full_name || 'Unnamed'}</p>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <button class="btn btn-sm" onclick="document.querySelectorAll('.exec-assign-cb').forEach(c=>c.checked=true)" style="font-size:0.78rem">Select All</button>
+        <button class="btn btn-sm" onclick="document.querySelectorAll('.exec-assign-cb').forEach(c=>c.checked=false)" style="font-size:0.78rem">Deselect All</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">
+        ${checkboxes}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn" onclick="document.getElementById('exec-assign-modal').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveExecPractices('${userId}')">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function saveExecPractices(userId) {
+  const sb = getSupabaseClient();
+  const selected = [...document.querySelectorAll('.exec-assign-cb:checked')].map(c => c.value);
+
+  // Delete existing
+  const { error: delErr } = await sb.from('executive_practices').delete().eq('user_id', userId);
+  if (delErr) {
+    showToast('Failed to clear old assignments: ' + delErr.message, 'error');
+    return;
+  }
+
+  // Insert new
+  if (selected.length > 0) {
+    const { error: insErr } = await sb
+      .from('executive_practices')
+      .insert(selected.map(p => ({ user_id: userId, practice: p })));
+    if (insErr) {
+      showToast('Failed to save assignments: ' + insErr.message, 'error');
+      return;
+    }
+  }
+
+  const modal = document.getElementById('exec-assign-modal');
+  if (modal) modal.remove();
+  showToast(`Updated practice assignments (${selected.length} practices)`, 'success');
+  renderAdminExecutives();
 }
 
 // ============ MANAGE PERMISSIONS ============
