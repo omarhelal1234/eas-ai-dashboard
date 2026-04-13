@@ -19,6 +19,28 @@
 - **8 granular view keys:** Covers all meaningful sidebar sections without being too atomic (individual form fields would be overkill).
 - **Seed all 32 rows:** Pre-populating ensures the admin grid is complete; no need for upsert logic on first access.
 
+### 0h-ext. April 13, 2026 — Admin-Managed Dashboard View Permissions
+
+**Problem:** The `role_view_permissions` system only covered VS Code extension views (`ext.*`). Dashboard sidebar views were hardcoded via `data-role` HTML attributes with no admin control over visibility per role.
+
+**Solution:** Extended the same `role_view_permissions` table with 68 new `web.*` rows (4 roles × 17 dashboard views). Dashboard boot sequence now fetches permissions and applies them on top of the existing `data-role` system.
+
+**Design Decisions:**
+- **Intersection model:** DB permissions work in addition to `data-role` HTML attributes. Admin can restrict further (hide a view for a role) but cannot grant access beyond what the role's `data-role` attribute allows. This is safer than replacing `data-role` entirely, which would require careful re-seeding.
+- **`data-view-key` attribute:** Each nav item gets a `data-view-key="web.<page>"` attribute. This provides a clean hook for JS to match DB rows to DOM elements without fragile string parsing or coupling to `data-page`.
+- **Fail-open default:** If the permission fetch fails (network error, table missing), all views remain visible. Missing view_keys in the permissions map also default to visible. This ensures the dashboard degrades gracefully.
+- **All visible by default:** All 68 new rows are seeded with `is_visible = true`, matching current behavior. Admin then selectively hides views per role.
+- **`web.*` prefix convention:** Mirrors the existing `ext.*` prefix for extension views, keeping namespaces clean and enabling category headers in the admin UI.
+- **Category headers in admin matrix:** The permission grid now groups rows under "Dashboard Views" and "VS Code Extension Views" headers for visual clarity, without changing the underlying flat data model.
+- **Navigation guard:** Click handler checks if target nav-item is hidden before navigating, preventing programmatic access to permission-hidden views.
+
+**Files Changed:**
+- `sql/008_web_view_permissions.sql` — New migration: 68 rows for 17 web views × 4 roles
+- `js/db.js` — New `fetchMyViewPermissions(role)` function returning `Map<viewKey, boolean>`
+- `js/auth.js` — New `applyViewPermissions(permissionsMap)` function hiding nav items + page divs
+- `src/pages/index.html` — Added `data-view-key` to all 17 nav items, permission fetch in boot, navigation guard
+- `src/pages/admin.html` — Updated subtitle, how-it-works text, and `renderAdminPermissions()` with category row headers
+
 **Files Changed:**
 - `sql/007_role_view_permissions.sql` — New migration: table, RLS, helper function, seed data
 - `supabase/functions/ide-task-log/index.ts` — Extended `/context` response with `permissions` object

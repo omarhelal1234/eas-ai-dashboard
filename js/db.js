@@ -1553,6 +1553,33 @@ const EAS_DB = (() => {
     return true;
   }
 
+  /**
+   * Fetch view permissions for a single role (lightweight).
+   * Returns a Map<viewKey, boolean> — used by the dashboard to
+   * show/hide nav items based on admin-managed permissions.
+   * Falls back to empty map on error (fail-open: all views visible).
+   * @param {string} role - One of 'admin', 'spoc', 'contributor', 'viewer'
+   * @returns {Promise<Map<string, boolean>>}
+   */
+  async function fetchMyViewPermissions(role) {
+    try {
+      const { data, error } = await sb
+        .from('role_view_permissions')
+        .select('view_key, is_visible')
+        .eq('role', role);
+      if (error) {
+        console.error('fetchMyViewPermissions error:', error.message);
+        return new Map();
+      }
+      const map = new Map();
+      (data || []).forEach(row => map.set(row.view_key, row.is_visible));
+      return map;
+    } catch (err) {
+      console.error('fetchMyViewPermissions exception:', err);
+      return new Map();
+    }
+  }
+
   // ===========================================================
   // Public API
   // ===========================================================
@@ -1637,6 +1664,9 @@ const EAS_DB = (() => {
     // Role-Based View Permissions (Admin)
     fetchRolePermissions,
     updateRolePermission,
-    resetRolePermissions
+    resetRolePermissions,
+
+    // View Permissions (Dashboard consumer)
+    fetchMyViewPermissions
   };
 })();

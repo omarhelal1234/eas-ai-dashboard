@@ -969,7 +969,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="page-header">
         <div>
           <h2>View Permissions</h2>
-          <div class="subtitle">Control which VS Code sidebar sections each role can see</div>
+          <div class="subtitle">Control which sections each role can see across the dashboard and VS Code extension</div>
         </div>
         <button class="btn btn-secondary" onclick="resetAllPermissions()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
@@ -994,7 +994,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           </table>
         </div>
         <div style="margin-top:12px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text-muted)">
-          <strong>How it works:</strong> Toggles control visibility of sidebar sections in the VS Code extension. Enabled (green) = visible, Disabled (red) = hidden. Changes take effect on the user's next sidebar refresh. Default: all visible (deny-list approach).
+          <strong>How it works:</strong> Toggles control visibility of sidebar sections across the web dashboard and VS Code extension. Enabled (green) = visible, Disabled (red) = hidden. Dashboard changes take effect on the user's next page load; extension changes on the next sidebar refresh. Default: all visible (deny-list approach). Dashboard permissions work in addition to role-based restrictions &mdash; admin can hide views but cannot grant access beyond what the role allows.
         </div>
       </div>
     </div>
@@ -3031,25 +3031,39 @@ async function renderAdminPermissions() {
   const labelMap = {};
   _adminPermissions.forEach(p => { labelMap[p.view_key] = p.label || p.view_key; });
 
+  // Separate into categories for visual grouping
+  const webKeys = viewKeys.filter(vk => vk.startsWith('web.'));
+  const extKeys = viewKeys.filter(vk => vk.startsWith('ext.'));
+  const otherKeys = viewKeys.filter(vk => !vk.startsWith('web.') && !vk.startsWith('ext.'));
+
   let html = '';
-  viewKeys.forEach(vk => {
-    html += `<tr><td style="font-weight:500">${escapeHtml(labelMap[vk])}<br><span style="font-size:11px;color:var(--text-muted)">${escapeHtml(vk)}</span></td>`;
-    ROLE_ORDER.forEach(role => {
-      const perm = _adminPermissions.find(p => p.view_key === vk && p.role === role);
-      const isVisible = perm ? perm.is_visible : true;
-      const toggleId = `perm-${role}-${vk.replace(/\./g, '-')}`;
-      html += `<td style="text-align:center">
-        <label class="toggle-switch" style="display:inline-block;position:relative;width:44px;height:24px;cursor:pointer">
-          <input type="checkbox" id="${toggleId}" ${isVisible ? 'checked' : ''}
-            onchange="togglePermission('${escapeHtml(role)}', '${escapeHtml(vk)}', this.checked)"
-            style="opacity:0;width:0;height:0">
-          <span style="position:absolute;top:0;left:0;right:0;bottom:0;background:${isVisible ? '#28a745' : '#dc3545'};border-radius:24px;transition:0.3s"></span>
-          <span style="position:absolute;top:2px;${isVisible ? 'left:22px' : 'left:2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
-        </label>
-      </td>`;
+
+  function renderCategoryRows(keys, categoryLabel) {
+    if (keys.length === 0) return;
+    html += `<tr><td colspan="5" style="padding:12px 8px 6px;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);border-bottom:2px solid var(--primary);background:var(--bg-main)">${escapeHtml(categoryLabel)}</td></tr>`;
+    keys.forEach(vk => {
+      html += `<tr><td style="font-weight:500">${escapeHtml(labelMap[vk])}<br><span style="font-size:11px;color:var(--text-muted)">${escapeHtml(vk)}</span></td>`;
+      ROLE_ORDER.forEach(role => {
+        const perm = _adminPermissions.find(p => p.view_key === vk && p.role === role);
+        const isVisible = perm ? perm.is_visible : true;
+        const toggleId = `perm-${role}-${vk.replace(/\./g, '-')}`;
+        html += `<td style="text-align:center">
+          <label class="toggle-switch" style="display:inline-block;position:relative;width:44px;height:24px;cursor:pointer">
+            <input type="checkbox" id="${toggleId}" ${isVisible ? 'checked' : ''}
+              onchange="togglePermission('${escapeHtml(role)}', '${escapeHtml(vk)}', this.checked)"
+              style="opacity:0;width:0;height:0">
+            <span style="position:absolute;top:0;left:0;right:0;bottom:0;background:${isVisible ? '#28a745' : '#dc3545'};border-radius:24px;transition:0.3s"></span>
+            <span style="position:absolute;top:2px;${isVisible ? 'left:22px' : 'left:2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
+          </label>
+        </td>`;
+      });
+      html += '</tr>';
     });
-    html += '</tr>';
-  });
+  }
+
+  renderCategoryRows(webKeys, '🌐 Dashboard Views');
+  renderCategoryRows(extKeys, '🖥️ VS Code Extension Views');
+  renderCategoryRows(otherKeys, 'Other');
 
   document.getElementById('permissions-matrix-tbody').innerHTML = html || '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">No permissions configured. Run the SQL migration first.</td></tr>';
 }

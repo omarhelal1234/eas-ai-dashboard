@@ -140,6 +140,38 @@ const EAS_Auth = (() => {
     });
   }
 
+  /**
+   * Apply admin-managed view permissions from the database.
+   * Hides nav items (and their corresponding page divs) where
+   * is_visible === false. Runs AFTER applyRoleVisibility() so
+   * the intersection model holds: data-role gates first, then
+   * DB permissions further restrict.
+   *
+   * Fail-open: if a view_key has no entry in the map, it stays visible.
+   *
+   * @param {Map<string, boolean>} permissionsMap - Map of view_key → is_visible
+   */
+  function applyViewPermissions(permissionsMap) {
+    if (!permissionsMap || permissionsMap.size === 0) return;
+
+    document.querySelectorAll('[data-view-key]').forEach(el => {
+      const viewKey = el.dataset.viewKey;
+      const isVisible = permissionsMap.get(viewKey);
+
+      // Only hide if explicitly set to false (fail-open for missing keys)
+      if (isVisible === false) {
+        el.style.display = 'none';
+
+        // Also hide the corresponding page div if it has a data-page
+        const pageKey = el.dataset.page;
+        if (pageKey) {
+          const pageDiv = document.getElementById('page-' + pageKey);
+          if (pageDiv) pageDiv.classList.add('hidden');
+        }
+      }
+    });
+  }
+
   /** Update user info display in sidebar */
   function updateUserDisplay() {
     const nameEl = document.getElementById('user-display-name');
@@ -182,6 +214,7 @@ const EAS_Auth = (() => {
     getUserId,
     requireAuth,
     applyRoleVisibility,
+    applyViewPermissions,
     updateUserDisplay,
     onAuthStateChange
   };

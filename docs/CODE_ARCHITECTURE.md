@@ -89,6 +89,7 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │   ├── 003_use_cases.sql    # AI Innovation approved use cases seed data (40 EAS use cases)
 │   └── 006_ide_api.sql      # Phase 10 IDE API schema (source column on tasks/accomplishments)
 │   └── 007_role_view_permissions.sql  # Role-based sidebar view permissions (deny-list)
+│   └── 008_web_view_permissions.sql   # Web dashboard view permissions (17 views × 4 roles)
 │
 ├── scripts/                # Node.js admin/migration scripts
 │   ├── create-auth-users.mjs   # One-time auth user creation
@@ -242,7 +243,7 @@ All modules use the **Revealing Module Pattern** (IIFE returning a public API):
 | `lovs` | Lists of values (dropdowns) | 18 |
 | `activity_log` | Audit trail (all CRUD operations) | Dynamic |
 | `data_dumps` | JSON backup snapshots (admin) | Dynamic |
-| `role_view_permissions` | Controls per-role sidebar section visibility (deny-list) | 32 (4 roles × 8 views) |
+| `role_view_permissions` | Controls per-role sidebar section visibility (deny-list) | 100 (4 roles × 25 views: 17 web + 8 ext) |
 
 ### Computed Columns
 
