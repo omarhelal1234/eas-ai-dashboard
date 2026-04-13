@@ -56,6 +56,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8m-4-4v4m-5-8l5-10 5 10M6 13h12"/></svg>
     Leaderboard
   </div>
+  <div class="nav-item" data-page="exec-summary" data-view-key="web.exec_summary">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/><circle cx="7" cy="16" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="19" cy="6" r="1.5"/></svg>
+    Executive Summary
+  </div>
 
   <div class="nav-section" data-role="admin,spoc,viewer">Practices</div>
   <div class="nav-item" data-page="mypractice" data-role="spoc" data-view-key="web.mypractice">
@@ -186,8 +190,8 @@
           <label for="quarter-selector">Quarter</label>
           <select class="quarter-selector" id="quarter-selector"></select>
         </div>
-        <button class="btn btn-primary" onclick="openModal('task')" data-hide-role="viewer">+ Log Task</button>
-        <button class="btn btn-secondary" onclick="openModal('accomplishment')" data-hide-role="viewer">+ Add Win</button>
+        <button class="btn btn-primary" onclick="openModal('task')" data-hide-role="viewer,executive">+ Log Task</button>
+        <button class="btn btn-secondary" onclick="openModal('accomplishment')" data-hide-role="viewer,executive">+ Add Win</button>
         <button class="btn btn-secondary" onclick="openExportModal('dashboard')" aria-label="Export this page">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
@@ -292,7 +296,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
         </button>
-        <button class="btn btn-primary" onclick="openModal('task')" data-hide-role="viewer">+ Log Task</button>
+        <button class="btn btn-primary" onclick="openModal('task')" data-hide-role="viewer,executive">+ Log Task</button>
       </div>
     </div>
     <div class="page-content">
@@ -501,7 +505,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
         </button>
-        <button class="btn btn-primary" onclick="openModal('task')">+ Log Task</button>
+        <button class="btn btn-primary" onclick="openModal('task')" data-hide-role="executive">+ Log Task</button>
       </div>
     </div>
     <div class="page-content">
@@ -590,7 +594,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
         </button>
-        <button class="btn btn-primary" onclick="openModal('task')">+ Log Task</button>
+        <button class="btn btn-primary" onclick="openModal('task')" data-hide-role="executive">+ Log Task</button>
       </div>
     </div>
     <div class="page-content">
@@ -1263,6 +1267,86 @@ npm run compile</code></pre>
 
     </div>
   </div>
+
+  <!-- Executive Summary Page -->
+  <div id="page-exec-summary" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2>Executive Summary</h2>
+        <div class="subtitle">Cross-practice AI adoption overview — <span id="exec-user-context">Executive View</span></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="quarter-selector-wrapper">
+          <label for="exec-quarter-selector">Quarter</label>
+          <select class="quarter-selector" id="exec-quarter-selector"></select>
+        </div>
+        <button class="btn btn-secondary" onclick="openExportModal('exec-summary')" aria-label="Export executive summary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
+      </div>
+    </div>
+    <div class="page-content">
+      <!-- KPI Cards -->
+      <div class="kpi-grid" id="exec-kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue" id="exec-kpi-tasks">—</div><div class="kpi-sub">across assigned practices</div></div>
+        <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value green" id="exec-kpi-hours">—</div><div class="kpi-sub">approved tasks only</div></div>
+        <div class="kpi-card"><div class="kpi-label">Active Users</div><div class="kpi-value yellow" id="exec-kpi-users">—</div><div class="kpi-sub">unique contributors</div></div>
+        <div class="kpi-card"><div class="kpi-label">Practices</div><div class="kpi-value purple" id="exec-kpi-practices">—</div><div class="kpi-sub">under your oversight</div></div>
+      </div>
+
+      <!-- Practice Breakdown Table -->
+      <div class="table-card" style="margin-top:24px">
+        <div class="table-header">
+          <h3>Practice Breakdown</h3>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="exec-practice-table">
+            <thead>
+              <tr>
+                <th>Practice</th>
+                <th>Tasks</th>
+                <th>Hours Saved</th>
+                <th>Active Users</th>
+                <th>Avg Quality</th>
+              </tr>
+            </thead>
+            <tbody id="exec-practice-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="exec-charts-row" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px">
+        <div class="chart-card">
+          <h4>Weekly Trend</h4>
+          <canvas id="exec-chart-weekly" height="260"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4>Copilot Adoption by Practice</h4>
+          <canvas id="exec-chart-copilot" height="260"></canvas>
+        </div>
+      </div>
+
+      <div class="exec-charts-row" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px">
+        <div class="chart-card">
+          <h4>Approval Pipeline</h4>
+          <canvas id="exec-chart-approvals" height="260"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4>AI Tools Usage</h4>
+          <canvas id="exec-chart-tools" height="260"></canvas>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="exec-empty-state" class="empty-state" style="display:none;text-align:center;padding:60px 20px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" width="48" height="48" style="margin-bottom:16px"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>
+        <h3 style="color:var(--text-secondary)">No Data Available</h3>
+        <p style="color:var(--text-tertiary)">No practices assigned yet, or no tasks logged for the selected quarter. Contact an administrator.</p>
+      </div>
+    </div>
+  </div>
 </main>
 
 <!-- Add Task Modal -->
@@ -1684,7 +1768,7 @@ function getThemeColor(varName) {
 function updateChartTheme() {
   const tickColor = getThemeColor('--text-secondary');
   const gridColor = getThemeColor('--bg-translucent');
-  Object.values(charts).forEach(c => {
+  [...Object.values(charts), ...(typeof execCharts !== 'undefined' ? Object.values(execCharts) : [])].forEach(c => {
     if (!c || !c.options) return;
     if (c.options.scales?.x) { c.options.scales.x.ticks.color = tickColor; c.options.scales.x.grid.color = gridColor; }
     if (c.options.scales?.y) { c.options.scales.y.ticks.color = tickColor; c.options.scales.y.grid.color = gridColor; }
@@ -1742,6 +1826,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
     if (item.dataset.page === 'usecases') renderUseCases();
     if (item.dataset.page === 'skills') renderSkillsLibrary();
     if (item.dataset.page === 'prompts') loadPromptLibrary();
+    if (item.dataset.page === 'exec-summary') renderExecSummary();
   });
 });
 
@@ -4902,6 +4987,251 @@ async function updateNavCounts() {
   }
 }
 
+// ======== EXECUTIVE SUMMARY ========
+let execCharts = {};
+
+async function renderExecSummary() {
+  const sb = getSupabaseClient();
+  const execKpiGrid = document.getElementById('exec-kpi-grid');
+  const execPracticeTbody = document.getElementById('exec-practice-tbody');
+  const emptyState = document.getElementById('exec-empty-state');
+  const execCtx = document.getElementById('exec-user-context');
+
+  // Update header context
+  if (execCtx) {
+    execCtx.textContent = `${EAS_Auth.getUserName()} — Executive View`;
+  }
+
+  // Determine quarter from the exec-specific selector
+  const execQSel = document.getElementById('exec-quarter-selector');
+  const quarterId = execQSel?.value || EAS_DB.getSelectedQuarter() || null;
+
+  try {
+    const { data: summary, error } = await sb.rpc('get_executive_summary', {
+      p_quarter_id: quarterId
+    });
+
+    if (error) {
+      console.error('Executive summary RPC error:', error);
+      showToast('Failed to load executive summary', 'error');
+      if (emptyState) emptyState.style.display = 'block';
+      return;
+    }
+
+    if (!summary || !summary.practices || summary.practices.length === 0) {
+      // No practices assigned
+      if (emptyState) emptyState.style.display = 'block';
+      if (execKpiGrid) execKpiGrid.style.display = 'none';
+      document.querySelectorAll('.exec-charts-row').forEach(r => r.style.display = 'none');
+      document.querySelector('#page-exec-summary .table-card')?.style.setProperty('display', 'none');
+      return;
+    }
+
+    // Show content, hide empty state
+    if (emptyState) emptyState.style.display = 'none';
+    if (execKpiGrid) execKpiGrid.style.display = '';
+    document.querySelectorAll('.exec-charts-row').forEach(r => r.style.display = '');
+    document.querySelector('#page-exec-summary .table-card')?.style.setProperty('display', '');
+
+    // ---- KPIs ----
+    document.getElementById('exec-kpi-tasks').textContent = fmt(summary.total_tasks, 0);
+    document.getElementById('exec-kpi-hours').textContent = fmt(summary.total_hours_saved, 1);
+    document.getElementById('exec-kpi-users').textContent = fmt(summary.active_users, 0);
+    document.getElementById('exec-kpi-practices').textContent = summary.practices.length;
+
+    // ---- Practice Breakdown Table ----
+    const breakdown = summary.practice_breakdown || [];
+    if (execPracticeTbody) {
+      if (breakdown.length === 0) {
+        execPracticeTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">No task data yet</td></tr>';
+      } else {
+        execPracticeTbody.innerHTML = breakdown.map(p => `
+          <tr>
+            <td><strong>${escapeHtml(p.practice)}</strong></td>
+            <td>${fmt(p.task_count, 0)}</td>
+            <td>${fmt(p.hours_saved, 1)}</td>
+            <td>${fmt(p.active_users, 0)}</td>
+            <td>${p.avg_quality ? fmt(p.avg_quality, 1) + '/5' : '—'}</td>
+          </tr>
+        `).join('');
+        // Totals row
+        const totals = breakdown.reduce((acc, p) => ({
+          tasks: acc.tasks + (p.task_count || 0),
+          hours: acc.hours + (p.hours_saved || 0),
+          users: acc.users + (p.active_users || 0)
+        }), { tasks: 0, hours: 0, users: 0 });
+        execPracticeTbody.innerHTML += `
+          <tr style="font-weight:600;border-top:2px solid var(--border-primary)">
+            <td>Total</td>
+            <td>${fmt(totals.tasks, 0)}</td>
+            <td>${fmt(totals.hours, 1)}</td>
+            <td>${fmt(totals.users, 0)}</td>
+            <td>—</td>
+          </tr>
+        `;
+      }
+    }
+
+    // ---- Charts ----
+    renderExecCharts(summary);
+
+  } catch (err) {
+    console.error('renderExecSummary error:', err);
+    showToast('Error loading executive summary', 'error');
+  }
+}
+
+function renderExecCharts(summary) {
+  // Destroy old charts
+  Object.values(execCharts).forEach(c => { if (c) c.destroy(); });
+  execCharts = {};
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const tickColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#14b8a6'];
+
+  const baseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: tickColor, padding: 12, font: { size: 12 } } }
+    },
+    scales: {
+      x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { color: gridColor } },
+      y: { ticks: { color: tickColor, font: { size: 11 } }, grid: { color: gridColor }, beginAtZero: true }
+    }
+  };
+
+  // 1. Weekly Trend (combo: bars=tasks, line=hours)
+  const weeklyData = summary.weekly_trend || [];
+  const weeklyCanvas = document.getElementById('exec-chart-weekly');
+  if (weeklyCanvas && weeklyData.length > 0) {
+    execCharts.weekly = new Chart(weeklyCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: weeklyData.map(w => 'W' + w.week_number),
+        datasets: [
+          {
+            label: 'Tasks',
+            data: weeklyData.map(w => w.task_count),
+            backgroundColor: 'rgba(59,130,246,0.7)',
+            borderRadius: 4,
+            order: 2
+          },
+          {
+            label: 'Hours Saved',
+            data: weeklyData.map(w => w.hours_saved),
+            type: 'line',
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16,185,129,0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            order: 1,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        ...baseOptions,
+        scales: {
+          ...baseOptions.scales,
+          y1: {
+            position: 'right',
+            ticks: { color: '#10b981', font: { size: 11 } },
+            grid: { drawOnChartArea: false },
+            beginAtZero: true,
+            title: { display: true, text: 'Hours', color: '#10b981' }
+          },
+          y: { ...baseOptions.scales.y, title: { display: true, text: 'Tasks', color: tickColor } }
+        }
+      }
+    });
+  }
+
+  // 2. Copilot Adoption by Practice (horizontal bar)
+  const copilotData = summary.copilot_adoption || [];
+  const copilotCanvas = document.getElementById('exec-chart-copilot');
+  if (copilotCanvas && copilotData.length > 0) {
+    execCharts.copilot = new Chart(copilotCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: copilotData.map(c => c.practice),
+        datasets: [
+          {
+            label: 'Total Licensed',
+            data: copilotData.map(c => c.total_users),
+            backgroundColor: 'rgba(139,92,246,0.6)',
+            borderRadius: 4
+          },
+          {
+            label: 'Active (Logged Task)',
+            data: copilotData.map(c => c.active_users),
+            backgroundColor: 'rgba(16,185,129,0.7)',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        ...baseOptions,
+        indexAxis: 'y'
+      }
+    });
+  }
+
+  // 3. Approval Pipeline (doughnut)
+  const approvalData = summary.approval_stats || [];
+  const approvalCanvas = document.getElementById('exec-chart-approvals');
+  if (approvalCanvas && approvalData.length > 0) {
+    const statusColors = {
+      'pending': '#f59e0b',
+      'ai_review': '#8b5cf6',
+      'spoc_review': '#3b82f6',
+      'admin_review': '#06b6d4',
+      'approved': '#10b981',
+      'rejected': '#ef4444'
+    };
+    execCharts.approvals = new Chart(approvalCanvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: approvalData.map(a => (a.approval_status || 'unknown').replace('_', ' ')),
+        datasets: [{
+          data: approvalData.map(a => a.count),
+          backgroundColor: approvalData.map(a => statusColors[a.approval_status] || '#94a3b8'),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: tickColor, padding: 10, font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // 4. AI Tools Usage (bar)
+  const toolData = summary.tool_usage || [];
+  const toolsCanvas = document.getElementById('exec-chart-tools');
+  if (toolsCanvas && toolData.length > 0) {
+    execCharts.tools = new Chart(toolsCanvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: toolData.map(t => t.ai_tool),
+        datasets: [{
+          label: 'Usage Count',
+          data: toolData.map(t => t.usage_count),
+          backgroundColor: toolData.map((_, i) => chartColors[i % chartColors.length]),
+          borderRadius: 4
+        }]
+      },
+      options: baseOptions
+    });
+  }
+}
+
 // Boot
 async function boot() {
   try {
@@ -4917,6 +5247,7 @@ async function boot() {
   EAS_DB.populatePageQuarterSelector('lb-filter-quarter', () => renderLeaderboard());
   EAS_DB.populatePageQuarterSelector('mytasks-filter-quarter', () => renderMyTasks());
   EAS_DB.populatePageQuarterSelector('acc-filter-quarter', () => renderAccomplishments());
+  EAS_DB.populatePageQuarterSelector('exec-quarter-selector', () => renderExecSummary());
   
   // 2c. Wire week-start date change to auto-update week number
   const fWeekStart = document.getElementById('f-weekstart');
@@ -4958,6 +5289,8 @@ async function boot() {
   if (headerCtx) {
     if (role === 'admin') {
       headerCtx.textContent = 'Administrator — All Practices';
+    } else if (role === 'executive') {
+      headerCtx.textContent = `Executive: ${name} — Multi-Practice`;
     } else if (role === 'spoc') {
       headerCtx.textContent = `SPOC: ${name} — ${practice}`;
     } else {
@@ -4983,7 +5316,9 @@ async function boot() {
   }
   
   // Role-aware default page
-  if (role === 'spoc') {
+  if (role === 'executive') {
+    document.querySelector('.nav-item[data-page="exec-summary"]')?.click();
+  } else if (role === 'spoc') {
     document.querySelector('.nav-item[data-page="mypractice"]')?.click();
   } else if (role === 'contributor') {
     document.querySelector('.nav-item[data-page="mytasks"]')?.click();

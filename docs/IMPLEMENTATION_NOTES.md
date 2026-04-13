@@ -6,6 +6,21 @@
 
 ## Changes Made
 
+### 0j. April 13, 2026 — Executive Role Implementation
+
+**Problem:** Senior directors needed cross-practice, read-only visibility into AI adoption metrics without the noise of task logging, approval, or management views.
+
+**Solution:** New `executive` role with a dedicated Executive Summary dashboard, multi-practice assignment via junction table, and an RPC-based aggregation function.
+
+**Design Decisions:**
+- **Frontend-only scoping (not RLS-restricted):** Existing RLS policies grant SELECT to all authenticated users. Adding executive-specific policies would be OR'd with existing broad policies, providing no actual restriction. Instead, practice scoping is enforced in the `get_executive_summary()` RPC function and the frontend. If strict DB-level restriction is needed later, the broad `_read_all_authenticated` policies would need to be modified to exclude executives.
+- **`executive_practices` junction table:** Enables N:M assignment of practices to executives. Simpler than overloading the single `practice` column on the `users` table (which is 1:1 for other roles).
+- **RPC aggregation vs client-side:** `get_executive_summary()` runs server-side to avoid N+1 queries and reduce payload. Returns a single JSONB blob with all KPIs, breakdowns, trends, and adoption data.
+- **Column corrections:** The plan referenced `saved_hours` and `copilot_users.is_active`. The real schema uses `time_without_ai - time_with_ai` (computed) and `has_logged_task` respectively. Corrected in the RPC.
+- **Visible pages:** Per user decision, executives see Dashboard + Leaderboard + Executive Summary (not only Executive Summary). This gives them broader context while keeping the focused executive view as their default landing page.
+- **Admin multi-practice picker:** When role = `executive`, the single-practice dropdown is hidden and a checkbox grid of all practices is shown. On save, `executive_practices` rows are upserted. On role change away from executive, cleanup deletes the junction rows.
+- **No edge function changes:** The IDE task logger reads role dynamically from `users.role` and `role_view_permissions`. The only hardcoded `"admin"` references are for approval routing, which executives don't use.
+
 ### 0i. April 13, 2026 — Departments & Practices CRUD Enhancement
 
 **Problem:** Practices management in the admin panel was localStorage-based (editing head/spoc only), and there was no concept of organizational departments to group practices.

@@ -1,6 +1,6 @@
 # Code Architecture — EAS AI Dashboard
 
-> **Last Updated:** April 13, 2026 | **Phase:** 10 (IDE Task Logger)
+> **Last Updated:** April 13, 2026 | **Phase:** 10 (IDE Task Logger + Executive Role)
 >
 > **Layout note (2026-04-11):** All HTML entry points now live under `src/pages/`. Shared assets in `css/` and `js/` are referenced from those pages via `../../css/…` and `../../js/…`. See §2 for the updated tree and §6 for path examples.
 
@@ -30,7 +30,7 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │                   Supabase                           │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────┐      │
 │  │  Auth     │  │ PostgreSQL│  │  RLS Policies │      │
-│  │  (JWT)    │  │  (9 tables)│  │  (per-role)   │      │
+│  │  (JWT)    │  │ (12 tables)│  │  (per-role)   │      │
 │  └──────────┘  └──────────┘  └──────────────┘      │
 └─────────────────────────────────────────────────────┘
 ```
@@ -91,6 +91,7 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │   └── 007_role_view_permissions.sql  # Role-based sidebar view permissions (deny-list)
 │   └── 008_web_view_permissions.sql   # Web dashboard view permissions (17 views × 4 roles)
 │   └── 009_departments.sql  # Departments table + practice enhancements (department_id, description, status)
+│   └── 010_executive_role.sql # Executive role, executive_practices table, RPC, view permissions
 │
 ├── scripts/                # Node.js admin/migration scripts
 │   ├── create-auth-users.mjs   # One-time auth user creation
@@ -230,7 +231,7 @@ All modules use the **Revealing Module Pattern** (IIFE returning a public API):
 
 ## 4. Database Schema
 
-### Tables (11)
+### Tables (12)
 
 | Table | Purpose | Row Count (Phase 1) |
 |-------|---------|---------------------|
@@ -244,7 +245,8 @@ All modules use the **Revealing Module Pattern** (IIFE returning a public API):
 | `lovs` | Lists of values (dropdowns) | 18 |
 | `activity_log` | Audit trail (all CRUD operations) | Dynamic |
 | `data_dumps` | JSON backup snapshots (admin) | Dynamic |
-| `role_view_permissions` | Controls per-role sidebar section visibility (deny-list) | 100 (4 roles × 25 views: 17 web + 8 ext) |
+| `role_view_permissions` | Controls per-role sidebar section visibility (deny-list) | 126 (5 roles × 26 views: 18 web + 8 ext) |
+| `executive_practices` | Maps executive users to their assigned practices (junction) | Dynamic |
 
 ### Computed Columns
 
@@ -265,6 +267,8 @@ All modules use the **Revealing Module Pattern** (IIFE returning a public API):
 | `get_employee_leaderboard()` | SECURITY INVOKER | Employee rankings by approved tasks, hours saved, efficiency |
 | `get_practice_leaderboard()` | SECURITY INVOKER | Practice rankings with weighted scoring (approved-only tasks/accomplishments) |
 | `get_licensed_tool_adoption()` | SECURITY INVOKER | Per-practice licensed vs other tool task/hours breakdown (Phase 9) |
+| `get_executive_practices()` | SQL, SECURITY DEFINER | Returns TEXT[] of practices assigned to the currently authenticated executive |
+| `get_executive_summary()` | PL/pgSQL, SECURITY DEFINER | Aggregates cross-practice KPIs (tasks, hours, users, trends, adoption) for executive dashboard |
 
 #### `signup_contributor()` Parameters
 
@@ -294,6 +298,7 @@ Returns `jsonb` with `{status, user_id, copilot_id?}`. Copilot logic:
 | **SPOC** | Read/write own practice, read aggregates |
 | **Contributor** | Insert own tasks, read own data |
 | **Viewer** | Read-only access (new: controlled by `role_view_permissions`) |
+| **Executive** | Read-only access across assigned practices; scoped via RPC, no write access |
 
 ---
 

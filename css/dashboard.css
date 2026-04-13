@@ -1709,3 +1709,21 @@ tr:hover td { background: var(--bg-translucent); }
   color: var(--success);
   background: rgba(16,185,129,0.1);
 }
+
+/* ======== Executive Summary ======== */
+.chart-card h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+#page-exec-summary .exec-charts-row {
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  #page-exec-summary .exec-charts-row {
+    grid-template-columns: 1fr !important;
+  }
+}

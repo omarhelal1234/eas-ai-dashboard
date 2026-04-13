@@ -1230,19 +1230,25 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="form-group"><label>Name</label><input type="text" id="eu-name" placeholder="Full name"></div>
     <div class="form-group"><label>Email</label><input type="email" id="eu-email" placeholder="Email address" readonly style="opacity:0.6"></div>
     <div class="form-row">
-      <div class="form-group">
+      <div class="form-group" id="eu-practice-group">
         <label>Practice</label>
         <select id="eu-practice"></select>
       </div>
       <div class="form-group">
         <label>Role</label>
-        <select id="eu-role">
+        <select id="eu-role" onchange="toggleExecPractices()">
           <option value="admin">Admin</option>
           <option value="spoc">SPOC</option>
           <option value="contributor">Contributor</option>
           <option value="viewer">Viewer</option>
+          <option value="executive">Executive</option>
         </select>
       </div>
+    </div>
+    <!-- Multi-practice picker for executives -->
+    <div class="form-group" id="exec-practices-row" style="display:none">
+      <label>Assigned Practices <span style="font-weight:normal;font-size:12px;color:var(--text-muted)">(select all that apply)</span></label>
+      <div id="exec-practices-checkboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 0"></div>
     </div>
     <div class="form-group">
       <label>Status</label>
@@ -3281,7 +3287,7 @@ async function renderAdminUsers() {
   if (badge) badge.textContent = _adminUsers.length;
 
   // Render table
-  const roleBadgeColor = { admin: '#dc3545', spoc: '#fd7e14', contributor: '#0d6efd', viewer: '#6c757d' };
+  const roleBadgeColor = { admin: '#dc3545', spoc: '#fd7e14', contributor: '#0d6efd', viewer: '#6c757d', executive: '#8b5cf6' };
   let html = '';
   filtered.forEach((u, i) => {
     const roleColor = roleBadgeColor[u.role] || '#6c757d';
@@ -3298,6 +3304,7 @@ async function renderAdminUsers() {
           <option value="spoc"${u.role === 'spoc' ? ' selected' : ''}>SPOC</option>
           <option value="contributor"${u.role === 'contributor' ? ' selected' : ''}>Contributor</option>
           <option value="viewer"${u.role === 'viewer' ? ' selected' : ''}>Viewer</option>
+          <option value="executive"${u.role === 'executive' ? ' selected' : ''}>Executive</option>
         </select>
       </td>
       <td style="text-align:center">${activeIcon}</td>
@@ -3325,10 +3332,14 @@ async function quickChangeRole(userId, newRole) {
   // Update local cache
   const user = _adminUsers.find(u => u.id === userId);
   if (user) user.role = newRole;
+  // Clean up executive_practices if role changed away from executive
+  if (newRole !== 'executive') {
+    await sb.from('executive_practices').delete().eq('user_id', userId);
+  }
   showToast(`Role updated to ${newRole}`, 'success');
 }
 
-function editUser(userId) {
+async function editUser(userId) {
   const user = _adminUsers.find(u => u.id === userId);
   if (!user) return;
 
@@ -3350,16 +3361,54 @@ function editUser(userId) {
     `<option value="${escapeHtml(p)}"${user.practice === p ? ' selected' : ''}>${escapeHtml(p)}</option>`
   ).join('');
 
+  // Populate executive multi-practice checkboxes
+  const checkboxContainer = document.getElementById('exec-practices-checkboxes');
+  if (checkboxContainer) {
+    checkboxContainer.innerHTML = practices.map(p =>
+      `<label style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;background:var(--bg-card)">
+        <input type="checkbox" class="exec-practice-cb" value="${escapeHtml(p)}"> ${escapeHtml(p)}
+      </label>`
+    ).join('');
+  }
+
+  // If executive, load existing assigned practices
+  if (user.role === 'executive') {
+    const sb = getSupabaseClient();
+    const { data: execPractices } = await sb
+      .from('executive_practices')
+      .select('practice')
+      .eq('user_id', user.id);
+    const assignedPractices = (execPractices || []).map(ep => ep.practice);
+    document.querySelectorAll('.exec-practice-cb').forEach(cb => {
+      cb.checked = assignedPractices.includes(cb.value);
+    });
+  }
+
+  toggleExecPractices();
   document.getElementById('user-modal-title').textContent = 'Edit User — ' + (user.name || user.email);
   openModal('modal-edit-user');
 }
 
+function toggleExecPractices() {
+  const role = document.getElementById('eu-role').value;
+  const execRow = document.getElementById('exec-practices-row');
+  const practiceGroup = document.getElementById('eu-practice-group');
+  if (role === 'executive') {
+    if (execRow) execRow.style.display = '';
+    if (practiceGroup) practiceGroup.style.display = 'none';
+  } else {
+    if (execRow) execRow.style.display = 'none';
+    if (practiceGroup) practiceGroup.style.display = '';
+  }
+}
+
 async function saveUser() {
   const id = document.getElementById('eu-id').value;
+  const role = document.getElementById('eu-role').value;
   const updates = {
     name: document.getElementById('eu-name').value.trim(),
-    practice: document.getElementById('eu-practice').value,
-    role: document.getElementById('eu-role').value,
+    practice: role === 'executive' ? null : document.getElementById('eu-practice').value,
+    role: role,
     is_active: document.getElementById('eu-active').value === 'true'
   };
 
@@ -3375,6 +3424,25 @@ async function saveUser() {
     return;
   }
 
+  // Handle executive practice assignments
+  if (role === 'executive') {
+    const selectedPractices = [...document.querySelectorAll('.exec-practice-cb:checked')].map(cb => cb.value);
+    // Delete existing assignments
+    await sb.from('executive_practices').delete().eq('user_id', id);
+    // Insert new assignments
+    if (selectedPractices.length > 0) {
+      const { error: epError } = await sb
+        .from('executive_practices')
+        .insert(selectedPractices.map(p => ({ user_id: id, practice: p })));
+      if (epError) {
+        showToast('User saved but failed to update practice assignments: ' + epError.message, 'error');
+      }
+    }
+  } else {
+    // Clean up executive_practices if role changed away from executive
+    await sb.from('executive_practices').delete().eq('user_id', id);
+  }
+
   closeModal('modal-edit-user');
   showToast('User updated successfully', 'success');
   _adminUsers = []; // force refresh
@@ -3383,7 +3451,7 @@ async function saveUser() {
 
 // ============ MANAGE PERMISSIONS ============
 let _adminPermissions = [];
-const ROLE_ORDER = ['admin', 'spoc', 'contributor', 'viewer'];
+const ROLE_ORDER = ['admin', 'spoc', 'contributor', 'viewer', 'executive'];
 
 async function renderAdminPermissions() {
   const sb = getSupabaseClient();

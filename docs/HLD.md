@@ -2,8 +2,8 @@
 
 # EAS AI Adoption Dashboard
 
-> **Version:** 2.2 | **Date:** April 13, 2026  
-> **Status:** Phase 10 In Progress - IDE Task Logger
+> **Version:** 2.3 | **Date:** April 13, 2026  
+> **Status:** Phase 10 In Progress - IDE Task Logger + Executive Role
 
 ---
 
@@ -12,7 +12,7 @@
 ```
 ┌────────────────────────────────────────────────────────────┐
 │                    USERS (Browser)                         │
-│  Admin · SPOC · Contributor                                │
+│  Admin · SPOC · Contributor · Viewer · Executive           │
 ├────────────────────────────────────────────────────────────┤
 │           GitHub Pages (Static Hosting)                    │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐                   │
@@ -30,10 +30,10 @@
 │  │              Supabase Cloud                       │     │
 │  │  ┌──────────┐  ┌───────────┐  ┌──────────────┐  │     │
 │  │  │   Auth   │  │ PostgREST │  │  PostgreSQL   │  │     │
-│  │  │  (JWT)   │  │  (API)    │  │  (10 tables)  │  │     │
+│  │  │  (JWT)   │  │  (API)    │  │  (11 tables)  │  │     │
 │  │  └──────────┘  └───────────┘  └──────────────┘  │     │
 │  │  ┌──────────┐  ┌───────────┐                     │     │
-│  │  │   RLS    │  │  6 RPCs   │                     │     │
+│  │  │   RLS    │  │  8 RPCs   │                     │     │
 │  │  │(Policies)│  │ (server)  │                     │     │
 │  │  └──────────┘  └───────────┘                     │     │
 │  └──────────────────────────────────────────────────┘     │
