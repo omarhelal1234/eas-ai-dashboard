@@ -1724,7 +1724,8 @@ const EAS_DB = (() => {
 
   /**
    * Fetch all active prompts from the prompt_library table.
-   * Returns array grouped-friendly objects sorted by role + sort_order.
+   * Returns array of grouped-friendly objects sorted by role + sort_order.
+   * Includes author name by looking up created_by (auth UUID) in public.users.
    */
   async function fetchPromptLibrary() {
     const { data, error } = await sb
@@ -1737,14 +1738,30 @@ const EAS_DB = (() => {
       console.error('fetchPromptLibrary error:', error.message);
       return [];
     }
+
+    // Collect unique auth UUIDs to look up author names
+    const authIds = [...new Set((data || []).map(p => p.created_by).filter(Boolean))];
+    let authorMap = {};
+    if (authIds.length > 0) {
+      const { data: users, error: uErr } = await sb
+        .from('users')
+        .select('auth_id, name')
+        .in('auth_id', authIds);
+      if (!uErr && users) {
+        users.forEach(u => { authorMap[u.auth_id] = u.name; });
+      }
+    }
+
     return (data || []).map(p => ({
-      id:        p.id,
-      role:      p.role,
-      roleLabel: p.role_label,
-      category:  p.category,
-      text:      p.prompt_text,
-      sortOrder: p.sort_order,
-      copyCount: p.copy_count
+      id:         p.id,
+      role:       p.role,
+      roleLabel:  p.role_label,
+      category:   p.category,
+      text:       p.prompt_text,
+      sortOrder:  p.sort_order,
+      copyCount:  p.copy_count,
+      createdBy:  p.created_by,
+      authorName: authorMap[p.created_by] || null
     }));
   }
 
@@ -1755,6 +1772,83 @@ const EAS_DB = (() => {
   async function incrementPromptCopy(promptId) {
     const { error } = await sb.rpc('increment_prompt_copy', { p_prompt_id: promptId });
     if (error) console.error('incrementPromptCopy error:', error.message);
+  }
+
+  /**
+   * Add a community-submitted prompt. Any authenticated user can call this.
+   * @param {string} role     – role key (pm, sa, ba, dev, dba, admin, dm)
+   * @param {string} roleLabel – human-readable role name
+   * @param {string} category  – prompt category
+   * @param {string} promptText – the prompt content
+   * @returns {Object|null} the newly created prompt, or null on error
+   */
+  async function addCommunityPrompt(role, roleLabel, category, promptText) {
+    const { data, error } = await sb.rpc('add_community_prompt', {
+      p_role: role,
+      p_role_label: roleLabel,
+      p_category: category,
+      p_prompt_text: promptText
+    });
+    if (error) {
+      console.error('addCommunityPrompt error:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  /**
+   * Cast, change, or remove a vote on a prompt.
+   * @param {string} promptId  – UUID of the prompt
+   * @param {string|null} voteType – 'like', 'dislike', or null to remove vote
+   * @returns {Object} { deleted, like_count, dislike_count, user_vote }
+   */
+  async function votePrompt(promptId, voteType) {
+    const { data, error } = await sb.rpc('vote_prompt', {
+      p_prompt_id: promptId,
+      p_vote_type: voteType
+    });
+    if (error) {
+      console.error('votePrompt error:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  /**
+   * Fetch aggregated like/dislike counts for all prompts.
+   * @returns {Object} map of promptId → { likeCount, dislikeCount }
+   */
+  async function fetchPromptVoteCounts() {
+    const { data, error } = await sb.rpc('get_prompt_vote_counts');
+    if (error) {
+      console.error('fetchPromptVoteCounts error:', error.message);
+      return {};
+    }
+    const map = {};
+    (data || []).forEach(r => {
+      map[r.prompt_id] = {
+        likeCount:    r.like_count,
+        dislikeCount: r.dislike_count
+      };
+    });
+    return map;
+  }
+
+  /**
+   * Fetch the current user's votes on all prompts.
+   * @returns {Object} map of promptId → voteType ('like' | 'dislike')
+   */
+  async function fetchMyVotes() {
+    const { data, error } = await sb
+      .from('prompt_votes')
+      .select('prompt_id, vote_type');
+    if (error) {
+      console.error('fetchMyVotes error:', error.message);
+      return {};
+    }
+    const map = {};
+    (data || []).forEach(r => { map[r.prompt_id] = r.vote_type; });
+    return map;
   }
 
   // ===========================================================
@@ -2045,6 +2139,10 @@ const EAS_DB = (() => {
     // Prompt Library (Guide Me)
     fetchPromptLibrary,
     incrementPromptCopy,
+    addCommunityPrompt,
+    votePrompt,
+    fetchPromptVoteCounts,
+    fetchMyVotes,
 
     // User Management (Admin)
     fetchUsers,

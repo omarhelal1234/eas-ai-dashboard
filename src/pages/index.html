@@ -1083,11 +1083,15 @@
 
   <!-- Prompt Library Page -->
   <div id="page-prompts" class="page hidden">
-    <div class="page-header">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
       <div>
         <h2>Prompt Library</h2>
         <div class="subtitle">Ready-to-use AI prompts tailored for every role at Ejada</div>
       </div>
+      <button class="prompt-submit-btn" onclick="openModal('add-prompt')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Submit a Prompt
+      </button>
     </div>
     <div class="page-content">
       <div class="guide-section" id="guide-prompts">
@@ -1883,6 +1887,40 @@ npm run compile</code></pre>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('project')">Cancel</button>
       <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Community Prompt Modal -->
+<div class="modal-overlay" id="modal-add-prompt">
+  <div class="modal" style="max-width:520px">
+    <h3>Submit a Prompt</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Share a useful AI prompt with the community. It will appear instantly in the library.</p>
+    <div class="form-group">
+      <label>Target Role <span style="color:var(--error)">*</span></label>
+      <select id="ap-role">
+        <option value="pm">Project Manager</option>
+        <option value="sa">Solution Architect</option>
+        <option value="ba">Business Analyst</option>
+        <option value="dev" selected>Developer</option>
+        <option value="dba">DBA</option>
+        <option value="admin">Admin</option>
+        <option value="dm">Delivery Manager</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Category <span style="color:var(--error)">*</span></label>
+      <input type="text" id="ap-category" placeholder="e.g., Code Quality, Sprint Planning, SQL Optimization" list="ap-category-list">
+      <datalist id="ap-category-list"></datalist>
+      <span style="font-size:11px;color:var(--text-muted)">Type a new category or pick from existing ones</span>
+    </div>
+    <div class="form-group">
+      <label>Prompt Text <span style="color:var(--error)">*</span></label>
+      <textarea id="ap-prompt-text" rows="5" placeholder="Write your AI prompt here. Use [brackets] for placeholders that users should customize."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('add-prompt')">Cancel</button>
+      <button class="btn btn-primary" id="ap-submit-btn" onclick="submitCommunityPrompt()">Submit Prompt</button>
     </div>
   </div>
 </div>
@@ -3426,11 +3464,14 @@ function renderUseCases() {
 
 // ======== PROMPT LIBRARY (DB-powered) ========
 
-/** Cache for loaded prompts */
+/** Cache for loaded prompts, vote counts, and user votes */
 let _promptLibraryCache = null;
+let _promptVotesCache = {};   // promptId → { likeCount, dislikeCount }
+let _promptMyVotesCache = {}; // promptId → 'like'|'dislike'
 
 /** Role badge abbreviations */
 const ROLE_BADGES = { pm: 'PM', sa: 'SA', ba: 'BA', dev: 'DEV', dba: 'DBA', admin: 'ADM', dm: 'DM' };
+const ROLE_LABELS = { pm: 'Project Manager', sa: 'Solution Architect', ba: 'Business Analyst', dev: 'Developer', dba: 'DBA', admin: 'Admin', dm: 'Delivery Manager' };
 
 // ======== SKILLS LIBRARY (skills.sh integration) ========
 
@@ -3828,28 +3869,49 @@ document.addEventListener('click', (e) => {
 const COPY_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 const CHECK_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>';
 
-/** Load prompts from DB and render */
-async function loadPromptLibrary() {
+/** SVG icons for voting */
+const LIKE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>';
+const DISLIKE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3H10z"/><path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>';
+
+/** Load prompts + votes from DB and render */
+async function loadPromptLibrary(forceRefresh) {
   const container = document.getElementById('prompt-library-container');
   if (!container) return;
 
-  // Use cache if available
-  if (_promptLibraryCache) {
+  // Use cache if available and not forced
+  if (!forceRefresh && _promptLibraryCache) {
     renderPromptCards(_promptLibraryCache, container);
     return;
   }
 
   try {
-    const prompts = await EAS_DB.fetchPromptLibrary();
+    // Fetch prompts, vote counts, and user's own votes in parallel
+    const [prompts, voteCounts, myVotes] = await Promise.all([
+      EAS_DB.fetchPromptLibrary(),
+      EAS_DB.fetchPromptVoteCounts(),
+      EAS_DB.fetchMyVotes()
+    ]);
     _promptLibraryCache = prompts;
+    _promptVotesCache = voteCounts;
+    _promptMyVotesCache = myVotes;
     renderPromptCards(prompts, container);
+    // Populate category datalist for the add-prompt modal
+    populateCategoryDatalist(prompts);
   } catch (err) {
     console.error('Failed to load prompt library:', err);
     container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--danger)">Failed to load prompts. Please refresh the page.</p>';
   }
 }
 
-/** Render prompt cards grouped by role + category */
+/** Populate the datalist with existing categories for autocomplete */
+function populateCategoryDatalist(prompts) {
+  const dl = document.getElementById('ap-category-list');
+  if (!dl) return;
+  const cats = [...new Set(prompts.map(p => p.category))].sort();
+  dl.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">`).join('');
+}
+
+/** Render prompt cards grouped by role + category, with voting UI */
 function renderPromptCards(prompts, container) {
   if (!prompts || prompts.length === 0) {
     container.innerHTML = '<p style="text-align:center;padding:40px;color:var(--text-muted)">No prompts available.</p>';
@@ -3887,12 +3949,40 @@ function renderPromptCards(prompts, container) {
 
     catEntries.forEach(([catName, catPrompts]) => {
       html += `<div class="prompt-category">
-        <h5 class="prompt-category-title">${catName}</h5>`;
+        <h5 class="prompt-category-title">${escapeHtml(catName)}</h5>`;
 
       catPrompts.forEach(p => {
-        html += `<div class="prompt-card" data-prompt-id="${p.id}" onclick="copyPrompt(this)">
-          <div class="prompt-text">${escapeHtml(p.text)}</div>
-          <button class="prompt-copy-btn" title="Copy prompt">${COPY_ICON_SVG}</button>
+        const votes = _promptVotesCache[p.id] || { likeCount: 0, dislikeCount: 0 };
+        const myVote = _promptMyVotesCache[p.id] || null;
+        const isPopular = votes.likeCount >= 10;
+        const popularCls = isPopular ? ' prompt-popular' : '';
+        const popularBadge = isPopular ? '<span class="prompt-popular-badge">🔥 Popular</span>' : '';
+        const authorHtml = p.authorName ? `<div class="prompt-author">by ${escapeHtml(p.authorName)}</div>` : '';
+
+        const likeActiveCls = myVote === 'like' ? ' active-like' : '';
+        const dislikeActiveCls = myVote === 'dislike' ? ' active-dislike' : '';
+
+        html += `<div class="prompt-card${popularCls}" data-prompt-id="${p.id}">
+          <div class="prompt-card-top">
+            <div class="prompt-card-meta">
+              <div style="flex:1;min-width:0">
+                <div class="prompt-text" onclick="copyPromptById('${p.id}', this)" style="cursor:pointer">${escapeHtml(p.text)}</div>
+                ${authorHtml}
+                ${popularBadge}
+              </div>
+            </div>
+            <button class="prompt-copy-btn" title="Copy prompt" onclick="event.stopPropagation();copyPromptById('${p.id}', this.closest('.prompt-card'))">${COPY_ICON_SVG}</button>
+          </div>
+          <div class="prompt-vote-bar">
+            <button class="prompt-vote-btn${likeActiveCls}" onclick="event.stopPropagation();handlePromptVote('${p.id}','like',this)" title="Like this prompt">
+              ${LIKE_ICON_SVG}
+              <span class="prompt-vote-count" data-vote-like="${p.id}">${votes.likeCount}</span>
+            </button>
+            <button class="prompt-vote-btn${dislikeActiveCls}" onclick="event.stopPropagation();handlePromptVote('${p.id}','dislike',this)" title="Dislike this prompt">
+              ${DISLIKE_ICON_SVG}
+              <span class="prompt-vote-count" data-vote-dislike="${p.id}">${votes.dislikeCount}</span>
+            </button>
+          </div>
         </div>`;
       });
 
@@ -3912,24 +4002,21 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-function copyPrompt(card) {
+/** Copy a prompt to clipboard by ID */
+function copyPromptById(promptId, cardEl) {
+  const card = cardEl.closest ? cardEl.closest('.prompt-card') : cardEl;
   const text = card.querySelector('.prompt-text').textContent.trim();
-  const promptId = card.dataset.promptId;
   navigator.clipboard.writeText(text).then(() => {
     card.classList.add('prompt-copied');
     const btn = card.querySelector('.prompt-copy-btn');
-    btn.innerHTML = CHECK_ICON_SVG;
+    if (btn) btn.innerHTML = CHECK_ICON_SVG;
     if (typeof showToast === 'function') showToast('Prompt copied to clipboard!', 'success');
-    // Track copy in DB (fire-and-forget)
-    if (promptId && typeof EAS_DB !== 'undefined') {
-      EAS_DB.incrementPromptCopy(promptId);
-    }
+    if (promptId && typeof EAS_DB !== 'undefined') EAS_DB.incrementPromptCopy(promptId);
     setTimeout(() => {
       card.classList.remove('prompt-copied');
-      btn.innerHTML = COPY_ICON_SVG;
+      if (btn) btn.innerHTML = COPY_ICON_SVG;
     }, 2000);
   }).catch(() => {
-    // Fallback for older browsers
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
@@ -3939,10 +4026,129 @@ function copyPrompt(card) {
     document.execCommand('copy');
     document.body.removeChild(ta);
     if (typeof showToast === 'function') showToast('Prompt copied!', 'success');
-    if (promptId && typeof EAS_DB !== 'undefined') {
-      EAS_DB.incrementPromptCopy(promptId);
-    }
+    if (promptId && typeof EAS_DB !== 'undefined') EAS_DB.incrementPromptCopy(promptId);
   });
+}
+
+/** Handle like/dislike vote on a prompt */
+async function handlePromptVote(promptId, voteType, btnEl) {
+  const currentVote = _promptMyVotesCache[promptId] || null;
+  // Toggle: clicking the same vote removes it
+  const newVoteType = (currentVote === voteType) ? null : voteType;
+
+  // Optimistic UI update
+  const card = btnEl.closest('.prompt-card');
+  const likeBtn = card.querySelector('.prompt-vote-btn:first-child');
+  const dislikeBtn = card.querySelector('.prompt-vote-btn:last-child');
+  const likeCountEl = card.querySelector(`[data-vote-like="${promptId}"]`);
+  const dislikeCountEl = card.querySelector(`[data-vote-dislike="${promptId}"]`);
+
+  // Update visual state immediately
+  likeBtn.classList.remove('active-like');
+  dislikeBtn.classList.remove('active-dislike');
+  if (newVoteType === 'like') likeBtn.classList.add('active-like');
+  if (newVoteType === 'dislike') dislikeBtn.classList.add('active-dislike');
+
+  try {
+    const result = await EAS_DB.votePrompt(promptId, newVoteType);
+    if (!result) {
+      showToast('Failed to register vote', 'error');
+      return;
+    }
+
+    // Prompt was hard-deleted (≥10 dislikes)
+    if (result.deleted) {
+      card.style.transition = 'opacity 0.3s, transform 0.3s';
+      card.style.opacity = '0';
+      card.style.transform = 'translateX(20px)';
+      setTimeout(() => {
+        card.remove();
+        updatePromptCounts();
+      }, 300);
+      showToast('Prompt removed — too many dislikes', 'info');
+      // Evict from cache
+      if (_promptLibraryCache) {
+        _promptLibraryCache = _promptLibraryCache.filter(p => p.id !== promptId);
+      }
+      delete _promptVotesCache[promptId];
+      delete _promptMyVotesCache[promptId];
+      return;
+    }
+
+    // Update caches and displayed counts
+    _promptVotesCache[promptId] = { likeCount: result.like_count, dislikeCount: result.dislike_count };
+    _promptMyVotesCache[promptId] = result.user_vote;
+    if (likeCountEl) likeCountEl.textContent = result.like_count;
+    if (dislikeCountEl) dislikeCountEl.textContent = result.dislike_count;
+
+    // Update popular state
+    if (result.like_count >= 10) {
+      card.classList.add('prompt-popular');
+      if (!card.querySelector('.prompt-popular-badge')) {
+        const meta = card.querySelector('.prompt-card-meta > div');
+        if (meta) meta.insertAdjacentHTML('beforeend', '<span class="prompt-popular-badge">🔥 Popular</span>');
+      }
+    } else {
+      card.classList.remove('prompt-popular');
+      const badge = card.querySelector('.prompt-popular-badge');
+      if (badge) badge.remove();
+    }
+
+    // Sync button visual with server truth
+    likeBtn.classList.toggle('active-like', result.user_vote === 'like');
+    dislikeBtn.classList.toggle('active-dislike', result.user_vote === 'dislike');
+  } catch (err) {
+    console.error('Vote error:', err);
+    showToast('Failed to register vote', 'error');
+  }
+}
+
+/** Submit a community prompt from the modal */
+async function submitCommunityPrompt() {
+  const roleSelect = document.getElementById('ap-role');
+  const categoryInput = document.getElementById('ap-category');
+  const promptTextArea = document.getElementById('ap-prompt-text');
+  const submitBtn = document.getElementById('ap-submit-btn');
+
+  const role = roleSelect.value;
+  const roleLabel = ROLE_LABELS[role] || role;
+  const category = (categoryInput.value || '').trim();
+  const promptText = (promptTextArea.value || '').trim();
+
+  // Validation
+  if (!category) { showToast('Please enter a category', 'error'); categoryInput.focus(); return; }
+  if (!promptText) { showToast('Please enter the prompt text', 'error'); promptTextArea.focus(); return; }
+  if (promptText.length < 10) { showToast('Prompt text is too short (min 10 chars)', 'error'); promptTextArea.focus(); return; }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
+
+  try {
+    const result = await EAS_DB.addCommunityPrompt(role, roleLabel, category, promptText);
+    if (!result) {
+      showToast('Failed to submit prompt', 'error');
+      return;
+    }
+    showToast('Prompt submitted successfully!', 'success');
+    closeModal('add-prompt');
+    // Clear form
+    categoryInput.value = '';
+    promptTextArea.value = '';
+    // Invalidate cache and reload
+    _promptLibraryCache = null;
+    await loadPromptLibrary(true);
+  } catch (err) {
+    console.error('Submit prompt error:', err);
+    showToast('Failed to submit prompt', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Prompt';
+  }
+}
+
+function copyPrompt(card) {
+  const promptId = card.dataset.promptId;
+  copyPromptById(promptId, card);
 }
 
 function filterPromptRole(role) {
@@ -4049,6 +4255,12 @@ function openModal(type) {
         document.getElementById('pw-confirm').value = '';
         document.getElementById('pw-error').style.display = 'none';
         document.getElementById('pw-success').style.display = 'none';
+      } else if (type === 'add-prompt') {
+        console.log('  → Setting up add-prompt modal...');
+        // Reset form fields
+        document.getElementById('ap-role').value = 'dev';
+        document.getElementById('ap-category').value = '';
+        document.getElementById('ap-prompt-text').value = '';
       }
     }
     // For task modals in edit mode, ensure Phase8 saved-hours calculation is initialized

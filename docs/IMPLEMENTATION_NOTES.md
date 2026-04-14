@@ -6,6 +6,34 @@
 
 ## Changes Made
 
+### 0u. April 15, 2026 — Community Prompt Library: Submit + Like/Dislike Voting
+
+**Purpose:** Allow any authenticated user to contribute prompts to the shared library, and let the community curate quality via like/dislike voting.
+
+**Approach:**
+- **New table `prompt_votes`** (UUID PK, `prompt_id` FK → `prompt_library ON DELETE CASCADE`, `user_id` FK → `auth.users`, `vote_type` CHECK `('like','dislike')`, unique on `(prompt_id, user_id)`).
+- **SECURITY DEFINER RPCs** rather than client-side RLS for vote+delete logic:
+  - `vote_prompt(prompt_id, vote_type)` — UPSERT pattern. If `vote_type IS NULL`, removes the vote (toggle off). After each vote, checks if `dislike_count ≥ 10` → hard-deletes the prompt (cascades to votes). Returns `{deleted, like_count, dislike_count, user_vote}`.
+  - `get_prompt_vote_counts()` — returns aggregated `{prompt_id, like_count, dislike_count}` for all prompts.
+  - `add_community_prompt(role, role_label, category, prompt_text)` — inserts with `created_by = auth.uid()`, `sort_order = 999`, `is_active = true`. Returns the new row as JSON.
+- **New RLS policies**: `prompt_library_insert_authenticated` (any auth user can insert), `prompt_library_delete_own` (users can delete their own). Existing admin policy covers admin CRUD.
+- **UI**: "Submit a Prompt" button in page header → modal with role dropdown, category input (with datalist autocomplete from existing categories), and text area. Cards now show like/dislike pill buttons with counts, author name, and "🔥 Popular" badge for ≥10 likes.
+- **Optimistic UI**: Vote buttons update instantly; server result confirms and corrects if needed. Deleted prompts animate out smoothly.
+
+**Key decisions:**
+- **Hard-delete at ≥10 dislikes** (user chose this over soft-delete) — keeps DB clean; admins can re-add if needed
+- **UPSERT pattern** for votes — simpler than separate insert/update/delete flows
+- **RPC-based aggregation** over materialized columns — avoids trigger complexity for a small dataset
+- **`fetchPromptLibrary` now JOINs** `users` table to get `authorName` — single query, no N+1
+- **Parallel fetch**: prompts, vote counts, and user's own votes loaded concurrently with `Promise.all`
+- **Category autocomplete**: existing categories populate a `<datalist>` so users converge on consistent naming
+
+**Files changed:**
+- `sql/019_prompt_votes.sql` — new migration (table + RLS + RPCs)
+- `js/db.js` — 4 new functions (`addCommunityPrompt`, `votePrompt`, `fetchPromptVoteCounts`, `fetchMyVotes`); updated `fetchPromptLibrary` to return `createdBy`/`authorName`
+- `src/pages/index.html` — new "Submit a Prompt" button, new modal `#modal-add-prompt`, rewritten `renderPromptCards` with voting UI, new functions (`handlePromptVote`, `submitCommunityPrompt`, `copyPromptById`, `populateCategoryDatalist`)
+- `css/dashboard.css` — voting styles, popular highlight, author text, submit button, modal form styles
+
 ### 0t. April 15, 2026 — SPOC IDE Usage Stats Page
 
 **Purpose:** Give SPOCs visibility into their practice team's Grafana Copilot IDE usage without navigating the admin panel.

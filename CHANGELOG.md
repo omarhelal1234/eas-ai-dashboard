@@ -18,4 +18,4 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 - 2026-04-14 (copilot) — **Fix: Task Count Mismatch — Show Both Total & Approved Counts** — Dashboard KPI "Total Tasks" sourced from `practice_summary` (approved-only) while nav badge and All Tasks tab counted all tasks regardless of approval status. Updated all locations to show both: Dashboard KPI now shows total tasks with "X approved" subtitle, nav badges show `N (M ✓)`, All Tasks pagination shows `(X approved)`, and My Tasks badge includes approved count. Applied same fix to admin.html. (fix/ui)
 
-- 2026-04-15 (
+- 2026-04-15 (copilot) — **Community Prompt Library: Submit + Like/Dislike Voting** — Any authenticated user can submit prompts to the library (immediately visible). Like/dislike voting with toggle support. Prompts with ≥10 likes highlighted as "🔥 Popular". Prompts with ≥10 dislikes hard-deleted. New `prompt_votes` table, 3 SECURITY DEFINER RPCs (`vote_prompt`, `get_prompt_vote_counts`, `add_community_prompt`), updated RLS on `prompt_library`. New modal "Submit a Prompt" with role/category/text fields. Author name displayed on community prompts. (feat/ui+db)
