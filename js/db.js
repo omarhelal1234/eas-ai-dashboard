@@ -1253,14 +1253,15 @@ const EAS_DB = (() => {
   }
 
   /**
-   * Get Copilot users by practice for autocomplete
+   * Get Copilot users by practice for autocomplete.
+   * Returns ALL users regardless of status so every team member
+   * can be selected when logging a task.
    */
   async function fetchCopilotUsersByPractice(practice) {
     if (!practice) {
       const { data, error } = await sb
         .from('copilot_users')
         .select('id, name, email, practice, role_skill, status')
-        .eq('status', 'access granted')
         .order('name');
       if (error) { console.error('fetchCopilotUsersByPractice error:', error.message); return []; }
       return data || [];
@@ -1269,7 +1270,6 @@ const EAS_DB = (() => {
       .from('copilot_users')
       .select('id, name, email, practice, role_skill, status')
       .eq('practice', practice)
-      .eq('status', 'access granted')
       .order('name');
     if (error) { console.error('fetchCopilotUsersByPractice error:', error.message); return []; }
     return data || [];

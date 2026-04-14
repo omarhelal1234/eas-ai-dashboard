@@ -55,7 +55,9 @@ Any layer reject → rejected
 #### Fix 3: Mandatory Employee Dropdown
 **Problem:** Employee name was a free-text input. Users could type any name, and `employee_email` was never stored from the autocomplete selection (a data gap).
 
-**Fix:** Replaced `<input type="text" id="f-employee">` with a searchable dropdown (text input + floating list) populated from `copilot_users` with `status = 'access granted'`. Mandatory: validation blocks submission unless an employee is selected from the list (checks `data-selectedUserId`). Admin sees all practices, SPOC sees own practice only. Selected employee's ID, email, and name are stored with the task via hidden fields.
+**Fix:** Replaced `<input type="text" id="f-employee">` with a searchable dropdown (text input + floating list) populated from `copilot_users`. Mandatory: validation blocks submission unless an employee is selected from the list (checks `data-selectedUserId`). Admin sees all practices, SPOC sees own practice only. Selected employee's ID, email, and name are stored with the task via hidden fields.
+
+**Fix 3b (April 14):** Removed the `status = 'access granted'` filter that excluded 21 users (7 `Active` + 14 `pending`). Two practices (EPCS, EPS) had zero `access granted` users, so the dropdown was completely empty for them. Now all `copilot_users` appear regardless of status.
 
 **Files:** `src/pages/index.html` (HTML + saveTask + editTask + form reset), `js/phase8-submission.js` (initEmployeeDropdown replacing initEmployeeAutocomplete)
 

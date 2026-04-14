@@ -180,7 +180,7 @@ State transitions in `approveSubmission()`:
 - `spoc_review` → `admin_review` (if ≥15h) OR `approved` (if <15h)
 - `admin_review` → `approved`
 
-Employee selection in the task form is mandatory — users must pick from the `copilot_users` dropdown (licensed users with `access granted` status). Admin sees all practices; SPOC sees own practice only.
+Employee selection in the task form is mandatory — users must pick from the `copilot_users` dropdown (all users regardless of status). Admin sees all practices; SPOC sees own practice only.
 
 ---
 
