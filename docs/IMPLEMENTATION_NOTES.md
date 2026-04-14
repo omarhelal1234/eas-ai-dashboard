@@ -6,6 +6,24 @@
 
 ## Changes Made
 
+### 0q. April 14, 2026 — Database Backup & Cross-Table Data Cleanup
+
+**Backup:** Created schema `backup_20260414` with full copies of all 18 public tables (618 total rows). Row counts verified to match live tables exactly.
+
+**Integrity Audit:** Ran 26 FK integrity checks and 18 cross-table consistency checks covering every foreign key relationship and denormalized field.
+
+**Issues Found & Fixed:**
+
+| # | Issue | Severity | Fix Applied |
+|---|-------|----------|-------------|
+| 1 | Orphan `submission_approvals` record (`6646e835...`) references deleted task `a8936902...` | Medium | Deleted the orphan record |
+| 2 | `practices.spoc` on SE = "Neeraj Goel" (user is `contributor`, not `spoc`); ADI = "Ahmed Fadl" (user doesn't exist) | Medium | Cleared stale `spoc` text fields |
+| 3 | 2 tasks had `approval_status = 'pending'` while their `submission_approvals` showed `ai_review` / `spoc_review` | Low | Expanded CHECK constraints on `tasks` and `accomplishments` to include `ai_review`, `spoc_review`, `admin_review`. Synced task statuses. |
+
+**Not fixed (by design):** 5 tasks have `employee_email` not in `copilot_users` — includes test data and SPOC-submitted tasks for non-licensed employees. Not a FK violation.
+
+**Post-fix verification:** All 23 checks pass with 0 remaining issues.
+
 ### 0p. April 14, 2026 — SPOC Mandatory Approval + Employee Dropdown + Duplicate Fix + Column Name Fix
 
 **Four critical fixes implemented across two iterations:**

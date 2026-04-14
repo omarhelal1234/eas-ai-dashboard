@@ -10,6 +10,8 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-14 (copilot) — **DB Backup & Data Cleanup** — Created full backup of all 18 public tables into `backup_20260414` schema. Ran 26 FK integrity checks + 18 cross-table consistency checks. Fixed 3 issues: (1) deleted 1 orphan `submission_approvals` record referencing a deleted task, (2) cleared stale `practices.spoc` text on SE and ADI (referenced non-existent/wrong-role users), (3) expanded `tasks`/`accomplishments` `approval_status` CHECK constraints to include `ai_review`/`spoc_review`/`admin_review` and synced 2 task statuses to match their `submission_approvals` records. All 23 post-fix checks pass with 0 issues. (fix/data)
+
 - 2026-04-14 (copilot) — **Fix: Employee Dropdown Missing Users** — Removed the `status = 'access granted'` filter from `fetchCopilotUsersByPractice()` in `db.js`. The dropdown now shows all `copilot_users` regardless of status (`access granted`, `Active`, `pending`). Previously, 21 users (7 `Active` + 14 `pending`) were invisible, and two entire practices (EPCS, EPS) had zero selectable employees. (fix)
 
 - 2026-04-14 (copilot) — **Remove AI Suggestions from Log Task** — Removed the "✨ AI Suggestions" buttons from the Task/Activity and "Why is this important?" fields in the task submission form. Removed `getAISuggestions` and `showSuggestionsDropdown` functions from `phase8-submission.js` and cleaned up related state properties. The `ai-suggestions` Edge Function remains deployed but is no longer invoked from the log task UI. (refactor)
