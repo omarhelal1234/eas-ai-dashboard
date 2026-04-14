@@ -54,7 +54,8 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 │   └── functions/                  # Supabase Edge Functions
 │       ├── ai-suggestions/         # GPT-4 suggestion generation
 │       ├── ai-validate/            # AI validation of submissions
-│       └── ide-task-log/           # Phase 10: IDE Task Logger API
+│       ├── ide-task-log/           # Phase 10: IDE Task Logger API
+│       └── prompt-improver/        # Admin-only: OpenAI qualifies + Anthropic improves prompts
 │
 ├── vscode-extension/               # Phase 10: VS Code Extension
 │   ├── src/                        # TypeScript source (auth, api, sidebar, quickLog)
@@ -113,6 +114,17 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 4. Set up Supabase tables and RLS policies (see [docs/phase8/PHASE_8_SETUP.md](docs/phase8/PHASE_8_SETUP.md))
 5. Deploy Edge Functions via Supabase CLI
 6. Open `src/pages/login.html` in a browser (or serve the repo root via a local static server)
+
+### Edge Function Secrets
+
+The `prompt-improver` Edge Function (admin-only AI prompt enhancement) requires:
+
+```bash
+supabase secrets set OPENAI_API_KEY=sk-...
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+```
+
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are auto-injected by Supabase. Never commit these keys to source control or paste them into chat — they grant unbounded API spend.
 
 ## Phase 8: AI-Assisted Approval Workflow
 
@@ -215,17 +227,4 @@ See [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md) for full setup instruct
 - **Edit/Delete UI**: Inline edit and delete buttons on task rows, accomplishment cards, and copilot user rows
 - **Audit logging**: All write operations are logged to `activity_log` table with user ID and details
 - **Data dumps**: Admin can create JSON snapshots of data stored in `data_dumps` table
-- **Excel upload removed**: Replaced by direct Supabase writes (Excel export still available)
-- **Admin panel deprecated**: CRUD functionality merged into main dashboard; admin.html is legacy
-- **Confirmation dialogs**: All destructive actions require user confirmation
-- **Form reset**: Edit modals properly reset titles and form fields
-
-### Phase 3 — Live Data & Cleanup
-- Removed ~3,700 lines of static APP_DATA JSON (77% code reduction)
-- Full Supabase data layer with live queries per quarter
-- Extracted CSS to `css/dashboard.css`
-- Added XSS sanitization and pagination (25 rows/page)
-
-## License
-
-Internal — Enterprise Application Solutions © 2026
+- **Excel upload removed**: Replaced by direct Supabase writes (Excel exp

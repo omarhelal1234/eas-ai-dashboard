@@ -958,10 +958,16 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           <h2>Prompt Library</h2>
           <div class="subtitle">Manage AI prompts shown in the Guide Me section</div>
         </div>
-        <button class="btn btn-primary" onclick="openPromptModal()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Prompt
-        </button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="openImproveModal()" title="Use OpenAI + Anthropic to qualify and improve a raw prompt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 2l2.39 4.84L20 8l-4 3.9.95 5.55L12 14.77 7.05 17.45 8 11.9 4 8l5.61-1.16z"/></svg>
+            Improve with AI
+          </button>
+          <button class="btn btn-primary" onclick="openPromptModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Prompt
+          </button>
+        </div>
       </div>
       <div class="page-content">
         <!-- Filters -->
@@ -1443,6 +1449,94 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-edit-prompt')">Cancel</button>
       <button class="btn btn-primary" onclick="savePrompt()">Save Prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Prompt Improver Modal (admin-only) -->
+<!--
+  Two-stage AI prompt enhancement:
+    1. OpenAI (gpt-4o-mini) qualifies the raw text into a structured prompt.
+    2. Anthropic (claude-sonnet-4-5) refines the qualified prompt.
+  Calls the `prompt-improver` Supabase Edge Function which holds the
+  API keys as secrets and enforces admin-only access server-side.
+-->
+<div class="modal-overlay" id="modal-improve-prompt">
+  <div class="modal" style="max-width:980px">
+    <h3>✨ Improve Prompt with AI</h3>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+      Paste a rough English prompt. OpenAI will <strong>qualify</strong> it (turn it into a structured prompt), then Anthropic will <strong>improve</strong> it. Review the output and choose to save it to the library.
+    </div>
+
+    <!-- Stage 0: Raw input -->
+    <div class="form-group">
+      <label for="ip-raw">Raw prompt (English)</label>
+      <textarea id="ip-raw" rows="4" maxlength="4000" placeholder="e.g. write a prompt that helps a developer review pull requests for security issues"></textarea>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-top:4px">
+        <span><span id="ip-raw-count">0</span> / 4000 chars</span>
+        <span id="ip-models-info">Models: gpt-4o-mini → claude-sonnet-4-5</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn btn-primary" id="ip-generate-btn" onclick="runPromptImprover()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Generate
+      </button>
+      <button class="btn btn-secondary" onclick="resetImproveModal()">Clear</button>
+      <span id="ip-status" style="align-self:center;font-size:13px;color:var(--text-muted)"></span>
+    </div>
+
+    <!-- Stage 1 & 2: Side-by-side outputs -->
+    <div id="ip-results" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-weight:600;margin-bottom:6px">
+            <span style="display:inline-block;background:#10a37f;color:white;font-size:11px;padding:2px 6px;border-radius:4px;margin-right:6px">OpenAI</span>
+            Qualified prompt
+          </label>
+          <textarea id="ip-qualified" rows="14" readonly style="background:var(--bg-card);font-family:ui-monospace,monospace;font-size:12px"></textarea>
+        </div>
+        <div>
+          <label style="display:block;font-weight:600;margin-bottom:6px">
+            <span style="display:inline-block;background:#cc785c;color:white;font-size:11px;padding:2px 6px;border-radius:4px;margin-right:6px">Anthropic</span>
+            Improved prompt
+          </label>
+          <textarea id="ip-improved" rows="14" style="font-family:ui-monospace,monospace;font-size:12px"></textarea>
+        </div>
+      </div>
+
+      <!-- Save metadata -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">Save improved prompt to library</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Role</label>
+            <select id="ip-role">
+              <option value="pm">Project Manager</option>
+              <option value="sa">Solution Architect</option>
+              <option value="ba">Business Analyst</option>
+              <option value="dev">Developer</option>
+              <option value="dba">Database Administrator</option>
+              <option value="admin">System / IT Admin</option>
+              <option value="dm">Delivery Manager</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <input type="text" id="ip-category" placeholder="e.g. Code Review">
+          </div>
+          <div class="form-group">
+            <label>Sort Order</label>
+            <input type="number" id="ip-sort" min="1" value="1" style="width:80px">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-improve-prompt')">Discard</button>
+      <button class="btn btn-success" id="ip-save-btn" onclick="saveImprovedPrompt()" style="display:none">Save to Library</button>
     </div>
   </div>
 </div>
@@ -2814,6 +2908,149 @@ async function deletePrompt(id) {
   showToast('Prompt deleted');
   _adminPrompts = [];
   renderAdminPrompts();
+}
+
+// ============================================================
+// AI PROMPT IMPROVER (admin-only)
+// ============================================================
+// Two-stage pipeline:
+//   1. OpenAI (gpt-4o-mini)      — qualifies the raw text into a
+//                                  structured prompt (ROLE/TASK/...).
+//   2. Anthropic (claude-sonnet-4-5) — improves the qualified prompt.
+//
+// Calls the `prompt-improver` Supabase Edge Function which holds the
+// API keys as server secrets and re-verifies the admin role using the
+// caller's JWT — so this UI cannot be bypassed by simply unhiding the
+// buttons in the browser.
+// ============================================================
+
+const PROMPT_IMPROVER_URL = SUPABASE_URL + '/functions/v1/prompt-improver';
+
+function openImproveModal() {
+  resetImproveModal();
+  openModal('modal-improve-prompt');
+  setTimeout(() => document.getElementById('ip-raw').focus(), 50);
+}
+
+function resetImproveModal() {
+  document.getElementById('ip-raw').value = '';
+  document.getElementById('ip-raw-count').textContent = '0';
+  document.getElementById('ip-qualified').value = '';
+  document.getElementById('ip-improved').value = '';
+  document.getElementById('ip-category').value = '';
+  document.getElementById('ip-sort').value = '1';
+  document.getElementById('ip-role').value = 'pm';
+  document.getElementById('ip-results').style.display = 'none';
+  document.getElementById('ip-save-btn').style.display = 'none';
+  document.getElementById('ip-status').textContent = '';
+  document.getElementById('ip-generate-btn').disabled = false;
+}
+
+// Live char counter (attached on first focus so it works regardless of
+// whether the script runs before or after the modal is in the DOM).
+document.addEventListener('input', (e) => {
+  if (e.target && e.target.id === 'ip-raw') {
+    document.getElementById('ip-raw-count').textContent = e.target.value.length;
+  }
+});
+
+async function runPromptImprover() {
+  const rawText = document.getElementById('ip-raw').value.trim();
+  if (!rawText) { showToast('Please enter a raw prompt first', 'warning'); return; }
+
+  const generateBtn = document.getElementById('ip-generate-btn');
+  const statusEl    = document.getElementById('ip-status');
+  generateBtn.disabled = true;
+  statusEl.textContent = 'Qualifying with OpenAI… then improving with Anthropic…';
+  document.getElementById('ip-results').style.display = 'none';
+  document.getElementById('ip-save-btn').style.display = 'none';
+
+  try {
+    const sb = getSupabaseClient();
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      showToast('Session expired. Please log in again.', 'error');
+      generateBtn.disabled = false;
+      statusEl.textContent = '';
+      return;
+    }
+
+    const resp = await fetch(PROMPT_IMPROVER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Authorization carries the user JWT so the Edge Function can
+        // verify the admin role server-side.
+        'Authorization': 'Bearer ' + session.access_token,
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ rawText })
+    });
+
+    const result = await resp.json();
+
+    if (!resp.ok) {
+      // If qualify succeeded but improve failed, the function returns
+      // the qualified text so the admin doesn't lose work.
+      if (result.qualified) {
+        document.getElementById('ip-qualified').value = result.qualified;
+        document.getElementById('ip-improved').value  = '';
+        document.getElementById('ip-results').style.display = 'block';
+      }
+      throw new Error(result.error || ('HTTP ' + resp.status));
+    }
+
+    document.getElementById('ip-qualified').value = result.qualified || '';
+    document.getElementById('ip-improved').value  = result.improved  || '';
+    document.getElementById('ip-results').style.display = 'block';
+    document.getElementById('ip-save-btn').style.display = 'inline-flex';
+    statusEl.textContent = '✓ Done — review the improved prompt and click Save to add it to the library.';
+  } catch (err) {
+    console.error('Prompt improver error:', err);
+    statusEl.textContent = '';
+    showToast('Failed: ' + (err.message || 'Unknown error'), 'error');
+  } finally {
+    generateBtn.disabled = false;
+  }
+}
+
+async function saveImprovedPrompt() {
+  const promptText = document.getElementById('ip-improved').value.trim();
+  const role       = document.getElementById('ip-role').value;
+  const category   = document.getElementById('ip-category').value.trim();
+  const sortOrder  = parseInt(document.getElementById('ip-sort').value, 10) || 1;
+
+  if (!promptText) { showToast('Improved prompt is empty', 'warning'); return; }
+  if (!category)   { showToast('Please enter a category', 'warning'); return; }
+
+  const saveBtn = document.getElementById('ip-save-btn');
+  saveBtn.disabled = true;
+
+  try {
+    const sb = getSupabaseClient();
+    const { data: { user } } = await sb.auth.getUser();
+    const { error } = await sb.from('prompt_library').insert({
+      role,
+      role_label:  ROLE_LABELS[role] || role,
+      category,
+      prompt_text: promptText,
+      sort_order:  sortOrder,
+      is_active:   true,
+      created_by:  user?.id || null
+    });
+
+    if (error) throw error;
+
+    showToast('Prompt saved to library', 'success');
+    closeModal('modal-improve-prompt');
+    _adminPrompts = []; // invalidate cache so renderAdminPrompts refetches
+    if (typeof renderAdminPrompts === 'function') renderAdminPrompts();
+  } catch (err) {
+    console.error('Save improved prompt failed:', err);
+    showToast('Save failed: ' + (err.message || 'Unknown error'), 'error');
+  } finally {
+    saveBtn.disabled = false;
+  }
 }
 
 function backupData() {

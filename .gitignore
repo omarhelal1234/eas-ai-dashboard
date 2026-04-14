@@ -43,3 +43,4 @@ scripts/sync_output/
 
 # Claude local config (contains symlinks)
 .claude/
+supabase/functions/prompt-improver/import_map.json
