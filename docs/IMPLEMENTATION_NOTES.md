@@ -6,6 +6,21 @@
 
 ## Changes Made
 
+### 0t. April 15, 2026 — SPOC IDE Usage Stats Page
+
+**Purpose:** Give SPOCs visibility into their practice team's Grafana Copilot IDE usage without navigating the admin panel.
+
+**Approach:** Display aggregate `copilot_users.ide_*` columns (synced from Grafana exports via `sync_grafana.py`) on a new dedicated page. SPOCs see only their own practice; admins see all practices with a dropdown filter.
+
+**Key decisions:**
+- Chose aggregate data (option C) over quarterly partitioning since Grafana data is synced as all-time totals, not per-quarter
+- Standalone page pattern (like `employee-status.html`) rather than SPA tab — keeps the page lightweight and focused
+- New `fetchGrafanaStats(practice)` function in `db.js` selects only the IDE-related columns to minimize payload
+- Sortable columns with sparkline bars for visual comparison of interactions
+- CSV export built-in for SPOCs who need to report to practice heads
+
+**Files changed:** `js/db.js` (new function + export), `src/pages/grafana-stats.html` (new), `src/pages/index.html` (nav link)
+
 ### 0s. April 15, 2026 — Dedup Post-Sync + Data-Sync Skill
 
 **Purpose:** Clean up duplicate records created when tracker_sync data overlapped with existing web-sourced records. Establish a reusable weekly sync skill.

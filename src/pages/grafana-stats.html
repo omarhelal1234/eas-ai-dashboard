@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDE Usage Stats - EAS AI Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-weight='bold' fill='%233b82f6'>E</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script defer src="../../js/config.js"></script>
+<script defer src="../../js/auth.js"></script>
+<script defer src="../../js/db.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --bg-card-hover: #334155;
+  --border: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #06b6d4;
+  --purple: #8b5cf6;
+  --pink: #ec4899;
+  --radius: 12px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container { max-width: 1400px; margin: 0 auto; }
+
+/* Header */
+.header {
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover { background: var(--bg-card-hover); }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover { background: var(--accent-hover); }
+
+/* Practice Filter (admin only) */
+.practice-filter {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+/* KPI Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.stat-value.success { color: var(--success); }
+.stat-value.warning { color: var(--warning); }
+.stat-value.info    { color: var(--info); }
+.stat-value.purple  { color: var(--purple); }
+.stat-value.pink    { color: var(--pink); }
+
+.stat-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Data Period Banner */
+.data-period-banner {
+  background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.data-period-banner .period-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.data-period-banner .period-value {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.data-period-banner .updated-at {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Table */
+.table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.table-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.table-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.table-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.filters-bar {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-select, .search-input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.table-scroll { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+thead {
+  background: rgba(59, 130, 246, 0.05);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+
+th {
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+th:hover { color: var(--accent); }
+
+th .sort-arrow {
+  font-size: 10px;
+  margin-left: 4px;
+  opacity: 0.4;
+}
+
+th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+tbody tr { transition: background 0.15s; }
+tbody tr:hover { background: rgba(59, 130, 246, 0.03); }
+
+.user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.user-email {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.metric-cell {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.metric-cell.zero {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.metric-cell.highlight {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.practice-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(59,130,246,0.1);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Bar sparkline (inline) */
+.bar-spark {
+  display: inline-block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  opacity: 0.7;
+  vertical-align: middle;
+  margin-left: 6px;
+  transition: width 0.4s ease;
+}
+
+/* Export Button */
+.export-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+
+.export-btn:hover { background: var(--bg-card-hover); }
+
+/* No Data State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state-text { font-size: 16px; font-weight: 600; color: var(--text-secondary); }
+.empty-state-subtext { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+/* Auth Loading */
+#auth-loading {
+  position: fixed; inset: 0;
+  background: var(--bg-primary);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 9999;
+}
+
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 20px; right: 20px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  transform: translateX(120%);
+  transition: transform 0.3s ease;
+  z-index: 9999;
+}
+
+.toast.show { transform: translateX(0); }
+.toast-error { border-color: var(--danger); }
+.toast-warning { border-color: var(--warning); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  body { padding: 12px; }
+  .header { flex-direction: column; align-items: flex-start; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-value { font-size: 22px; }
+  table { min-width: 700px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Auth Loading -->
+<div id="auth-loading">
+  <div class="spinner"></div>
+  <p style="margin-top:12px;color:var(--text-muted);font-size:14px">Loading IDE usage data...</p>
+</div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>📊 IDE Usage Stats</h1>
+      <div class="header-subtitle" id="header-subtitle">Grafana Copilot usage data for your practice</div>
+    </div>
+    <div class="header-actions">
+      <select class="practice-filter" id="practice-filter" style="display:none" aria-label="Filter by practice">
+        <option value="">All Practices</option>
+      </select>
+      <button class="export-btn" onclick="exportToCSV()" title="Export to CSV">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+      <button class="btn btn-secondary" onclick="window.location.href='index.html'">← Back to Dashboard</button>
+    </div>
+  </div>
+
+  <!-- Data Period Banner -->
+  <div class="data-period-banner" id="data-period-banner" style="display:none">
+    <div>
+      <span class="period-label">Data Period:</span>
+      <span class="period-value" id="data-period-text">—</span>
+    </div>
+    <div class="updated-at" id="data-updated-at"></div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">👥 Total Users</div>
+      <div class="stat-value" id="stat-total-users">0</div>
+      <div class="stat-sub" id="stat-active-users">0 active</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">📅 Avg Days Active</div>
+      <div class="stat-value info" id="stat-avg-days">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">💬 Total Interactions</div>
+      <div class="stat-value purple" id="stat-total-interactions">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">⚡ Code Generations</div>
+      <div class="stat-value success" id="stat-code-generations">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">✅ Code Acceptances</div>
+      <div class="stat-value warning" id="stat-code-acceptances">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">📝 LOC Added</div>
+      <div class="stat-value pink" id="stat-loc-added">0</div>
+      <div class="stat-sub" id="stat-loc-suggested">0 suggested</div>
+    </div>
+  </div>
+
+  <!-- User Table -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>User IDE Activity</h3>
+      <div class="table-count" id="table-count">0 users</div>
+    </div>
+    <div class="filters-bar">
+      <select class="filter-select" id="activity-filter" onchange="applyFilters()" aria-label="Filter by activity">
+        <option value="">All Users</option>
+        <option value="active">Active Users Only</option>
+        <option value="inactive">Inactive Users</option>
+      </select>
+      <input type="text" class="search-input" id="user-search" placeholder="Search by name or email..." oninput="applyFilters()" aria-label="Search users">
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="name">User <span class="sort-arrow">▲</span></th>
+            <th data-sort="practice" id="th-practice">Practice <span class="sort-arrow">▲</span></th>
+            <th data-sort="ideDaysActive" class="metric-th">Days Active <span class="sort-arrow">▲</span></th>
+            <th data-sort="ideTotalInteractions" class="metric-th">Interactions <span class="sort-arrow">▲</span></th>
+            <th data-sort="ideCodeGenerations" class="metric-th">Generations <span class="sort-arrow">▲</span></th>
+            <th data-sort="ideCodeAcceptances" class="metric-th">Acceptances <span class="sort-arrow">▲</span></th>
+            <th data-sort="ideAgentDays" class="metric-th">Agent Days <span class="sort-arrow">▲</span></th>
+            <th data-sort="ideChatDays" class="metric-th">Chat Days <span class="sort-arrow">▲</span></th>
+            <th data-sort="ideLocAdded" class="metric-th">LOC Added <span class="sort-arrow">▲</span></th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+  // ---- State ----
+  let allStats = [];
+  let filteredStats = [];
+  let currentSort = { key: 'ideTotalInteractions', asc: false };
+  let userRole = '';
+  let userPractice = '';
+
+  // ---- Init ----
+  async function init() {
+    const profile = await EAS_Auth.getUserProfile();
+    if (!profile) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    userRole = profile.role;
+    userPractice = profile.practice;
+
+    // Update subtitle based on role
+    const subtitleEl = document.getElementById('header-subtitle');
+    if (userRole === 'admin') {
+      subtitleEl.textContent = 'Grafana Copilot IDE usage data — All Practices';
+      // Show practice filter for admins
+      await populatePracticeFilter();
+    } else if (userRole === 'spoc') {
+      subtitleEl.textContent = `Grafana Copilot IDE usage data — ${userPractice}`;
+    } else {
+      subtitleEl.textContent = 'Grafana Copilot IDE usage data';
+    }
+
+    await loadData();
+    document.getElementById('auth-loading').style.display = 'none';
+  }
+
+  async function populatePracticeFilter() {
+    const filterEl = document.getElementById('practice-filter');
+    filterEl.style.display = '';
+
+    // Fetch all practices from copilot_users
+    const stats = await EAS_DB.fetchGrafanaStats(null);
+    const practices = [...new Set(stats.map(u => u.practice))].sort();
+    practices.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      filterEl.appendChild(opt);
+    });
+
+    filterEl.addEventListener('change', () => loadData());
+  }
+
+  async function loadData() {
+    let practice = null;
+
+    if (userRole === 'spoc') {
+      practice = userPractice;
+    } else if (userRole === 'admin') {
+      const filterVal = document.getElementById('practice-filter').value;
+      practice = filterVal || null;
+    } else {
+      // Other roles: show own practice data if they have one, otherwise all
+      practice = userPractice || null;
+    }
+
+    allStats = await EAS_DB.fetchGrafanaStats(practice);
+    updateKPIs();
+    updateDataPeriod();
+    applyFilters();
+  }
+
+  // ---- KPI Cards ----
+  function updateKPIs() {
+    const users = allStats;
+    const total = users.length;
+    const active = users.filter(u => u.ideDaysActive > 0).length;
+    const avgDays = total > 0 ? (users.reduce((s, u) => s + u.ideDaysActive, 0) / total) : 0;
+    const totalInteractions = users.reduce((s, u) => s + u.ideTotalInteractions, 0);
+    const codeGen = users.reduce((s, u) => s + u.ideCodeGenerations, 0);
+    const codeAcc = users.reduce((s, u) => s + u.ideCodeAcceptances, 0);
+    const locAdded = users.reduce((s, u) => s + u.ideLocAdded, 0);
+    const locSugg = users.reduce((s, u) => s + u.ideLocSuggested, 0);
+
+    document.getElementById('stat-total-users').textContent = total.toLocaleString();
+    document.getElementById('stat-active-users').textContent = `${active} active`;
+    document.getElementById('stat-avg-days').textContent = avgDays.toFixed(1);
+    document.getElementById('stat-total-interactions').textContent = totalInteractions.toLocaleString();
+    document.getElementById('stat-code-generations').textContent = codeGen.toLocaleString();
+    document.getElementById('stat-code-acceptances').textContent = codeAcc.toLocaleString();
+    document.getElementById('stat-loc-added').textContent = locAdded.toLocaleString();
+    document.getElementById('stat-loc-suggested').textContent = `${locSugg.toLocaleString()} suggested`;
+  }
+
+  function updateDataPeriod() {
+    // Find the most recent ide_data_period and ide_data_updated_at
+    const withPeriod = allStats.filter(u => u.ideDataPeriod);
+    if (withPeriod.length === 0) {
+      document.getElementById('data-period-banner').style.display = 'none';
+      return;
+    }
+
+    // Collect unique periods
+    const periods = [...new Set(withPeriod.map(u => u.ideDataPeriod))];
+    document.getElementById('data-period-text').textContent = periods.join(', ');
+
+    // Most recent update timestamp
+    const updatedDates = withPeriod.filter(u => u.ideDataUpdatedAt).map(u => new Date(u.ideDataUpdatedAt));
+    if (updatedDates.length > 0) {
+      const latest = new Date(Math.max(...updatedDates));
+      document.getElementById('data-updated-at').textContent = `Last synced: ${latest.toLocaleDateString()} ${latest.toLocaleTimeString()}`;
+    }
+
+    document.getElementById('data-period-banner').style.display = '';
+  }
+
+  // ---- Filtering & Sorting ----
+  function applyFilters() {
+    const activityFilter = document.getElementById('activity-filter').value;
+    const search = (document.getElementById('user-search').value || '').toLowerCase();
+
+    filteredStats = allStats.filter(u => {
+      if (activityFilter === 'active' && u.ideDaysActive === 0) return false;
+      if (activityFilter === 'inactive' && u.ideDaysActive > 0) return false;
+      if (search) {
+        return u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search);
+      }
+      return true;
+    });
+
+    sortData();
+    renderTable();
+  }
+
+  function sortData() {
+    const { key, asc } = currentSort;
+    filteredStats.sort((a, b) => {
+      let av = a[key], bv = b[key];
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return asc ? -1 : 1;
+      if (av > bv) return asc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // ---- Render ----
+  function renderTable() {
+    const tbody = document.getElementById('users-tbody');
+    document.getElementById('table-count').textContent = `${filteredStats.length} user${filteredStats.length !== 1 ? 's' : ''}`;
+
+    // Hide practice column for SPOCs (they only see their own)
+    const showPractice = userRole === 'admin';
+    document.getElementById('th-practice').style.display = showPractice ? '' : 'none';
+
+    if (filteredStats.length === 0) {
+      tbody.innerHTML = `
+        <tr><td colspan="${showPractice ? 9 : 8}" style="text-align:center;padding:60px 20px">
+          <div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <div class="empty-state-text">No IDE usage data found</div>
+            <div class="empty-state-subtext">Grafana data has not been synced for this practice yet</div>
+          </div>
+        </td></tr>`;
+      return;
+    }
+
+    // Compute max for sparklines
+    const maxInteractions = Math.max(...filteredStats.map(u => u.ideTotalInteractions), 1);
+
+    let html = '';
+    filteredStats.forEach(u => {
+      const sparkW = Math.round((u.ideTotalInteractions / maxInteractions) * 60);
+      html += `<tr>
+        <td>
+          <div class="user-cell">
+            <span class="user-name">${esc(u.name)}</span>
+            <span class="user-email">${esc(u.email)}</span>
+          </div>
+        </td>
+        ${showPractice ? `<td><span class="practice-badge">${esc(u.practice)}</span></td>` : ''}
+        <td class="metric-cell ${u.ideDaysActive === 0 ? 'zero' : ''}">${u.ideDaysActive}</td>
+        <td class="metric-cell ${u.ideTotalInteractions === 0 ? 'zero' : 'highlight'}">${u.ideTotalInteractions.toLocaleString()}<span class="bar-spark" style="width:${sparkW}px"></span></td>
+        <td class="metric-cell ${u.ideCodeGenerations === 0 ? 'zero' : ''}">${u.ideCodeGenerations.toLocaleString()}</td>
+        <td class="metric-cell ${u.ideCodeAcceptances === 0 ? 'zero' : ''}">${u.ideCodeAcceptances.toLocaleString()}</td>
+        <td class="metric-cell ${u.ideAgentDays === 0 ? 'zero' : ''}">${u.ideAgentDays}</td>
+        <td class="metric-cell ${u.ideChatDays === 0 ? 'zero' : ''}">${u.ideChatDays}</td>
+        <td class="metric-cell ${u.ideLocAdded === 0 ? 'zero' : ''}">${u.ideLocAdded.toLocaleString()}</td>
+      </tr>`;
+    });
+
+    tbody.innerHTML = html;
+  }
+
+  // ---- Column Sorting ----
+  document.addEventListener('click', e => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    const key = th.dataset.sort;
+    if (currentSort.key === key) {
+      currentSort.asc = !currentSort.asc;
+    } else {
+      currentSort = { key, asc: key === 'name' || key === 'practice' };
+    }
+    // Update sort indicators
+    document.querySelectorAll('th[data-sort]').forEach(el => {
+      el.classList.remove('sorted');
+      el.querySelector('.sort-arrow').textContent = '▲';
+    });
+    th.classList.add('sorted');
+    th.querySelector('.sort-arrow').textContent = currentSort.asc ? '▲' : '▼';
+    applyFilters();
+  });
+
+  // ---- CSV Export ----
+  function exportToCSV() {
+    if (filteredStats.length === 0) {
+      showToast('No data to export', 'warning');
+      return;
+    }
+
+    const headers = ['Name', 'Email', 'Practice', 'Days Active', 'Total Interactions', 'Code Generations', 'Code Acceptances', 'Agent Days', 'Chat Days', 'LOC Suggested', 'LOC Added', 'Last Active', 'Data Period'];
+    const rows = filteredStats.map(u => [
+      u.name, u.email, u.practice, u.ideDaysActive, u.ideTotalInteractions,
+      u.ideCodeGenerations, u.ideCodeAcceptances, u.ideAgentDays, u.ideChatDays,
+      u.ideLocSuggested, u.ideLocAdded, u.ideLastActiveDate || '', u.ideDataPeriod || ''
+    ]);
+
+    let csv = headers.join(',') + '\n';
+    rows.forEach(r => {
+      csv += r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',') + '\n';
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ide_usage_stats_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('CSV exported successfully');
+  }
+
+  // ---- Helpers ----
+  function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast toast-' + type + ' show';
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ---- Startup ----
+  async function startApp() {
+    let attempts = 0;
+    while ((typeof EAS_DB === 'undefined' || typeof EAS_Auth === 'undefined') && attempts < 50) {
+      await new Promise(r => setTimeout(r, 100));
+      attempts++;
+    }
+
+    if (typeof EAS_DB === 'undefined' || typeof EAS_Auth === 'undefined') {
+      console.error('Failed to load required libraries');
+      showToast('Failed to load. Please refresh.', 'error');
+      return;
+    }
+
+    await init();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
+  } else {
+    startApp();
+  }
+</script>
+
+</body>
+</html>

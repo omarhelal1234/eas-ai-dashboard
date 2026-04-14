@@ -10,6 +10,8 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-15 (copilot) — **SPOC IDE Usage Stats Page** — New standalone page (`grafana-stats.html`) showing Grafana Copilot IDE usage stats scoped to the SPOC's practice users. SPOCs see only their practice; admins see all with a practice filter. Features: 6 KPI summary cards (total users, avg days active, interactions, generations, acceptances, LOC added), sortable/filterable user table with sparkline bars, data period banner, CSV export. Added `fetchGrafanaStats(practice)` to `db.js`. Navigation link added to sidebar under Management section for admin/spoc roles. (feat/ui)
+
 - 2026-04-14 (copilot) — **IDE Usage Analytics Page in Admin Panel** — Added new "IDE Usage" page to admin panel showing Grafana Copilot IDE telemetry data. Features: 6 KPI summary cards (active users, code generations, acceptances, LOC added, agent days, chat days), filterable/sortable table with 13 columns, practice filter, search by name/username, CSV export. Data queried live from `copilot_users` IDE columns via Supabase. Accessible at `admin.html#ide-usage`. (feat/ui)
 
 - 2026-04-14 (copilot) — **Fix: Task Count Mismatch — Show Both Total & Approved Counts** — Dashboard KPI "Total Tasks" sourced from `practice_summary` (approved-only) while nav badge and All Tasks tab counted all tasks regardless of approval status. Updated all locations to show both: Dashboard KPI now shows total tasks with "X approved" subtitle, nav badges show `N (M ✓)`, All Tasks pagination shows `(X approved)`, and My Tasks badge includes approved count. Applied same fix to admin.html. (fix/ui)

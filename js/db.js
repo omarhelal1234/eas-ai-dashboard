@@ -1923,6 +1923,54 @@ const EAS_DB = (() => {
   }
 
   // ===========================================================
+  // Grafana IDE Stats — Practice-scoped for SPOCs
+  // ===========================================================
+
+  /**
+   * Fetch Grafana IDE usage stats for copilot_users.
+   * If practice is provided, filters to that practice only (SPOC view).
+   * If practice is null/undefined, returns all users (Admin view).
+   * Returns array of objects with user info + ide_* columns.
+   */
+  async function fetchGrafanaStats(practice) {
+    let query = sb
+      .from('copilot_users')
+      .select('id, name, email, practice, role_skill, status, ide_days_active, ide_total_interactions, ide_code_generations, ide_code_acceptances, ide_agent_days, ide_chat_days, ide_loc_suggested, ide_loc_added, ide_last_active_date, ide_data_period, ide_data_updated_at')
+      .order('practice', { ascending: true })
+      .order('name', { ascending: true })
+      .limit(2000);
+
+    if (practice) {
+      query = query.eq('practice', practice);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('fetchGrafanaStats error:', error.message);
+      return [];
+    }
+    return (data || []).map(u => ({
+      id:                  u.id,
+      name:                u.name,
+      email:               u.email,
+      practice:            u.practice,
+      roleSkill:           u.role_skill,
+      status:              u.status,
+      ideDaysActive:       u.ide_days_active || 0,
+      ideTotalInteractions:u.ide_total_interactions || 0,
+      ideCodeGenerations:  u.ide_code_generations || 0,
+      ideCodeAcceptances:  u.ide_code_acceptances || 0,
+      ideAgentDays:        u.ide_agent_days || 0,
+      ideChatDays:         u.ide_chat_days || 0,
+      ideLocSuggested:     u.ide_loc_suggested || 0,
+      ideLocAdded:         u.ide_loc_added || 0,
+      ideLastActiveDate:   u.ide_last_active_date,
+      ideDataPeriod:       u.ide_data_period,
+      ideDataUpdatedAt:    u.ide_data_updated_at
+    }));
+  }
+
+  // ===========================================================
   // Public API
   // ===========================================================
 
@@ -1947,6 +1995,7 @@ const EAS_DB = (() => {
     fetchAccomplishments,
     fetchCopilotUsers,
     fetchCopilotUsersByPractice,
+    fetchGrafanaStats,
     fetchProjects,
     fetchLovs,
     fetchApprovedUseCases,

@@ -70,6 +70,7 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │       ├── signup.html             # Contributor self-registration (2-step form)
 │       ├── admin.html              # Admin CRUD panel + Approvals tab
 │       ├── employee-status.html    # Employee task approval status tracker
+│       ├── grafana-stats.html      # SPOC/Admin Grafana IDE usage stats page
 │       └── migrate.html            # One-time data migration tool
 │
 ├── css/
