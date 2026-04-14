@@ -3028,15 +3028,15 @@ async function saveImprovedPrompt() {
 
   try {
     const sb = getSupabaseClient();
-    const { data: { user } } = await sb.auth.getUser();
+    // NOTE: prompt_library.created_by FKs to public.users.id (not auth.users.id),
+    // so we omit it here. The existing savePrompt() does the same.
     const { error } = await sb.from('prompt_library').insert({
       role,
       role_label:  ROLE_LABELS[role] || role,
       category,
       prompt_text: promptText,
       sort_order:  sortOrder,
-      is_active:   true,
-      created_by:  user?.id || null
+      is_active:   true
     });
 
     if (error) throw error;

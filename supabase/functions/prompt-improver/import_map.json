@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "http/server": "https://deno.land/std@0.168.0/http/server.ts",
+    "openai": "https://esm.sh/openai@4.28.0",
+    "anthropic": "https://esm.sh/@anthropic-ai/sdk@0.27.0",
+    "supabase": "https://esm.sh/@supabase/supabase-js@2"
+  }
+}
