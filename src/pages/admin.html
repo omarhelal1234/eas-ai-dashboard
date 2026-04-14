@@ -2876,7 +2876,8 @@ async function savePrompt() {
   if (!category) { showToast('Category is required', 'error'); return; }
 
   const sb = getSupabaseClient();
-  const payload = { role, role_label: roleLabel, category, prompt_text: promptText, sort_order: sortOrder, is_active: isActive };
+  const { data: { user } } = await sb.auth.getUser();
+  const payload = { role, role_label: roleLabel, category, prompt_text: promptText, sort_order: sortOrder, is_active: isActive, created_by: user?.id || null };
 
   let error;
   if (id) {
@@ -3028,15 +3029,15 @@ async function saveImprovedPrompt() {
 
   try {
     const sb = getSupabaseClient();
-    // NOTE: prompt_library.created_by FKs to public.users.id (not auth.users.id),
-    // so we omit it here. The existing savePrompt() does the same.
+    const { data: { user } } = await sb.auth.getUser();
     const { error } = await sb.from('prompt_library').insert({
       role,
       role_label:  ROLE_LABELS[role] || role,
       category,
       prompt_text: promptText,
       sort_order:  sortOrder,
-      is_active:   true
+      is_active:   true,
+      created_by:  user?.id || null
     });
 
     if (error) throw error;
