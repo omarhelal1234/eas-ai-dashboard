@@ -2084,8 +2084,9 @@ function renderDashboard() {
   if (!fd) return; // Data not loaded yet
   const t = fd.summary.totals;
   const qLabel = EAS_DB.getQuarterLabel(EAS_DB.getSelectedQuarter());
+  const allTaskCount = fd.tasks.length;
   document.getElementById('kpi-grid').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue">${t.tasks}</div><div class="kpi-sub">${qLabel}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue">${allTaskCount}</div><div class="kpi-sub">${t.tasks} approved · ${qLabel}</div></div>
     <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value green">${fmt(t.timeSaved, 0)}</div><div class="kpi-sub">of ${fmt(t.timeWithout, 0)} total hrs</div></div>
     <div class="kpi-card"><div class="kpi-label">Avg Efficiency</div><div class="kpi-value yellow">${fmt(t.efficiency, 1)}%</div><div class="kpi-sub">time reduction</div></div>
     <div class="kpi-card"><div class="kpi-label">Avg Quality</div><div class="kpi-value purple">${fmt(t.quality, 1)}/5</div><div class="kpi-sub">rating</div></div>
@@ -2475,7 +2476,8 @@ function renderTasks() {
   const start = (taskPage - 1) * TASK_PAGE_SIZE;
   const pageItems = filtered.slice(start, start + TASK_PAGE_SIZE);
 
-  document.getElementById('task-count-label').textContent = `Showing ${start + 1}–${start + pageItems.length} of ${filtered.length} tasks`;
+  const approvedInPage = filtered.filter(t => t.approvalStatus === 'approved').length;
+  document.getElementById('task-count-label').textContent = `Showing ${start + 1}–${start + pageItems.length} of ${filtered.length} tasks (${approvedInPage} approved)`;
   document.getElementById('tasks-tbody').innerHTML = pageItems.map(t => `
     <tr${t.approvalStatus !== 'approved' ? ' style="opacity:0.75"' : ''}>
       <td><span style="color:${practiceColors[t.practice] || '#94a3b8'};font-weight:600">${t.practice}</span></td>
@@ -5676,7 +5678,8 @@ function populateFilters() {
 async function updateNavCounts() {
   if (!data) return;
   const fd = getFilteredData();
-  document.getElementById('nav-task-count').textContent = fd.tasks.length;
+  const approvedTaskCount = fd.tasks.filter(t => t.approvalStatus === 'approved').length;
+  document.getElementById('nav-task-count').textContent = `${fd.tasks.length} (${approvedTaskCount} ✓)`;
   document.getElementById('nav-acc-count').textContent = fd.accomplishments.length;
   document.getElementById('nav-copilot-count').textContent = data.copilotUsers.length;
   document.getElementById('nav-project-count').textContent = data.projects.length;
@@ -5701,11 +5704,12 @@ async function updateNavCounts() {
     const userName = EAS_Auth.getUserName();
     const profile = await EAS_Auth.getUserProfile();
     const userEmail = profile?.email || '';
-    const myCount = data.tasks.filter(t =>
+    const myAllTasks = data.tasks.filter(t =>
       (t.employee && t.employee.toLowerCase() === userName.toLowerCase()) ||
       (t.employeeEmail && t.employeeEmail.toLowerCase() === userEmail.toLowerCase())
-    ).length;
-    mtEl.textContent = myCount;
+    );
+    const myApproved = myAllTasks.filter(t => t.approvalStatus === 'approved').length;
+    mtEl.textContent = `${myAllTasks.length} (${myApproved} ✓)`;
   }
 
   // Issues count

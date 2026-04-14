@@ -1542,7 +1542,9 @@ function truncate(str, len = 50) {
 }
 
 function updateNavCounts() {
-  document.getElementById('admin-task-count').textContent = data.tasks ? data.tasks.length : 0;
+  const allTasks = data.tasks ? data.tasks.length : 0;
+  const approvedTasks = data.tasks ? data.tasks.filter(t => (t.approvalStatus || t.approval_status) === 'approved').length : 0;
+  document.getElementById('admin-task-count').textContent = `${allTasks} (${approvedTasks} ✓)`;
   document.getElementById('admin-acc-count').textContent = data.accomplishments ? data.accomplishments.length : 0;
   document.getElementById('admin-copilot-count').textContent = data.copilotUsers ? data.copilotUsers.length : 0;
   document.getElementById('admin-proj-count').textContent = data.projects ? data.projects.length : 0;
