@@ -624,6 +624,26 @@ tbody tr:hover { background: rgba(59, 130, 246, 0.03); }
     document.getElementById('stat-loc-suggested').textContent = `${locSugg.toLocaleString()} suggested`;
   }
 
+  /**
+   * Convert a date-range period string like '2026-02-16 to 2026-03-30'
+   * to month-only format like 'Feb 2026 to Mar 2026'.
+   * If the two months are the same, returns a single month e.g. 'Feb 2026'.
+   */
+  function periodToMonths(period) {
+    if (!period) return '';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const parts = period.split(' to ');
+    if (parts.length !== 2) return period; // fallback
+    const fmt = (ds) => {
+      const d = new Date(ds.trim());
+      if (isNaN(d)) return ds.trim();
+      return `${months[d.getMonth()]} ${d.getFullYear()}`;
+    };
+    const start = fmt(parts[0]);
+    const end   = fmt(parts[1]);
+    return start === end ? start : `${start} to ${end}`;
+  }
+
   function updateDataPeriod() {
     // Find the most recent ide_data_period and ide_data_updated_at
     const withPeriod = allStats.filter(u => u.ideDataPeriod);
@@ -632,8 +652,11 @@ tbody tr:hover { background: rgba(59, 130, 246, 0.03); }
       return;
     }
 
-    // Collect unique periods
-    const periods = [...new Set(withPeriod.map(u => u.ideDataPeriod))];
+    // Collect unique periods — show months only for SPOCs
+    const isSpoc = userRole === 'spoc';
+    const periods = [...new Set(withPeriod.map(u =>
+      isSpoc ? periodToMonths(u.ideDataPeriod) : u.ideDataPeriod
+    ))];
     document.getElementById('data-period-text').textContent = periods.join(', ');
 
     // Most recent update timestamp
@@ -752,10 +775,12 @@ tbody tr:hover { background: rgba(59, 130, 246, 0.03); }
     }
 
     const headers = ['Name', 'Email', 'Practice', 'Days Active', 'Total Interactions', 'Code Generations', 'Code Acceptances', 'Agent Days', 'Chat Days', 'LOC Suggested', 'LOC Added', 'Last Active', 'Data Period'];
+    const isSpoc = userRole === 'spoc';
     const rows = filteredStats.map(u => [
       u.name, u.email, u.practice, u.ideDaysActive, u.ideTotalInteractions,
       u.ideCodeGenerations, u.ideCodeAcceptances, u.ideAgentDays, u.ideChatDays,
-      u.ideLocSuggested, u.ideLocAdded, u.ideLastActiveDate || '', u.ideDataPeriod || ''
+      u.ideLocSuggested, u.ideLocAdded, u.ideLastActiveDate || '',
+      isSpoc ? periodToMonths(u.ideDataPeriod) : (u.ideDataPeriod || '')
     ]);
 
     let csv = headers.join(',') + '\n';
