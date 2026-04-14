@@ -130,7 +130,26 @@ Whenever a file is moved or renamed, you MUST immediately grep the repository fo
 
 ---
 
-## 8. Channel-Agnostic Enforcement
+## 8. Enterprise Portability Check
+
+Before implementing **any** change, assess whether the proposed modification would be easy to migrate or replicate on other enterprise internal infrastructure (e.g., on-prem servers, different cloud providers, air-gapped environments, alternate identity providers, different RDBMS). Specifically:
+
+- **Vendor lock-in** — Does the change introduce or deepen a dependency on a specific SaaS product, proprietary API, or cloud-only feature that has no portable equivalent?
+- **Network / connectivity assumptions** — Does it require public internet access, specific DNS configurations, or external webhook endpoints that may not exist in restricted networks?
+- **Auth / SSO coupling** — Does it hard-code an identity provider (e.g., Supabase Auth, Auth0) in a way that cannot be swapped via configuration?
+- **Infrastructure requirements** — Does it assume serverless runtimes, edge functions, or container orchestration that may not be available in every enterprise?
+- **Data residency / compliance** — Could the change conflict with data-sovereignty or regulatory requirements common in enterprise environments?
+
+**If any of the above applies**, you MUST warn the user **before** proceeding with implementation. The warning should:
+1. Clearly state which portability concern(s) exist.
+2. Rate the migration difficulty as **Low / Medium / High**.
+3. Suggest a more portable alternative when one exists.
+
+Only proceed after the user acknowledges the trade-off. If the change is fully portable, no warning is needed — move on.
+
+---
+
+## 9. Channel-Agnostic Enforcement
 
 These instructions apply identically whether the task arrived through:
 
@@ -139,4 +158,4 @@ These instructions apply identically whether the task arrived through:
 - **A git commit or push** (the author is responsible for applying the sweep before pushing)
 - **Direct editing** in VS Code or any other editor
 
-Every author is responsible for running §1 → §7 before their change lands in `master`.
+Every author is responsible for running §1 → §8 before their change lands in `master`.

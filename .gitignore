@@ -40,3 +40,6 @@ vscode-extension/*.vsix
 
 # Data sync generated files
 scripts/sync_output/
+
+# Claude local config (contains symlinks)
+.claude/
