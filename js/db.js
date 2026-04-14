@@ -209,7 +209,7 @@ const EAS_DB = (() => {
       quality:     Number(t.quality_rating) || 0,
       status:      t.status,
       approvalStatus: t.approval_status || 'pending',
-      submittedForApproval: t.submitted_for_approval || false,
+      submittedForApproval: t.submission_approved || false,
       notes:       t.notes,
       quarterId:   t.quarter_id
     }));
@@ -254,7 +254,7 @@ const EAS_DB = (() => {
       effortSaved:   Number(a.effort_saved) || 0,
       status:        a.status,
       approvalStatus: a.approval_status || 'pending',
-      submittedForApproval: a.submitted_for_approval || false,
+      submittedForApproval: a.submission_approved || false,
       evidence:      a.evidence,
       notes:         a.notes,
       quarterId:     a.quarter_id
@@ -599,7 +599,7 @@ const EAS_DB = (() => {
     const isAdmin = profile?.role === 'admin';
     if (!isAdmin) {
       payload.approval_status = 'pending';
-      payload.submitted_for_approval = true;
+      payload.submission_approved = false;
       payload.approved_by = null;
       payload.approved_by_name = null;
     }
@@ -618,9 +618,7 @@ const EAS_DB = (() => {
       const approval = await createSubmissionApproval('task', data.id, savedHours, null, data.practice, false);
       if (approval) {
         await sb.from('tasks').update({
-          approval_id: approval.id,
-          approval_status: approval.approval_status,
-          submitted_for_approval: true
+          approval_id: approval.id
         }).eq('id', data.id);
       }
     }
@@ -704,7 +702,7 @@ const EAS_DB = (() => {
     const isAdmin = profile?.role === 'admin';
     if (!isAdmin) {
       payload.approval_status = 'pending';
-      payload.submitted_for_approval = true;
+      payload.submission_approved = false;
       payload.approved_by = null;
       payload.approved_by_name = null;
     }
@@ -723,9 +721,7 @@ const EAS_DB = (() => {
       const approval = await createSubmissionApproval('accomplishment', data.id, savedHours, null, data.practice, false);
       if (approval) {
         await sb.from('accomplishments').update({
-          approval_id: approval.id,
-          approval_status: approval.approval_status,
-          submitted_for_approval: true
+          approval_id: approval.id
         }).eq('id', data.id);
       }
     }
@@ -1425,9 +1421,7 @@ const EAS_DB = (() => {
     // Update task with approval ID and status
     if (approval) {
       await sb.from('tasks').update({ 
-        approval_id: approval.id,
-        approval_status: approval.approval_status,
-        submitted_for_approval: true
+        approval_id: approval.id
       }).eq('id', task.id);
     }
 
@@ -1452,9 +1446,7 @@ const EAS_DB = (() => {
     // Update accomplishment with approval ID and status
     if (approval) {
       await sb.from('accomplishments').update({ 
-        approval_id: approval.id,
-        approval_status: approval.approval_status,
-        submitted_for_approval: true
+        approval_id: approval.id
       }).eq('id', acc.id);
     }
 
@@ -1609,10 +1601,12 @@ const EAS_DB = (() => {
     
     if (error) { console.error('approveSubmission error:', error.message); return null; }
 
-    // Update the actual task/accomplishment status to match
+    // Update the actual task/accomplishment status to match (only for final states)
     if (approval) {
       const table = approval.submission_type === 'task' ? 'tasks' : 'accomplishments';
-      const taskUpdate = { approval_status: nextStatus };
+      // tasks/accomplishments only allow: pending, approved, rejected
+      const mappedStatus = (nextStatus === 'approved' || nextStatus === 'rejected') ? nextStatus : 'pending';
+      const taskUpdate = { approval_status: mappedStatus };
       if (nextStatus === 'approved') {
         taskUpdate.approved_by = profile?.id;
         taskUpdate.approved_by_name = profile?.name;

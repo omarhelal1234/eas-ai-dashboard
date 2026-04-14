@@ -6,9 +6,26 @@
 
 ## Changes Made
 
-### 0p. April 14, 2026 — SPOC Mandatory Approval + Employee Dropdown + Duplicate Fix
+### 0p. April 14, 2026 — SPOC Mandatory Approval + Employee Dropdown + Duplicate Fix + Column Name Fix
 
-**Three critical fixes implemented in a single iteration:**
+**Four critical fixes implemented across two iterations:**
+
+#### Fix 0: Column Name Mismatch — `submitted_for_approval` vs `submission_approved` (Critical)
+**Problem:** ALL non-admin task and accomplishment updates were silently failing. The code referenced `submitted_for_approval` in 8 places across `db.js` and 1 in `ide-task-log/index.ts`, but the actual database column is `submission_approved`. This caused:
+1. Every `updateTask()` and `updateAccomplishment()` call for non-admin users to fail (PostgreSQL rejects unknown columns)
+2. Approval linkage after new task/accomplishment inserts to fail — `approval_id` was never set on the parent record
+3. The user perceived "updated task gets deleted, old version stays" because the update silently failed
+
+**Additional problem:** Code was writing workflow states (`spoc_review`, `admin_review`) into `tasks.approval_status` and `accomplishments.approval_status`, but those columns have a CHECK constraint allowing only `pending`/`approved`/`rejected`. The fine-grained workflow states belong only in `submission_approvals`.
+
+**Fix:**
+- Replaced all 8 `submitted_for_approval` → `submission_approved` in `db.js`
+- Replaced 1 occurrence in `supabase/functions/ide-task-log/index.ts`
+- Changed `submitTaskWithApproval()` and `submitAccomplishmentWithApproval()` to only set `approval_id` on the parent record (not copy the workflow approval_status)
+- Changed `approveSubmission()` to map intermediate states to `pending` on the parent table (`const mappedStatus = (nextStatus === 'approved' || nextStatus === 'rejected') ? nextStatus : 'pending'`)
+- Added migration `sql/013_fix_column_name_and_linkage.sql` to fix existing broken linkage and migrate legacy `ai_review` records to `spoc_review`
+
+**Files:** `js/db.js`, `supabase/functions/ide-task-log/index.ts`, `sql/013_fix_column_name_and_linkage.sql`
 
 #### Fix 1: Duplicate-on-Edit Bug (Critical)
 **Problem:** Editing any task, accomplishment, copilot user, or issue created a duplicate instead of updating. Root cause: `closeModal(type)` clears `_editingId`/`_editingType` in all save functions, but it was called BEFORE the `if (_editingId && _editingType === 'task')` check — so the check was always false, always inserting.
@@ -341,7 +358,7 @@ Any layer reject → rejected
 - `submission_approvals` - Tracks approval workflow
 
 **Modified Tables:**
-- `tasks` - Added approval_id, approved_by, approved_by_name, approval_status, approval_notes, submitted_for_approval
+- `tasks` - Added approval_id, approved_by, approved_by_name, approval_status, approval_notes, submission_approved
 - `accomplishments` - Same approval-related fields added
 
 **New Views:**
@@ -453,20 +470,23 @@ Any layer reject → rejected
 ```
 Employee Submits Task
          ↓
-Task Created with submitted_for_approval = true
+Task Created (approval_status = 'pending')
          ↓
-    Approval Entry Created
+    Approval Entry Created in submission_approvals
+    (approval_status = 'spoc_review')
          ↓
-Routing Logic Determines Path:
-├─ If saved_hours ≥ 15 → status = admin_review, route to admin
-├─ If AI validation fails → status = spoc_review, route to SPOC
-└─ Else → status = ai_review, route to AI system
+    Task linked via approval_id
          ↓
-SPOC/Admin Reviews Task
+SPOC Reviews Task
+         ↓
+├─ If saved_hours ≥ 15 → advance to admin_review
+└─ Else → approve directly
+         ↓
+Admin Reviews (if applicable)
          ↓
 Approve or Reject
          ↓
-Task Status Updated
+Task approval_status updated to 'approved'/'rejected'
          ↓
 Employee Notified (via status page)
 ```

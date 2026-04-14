@@ -509,11 +509,9 @@ async function handleSubmitTask(
     }, 201);
   }
 
-  // Update task with approval reference
+  // Update task with approval reference (don't set approval_status — check constraint only allows pending/approved/rejected)
   await userClient.from("tasks").update({
     approval_id: approval.id,
-    approval_status: approval.approval_status,
-    submitted_for_approval: true,
   }).eq("id", task.id);
 
   // Log activity (using service client to ensure insert succeeds)
