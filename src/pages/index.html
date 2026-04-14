@@ -1454,7 +1454,6 @@ npm run compile</code></pre>
       <div class="form-group">
         <label>Task / Activity <span class="required">*</span></label>
         <input type="text" id="f-task" required>
-        <button type="button" class="btn btn-sm" style="margin-top:4px;font-size:12px" onclick="Phase8.getAISuggestions('what', document.getElementById('f-task').value, {category: document.getElementById('f-category').value, aiTool: document.getElementById('f-tool').value})">✨ AI Suggestions</button>
       </div>
     </div>
     <div class="form-row">
@@ -1502,7 +1501,6 @@ npm run compile</code></pre>
     <div class="form-group">
       <label>Why is this important? <span style="font-size:11px;color:var(--text-muted)">(context, helps AI validator)</span></label>
       <textarea id="f-task-why" rows="2" placeholder="e.g. Reduced manual code review effort..."></textarea>
-      <button type="button" class="btn btn-sm" style="margin-top:4px;font-size:12px" onclick="Phase8.getAISuggestions('why', document.getElementById('f-task-why').value, {category: document.getElementById('f-category').value, task: document.getElementById('f-task').value})">✨ AI Suggestions</button>
     </div>
     <div class="form-group">
       <label>Notes / Learnings</label>
