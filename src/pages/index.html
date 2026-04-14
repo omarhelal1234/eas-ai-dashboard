@@ -513,6 +513,10 @@
         <div class="subtitle" id="mypractice-subtitle">Practice dashboard</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
+        <div class="quarter-selector-wrapper">
+          <label for="mypractice-filter-quarter">Quarter</label>
+          <select class="quarter-selector" id="mypractice-filter-quarter" aria-label="Filter by quarter"></select>
+        </div>
         <button class="btn btn-secondary" onclick="openExportModal('mypractice')" aria-label="Export my practice">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
@@ -3006,8 +3010,8 @@ async function handleApprovalAction(approvalId, action) {
 async function renderMyPractice() {
   const practice = EAS_Auth.getUserPractice();
   if (!practice) return;
-  const quarterId = EAS_DB.getSelectedQuarter();
-  document.getElementById('mypractice-subtitle').textContent = `${practice} — Team Dashboard`;
+  const quarterId = document.getElementById('mypractice-filter-quarter')?.value || EAS_DB.getSelectedQuarter();
+  document.getElementById('mypractice-subtitle').textContent = `${practice} — Team Dashboard` + (quarterId && quarterId !== 'all' ? ` (${EAS_DB.getQuarterLabel(quarterId)})` : '');
 
   // Fetch team leaderboard + inactive members in parallel
   const [teamData, inactive] = await Promise.all([
@@ -3020,8 +3024,8 @@ async function renderMyPractice() {
   const totalSaved = teamData.reduce((s, e) => s + e.timeSaved, 0);
   const avgEff = teamData.length > 0 ? teamData.reduce((s, e) => s + e.efficiency, 0) / teamData.length : 0;
 
-  // Licensed tool stats for this practice
-  const practiceTasks = (data.tasks || []).filter(t => t.practice === practice && t.approvalStatus === 'approved');
+  // Licensed tool stats for this practice (quarter-aware)
+  const practiceTasks = (data.tasks || []).filter(t => t.practice === practice && t.approvalStatus === 'approved' && (quarterId === 'all' || !quarterId || t.quarterId === quarterId));
   const licensedCount = practiceTasks.filter(t => t.isLicensedTool).length;
   const licensedPct = practiceTasks.length > 0 ? (licensedCount / practiceTasks.length * 100).toFixed(0) : '0';
 
@@ -6006,6 +6010,7 @@ async function boot() {
   EAS_DB.populatePageQuarterSelector('lb-filter-quarter', () => renderLeaderboard());
   EAS_DB.populatePageQuarterSelector('mytasks-filter-quarter', () => renderMyTasks());
   EAS_DB.populatePageQuarterSelector('acc-filter-quarter', () => renderAccomplishments());
+  EAS_DB.populatePageQuarterSelector('mypractice-filter-quarter', () => renderMyPractice());
   EAS_DB.populatePageQuarterSelector('exec-quarter-selector', () => renderExecSummary());
   
   // 2c. Wire week-start date change to auto-update week number
