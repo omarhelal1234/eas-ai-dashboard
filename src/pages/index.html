@@ -589,7 +589,7 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeModal('modal-team-lead-assign')">Cancel</button>
+        <button class="btn btn-secondary" onclick="closeModal('team-lead-assign')">Cancel</button>
         <button class="btn btn-primary" onclick="saveTeamLeadAssignments()">Save Assignments</button>
       </div>
     </div>
@@ -3335,7 +3335,7 @@ async function openTeamLeadAssignModal(preselectedLeadId) {
   select.innerHTML = '<option value="">— Select a contributor —</option>' + 
     users.map(u => `<option value="${u.id}" ${u.id === preselectedLeadId ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.email)})${u.role === 'team_lead' ? ' \u2605' : ''}</option>`).join('');
   
-  openModal('modal-team-lead-assign');
+  openModal('team-lead-assign');
   
   if (preselectedLeadId) {
     await loadAvailableMembers();
@@ -3424,7 +3424,7 @@ async function saveTeamLeadAssignments() {
     if (!result) errors++;
   }
   
-  closeModal('modal-team-lead-assign');
+  closeModal('team-lead-assign');
   if (errors > 0) {
     showToast(`Saved with ${errors} error(s)`, 'error');
   } else {
