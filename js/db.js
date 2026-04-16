@@ -1303,6 +1303,49 @@ const EAS_DB = (() => {
   }
 
   /**
+   * Sync practice_spoc when a user's role changes.
+   * - Role set to 'spoc': upsert an active row for user+practice.
+   * - Role changed away from 'spoc': deactivate (is_active = false).
+   */
+  async function syncPracticeSpoc(userId, newRole, practice, userName, userEmail) {
+    if (newRole === 'spoc' && practice) {
+      // Upsert: insert or reactivate
+      const { data: existing } = await sb
+        .from('practice_spoc')
+        .select('id, is_active')
+        .eq('spoc_id', userId)
+        .eq('practice', practice)
+        .maybeSingle();
+
+      if (existing) {
+        if (!existing.is_active) {
+          await sb.from('practice_spoc').update({ is_active: true, spoc_name: userName, spoc_email: userEmail }).eq('id', existing.id);
+        }
+      } else {
+        await sb.from('practice_spoc').insert({
+          practice,
+          spoc_id: userId,
+          spoc_name: userName || null,
+          spoc_email: userEmail || null,
+          is_active: true
+        });
+      }
+      await logActivity('SPOC_ASSIGN', 'practice_spoc', userId, { practice, spoc_name: userName });
+    } else if (newRole !== 'spoc') {
+      // Deactivate any practice_spoc rows for this user
+      const { data: rows } = await sb
+        .from('practice_spoc')
+        .select('id')
+        .eq('spoc_id', userId)
+        .eq('is_active', true);
+      if (rows && rows.length > 0) {
+        await sb.from('practice_spoc').update({ is_active: false }).eq('spoc_id', userId);
+        await logActivity('SPOC_REMOVE', 'practice_spoc', userId, { reason: 'role_changed_to_' + newRole });
+      }
+    }
+  }
+
+  /**
    * Determine approval routing based on saved hours.
    * RULES (AI validation removed):
    * - savedHours < 5    → auto-approve (no approval record needed)
@@ -2261,6 +2304,7 @@ const EAS_DB = (() => {
     // Approval workflow (Phase 8)
     getSpocForPractice,
     getSpocsForPractice,
+    syncPracticeSpoc,
     determineApprovalRouting,
     createSubmissionApproval,
     fetchSubmissionApproval,

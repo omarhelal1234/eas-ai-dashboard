@@ -3794,6 +3794,8 @@ async function quickChangeRole(userId, newRole) {
   if (newRole !== 'team_lead') {
     await sb.from('team_lead_assignments').delete().eq('team_lead_id', userId);
   }
+  // Auto-sync practice_spoc when role changes to/from SPOC
+  await EAS_DB.syncPracticeSpoc(userId, newRole, user?.practice, user?.name, user?.email);
   showToast(`Role updated to ${newRole}`, 'success');
 }
 
@@ -3905,6 +3907,9 @@ async function saveUser() {
   if (role !== 'team_lead') {
     await sb.from('team_lead_assignments').delete().eq('team_lead_id', id);
   }
+
+  // Auto-sync practice_spoc when role changes to/from SPOC
+  await EAS_DB.syncPracticeSpoc(id, role, updates.practice, updates.name, document.getElementById('eu-email').value);
 
   closeModal('modal-edit-user');
   showToast('User updated successfully', 'success');
