@@ -6,6 +6,20 @@
 
 ## Changes Made
 
+### 0w. April 16, 2026 — Admin Override: Approve Any Task at Any Stage
+
+**Purpose:** Allow admin to approve tasks even if they are pending with SPOC, bypassing the normal multi-step approval flow.
+
+**Approach:**
+- Modified `approveSubmission()` in `js/db.js` to check `userRole === 'admin'` as the first branch in the state machine. When true, `nextStatus` is set directly to `'approved'` regardless of `currentStatus`.
+- No changes to `fetchPendingApprovals()` — admin already queries all pending statuses (`pending`, `admin_review`, `spoc_review`).
+- No UI changes — the Approve/Reject buttons in `admin.html` already render for every pending approval.
+- Metadata fields (`approved_by`, `approved_by_name`, `approved_at`) are populated correctly since the `nextStatus === 'approved'` block handles final approval metadata.
+
+**Trade-offs:**
+- Simple role check added to existing state machine — minimal code change, no new DB columns or RLS policies needed.
+- BRD/HLD/CODE_ARCHITECTURE unchanged — this is a business-logic-only change within the existing approval module.
+
 ### 0v. April 16, 2026 — Team Lead Role
 
 **Purpose:** Allow SPOCs to delegate scoped SPOC-like capabilities to practice contributors by assigning them as "Team Leads" over a subset of members.

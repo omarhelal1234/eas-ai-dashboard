@@ -1591,7 +1591,12 @@ const EAS_DB = (() => {
 
     // State machine: determine next state
     // Flow: spoc_review → (admin_review if >10h, else approved) → approved
-    if (currentStatus === 'spoc_review') {
+    // Admin override: admin can approve any task at any stage directly
+    if (userRole === 'admin') {
+      // Admin bypasses normal flow — approve immediately regardless of stage
+      nextStatus = 'approved';
+      nextLayer = null;
+    } else if (currentStatus === 'spoc_review') {
       // SPOC reviewed → advance to Admin review if >10h, otherwise approve
       if (savedHours > 10) {
         nextStatus = 'admin_review';
