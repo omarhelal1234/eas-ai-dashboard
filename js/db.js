@@ -286,7 +286,6 @@ const EAS_DB = (() => {
       status:        u.status,
       hasLoggedTask: u.has_logged_task,
       lastTaskDate:  u.last_task_date,
-      remarks:       u.remarks,
       copilotAccessDate: u.copilot_access_date,
       githubCopilotStatus: u.github_copilot_status || 'inactive',
       m365CopilotStatus:   u.m365_copilot_status || 'inactive',
@@ -751,8 +750,7 @@ const EAS_DB = (() => {
       name:        userData.name || null,
       email:       userData.email || null,
       role_skill:  userData.skill || null,
-      status:      userData.status || 'active',
-      remarks:     userData.remarks || userData.status || null
+      status:      userData.status || 'pending'
     };
     const { data, error } = await sb.from('copilot_users').insert(payload).select().single();
     if (error) { console.error('insertCopilotUser error:', error.message); return null; }
@@ -770,7 +768,6 @@ const EAS_DB = (() => {
     if (userData.email !== undefined)    payload.email      = userData.email;
     if (userData.skill !== undefined)    payload.role_skill = userData.skill;
     if (userData.status !== undefined)   payload.status     = userData.status;
-    if (userData.remarks !== undefined)  payload.remarks    = userData.remarks;
 
     const { data, error } = await sb.from('copilot_users').update(payload).eq('id', id).select().single();
     if (error) { console.error('updateCopilotUser error:', error.message); return null; }

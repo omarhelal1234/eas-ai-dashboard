@@ -267,7 +267,6 @@ async function runMigration() {
       email: email,
       role_skill: (u.skill || '').trim() || null,
       status: (u.remarks || 'access granted').trim(),
-      remarks: (u.remarks || '').trim() || null,
       has_logged_task: hasTask
     });
   });

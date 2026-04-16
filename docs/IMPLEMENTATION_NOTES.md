@@ -6,6 +6,34 @@
 
 ## Changes Made
 
+### 0aa. April 17, 2026 — Unify status/remarks Columns + NOT NULL Constraint
+
+**Problem:** `copilot_users` had two columns carrying the same information: `status` and `remarks`. They frequently conflicted (e.g., `status = 'access granted'` but `remarks = 'pending'`). The UI displayed `remarks` while the backend filtered on `status`.
+
+**Fixes applied:**
+- **Data normalization:** `Active` (27 rows) → `access granted`. All statuses now: `access granted` (169) or `pending` (11).
+- **Column drop:** Removed `remarks` column entirely from `copilot_users`.
+- **NOT NULL constraint:** `status` is now `NOT NULL DEFAULT 'pending'` — no more nulls possible.
+- **Code cleanup:** Removed all `remarks` references from `db.js` (insert/update/fetch), `index.html` (table render, form save/load, Excel export), `migrate.html` (import payload), and `001_schema.sql`.
+
+**Migration:** `unify_status_drop_remarks`.
+
+### 0z. April 16, 2026 — Fix Inaccurate Licensed User & Task Counts
+
+**Problem:** Dashboard KPIs showed 180 "Total Licensed Users" (counting all copilot_users regardless of status) and only 10 "Has Logged Task" (stale `has_logged_task` boolean).
+
+**Root causes:**
+1. `has_logged_task` boolean was not being synced when tasks were logged via the weekly Excel import — 29 users had tasks but were marked `false`.
+2. All statuses (`access granted`, `Active`, `pending`) were counted as "licensed" — only `access granted` (142 users) should count.
+
+**Fixes applied:**
+- **Data fix:** Updated `has_logged_task = true` for 29 users with existing tasks in `tasks` table.
+- **Schema fix:** Added `DEFAULT 'pending'` on `copilot_users.status` to prevent future NULLs. Normalized `Pending` → `pending`.
+- **Dashboard JS:** `totalUsers` now filters `copilot_users` to `status === 'access granted'` only.
+- **SQL functions/views:** Updated `practice_summary` view, `get_licensed_tool_adoption()`, and `get_executive_summary()` to filter `WHERE LOWER(status) = 'access granted'`.
+
+**Corrected metrics:** Total Licensed = 142, Has Logged Task = 23 (of licensed), Adoption = 16.2%.
+
 ### 0y. April 16, 2026 — Featured Spotlight Banner + Global Likes System
 
 **Purpose:** Add a marketing-style carousel banner to the dashboard spotlighting top-performing content, plus a permanent like system across all content sections.
