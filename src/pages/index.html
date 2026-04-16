@@ -7498,6 +7498,9 @@ async function initSpotlightBanner() {
   if (!track || !banner) return;
 
   try {
+  // Remove any previous empty state
+  document.querySelectorAll('.spotlight-empty').forEach(el => el.remove());
+
   // Check localStorage cache
   const cacheKey = 'eas_banner_selection';
   const cacheDateKey = 'eas_banner_date';
@@ -7516,14 +7519,18 @@ async function initSpotlightBanner() {
   if (!slides.length) {
     // Fetch fresh
     let candidates = [], config = {};
+    console.log('[Spotlight] Fetching banner data... quarterId=' + quarterId);
+    console.log('[Spotlight] fetchBannerCandidates exists:', typeof EAS_DB.fetchBannerCandidates);
+    console.log('[Spotlight] fetchBannerConfig exists:', typeof EAS_DB.fetchBannerConfig);
     try {
       [candidates, config] = await Promise.all([
         EAS_DB.fetchBannerCandidates(quarterId),
         EAS_DB.fetchBannerConfig()
       ]);
     } catch (err) {
-      console.error('Spotlight banner fetch error:', err);
+      console.error('[Spotlight] Fetch error:', err);
     }
+    console.log('[Spotlight] candidates:', candidates.length, 'config keys:', Object.keys(config));
 
     // Fallback config if fetch returned empty (RLS timing / auth race)
     const defaultSlots = { task: 3, accomplishment: 3, prompt: 2, use_case: 2 };
@@ -7540,6 +7547,7 @@ async function initSpotlightBanner() {
       const selected = [...pinned.slice(0, maxSlots), ...rest.slice(0, maxSlots - Math.min(pinned.length, maxSlots))];
       slides.push(...selected);
     });
+    console.log('[Spotlight] Selected slides:', slides.length);
 
     // Only cache if we got real data — avoid caching empty results from transient failures
     if (slides.length) {
@@ -7561,10 +7569,6 @@ async function initSpotlightBanner() {
 
   if (!slides.length) {
     banner.classList.add('hidden');
-    const empty = document.createElement('div');
-    empty.className = 'spotlight-empty';
-    empty.innerHTML = '<span style="font-size:18px;font-weight:600">No spotlight items yet</span><span>Start logging tasks and liking contributions to see them featured here!</span>';
-    banner.parentNode.insertBefore(empty, banner);
     return;
   }
 
