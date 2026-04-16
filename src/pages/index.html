@@ -912,18 +912,26 @@
     </div>
     <div class="page-content">
       <div class="guide-section" id="guide-enablement">
-        <div class="guide-grid">
+
+        <!-- ── Section: Getting Started ── -->
+        <div class="enablement-section-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          <h3>Getting Started</h3>
+        </div>
+        <div class="guide-grid" style="margin-bottom:32px">
           <!-- Getting Started card -->
-          <div class="guide-card guide-card-highlight">
+          <div class="guide-card guide-card-highlight enablement-hero">
             <div class="guide-card-icon" style="background:rgba(59,130,246,0.15);color:var(--accent)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
             </div>
-            <h4>Getting Started — GitHub Enterprise Login</h4>
-            <p>Access the Ejada GitHub Enterprise portal to begin your AI-powered development journey.</p>
-            <a href="https://github.com/enterprises/ejadasa/" target="_blank" rel="noopener" class="guide-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              Open GitHub Enterprise Portal
-            </a>
+            <div>
+              <h4>GitHub Enterprise Login</h4>
+              <p>Access the Ejada GitHub Enterprise portal to begin your AI-powered development journey.</p>
+              <a href="https://github.com/enterprises/ejadasa/" target="_blank" rel="noopener" class="guide-link guide-link-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                Open GitHub Enterprise Portal
+              </a>
+            </div>
           </div>
           <!-- Access Types -->
           <div class="guide-card">
@@ -958,7 +966,7 @@
             </ol>
           </div>
           <!-- Important Reminders -->
-          <div class="guide-card">
+          <div class="guide-card enablement-alert-card">
             <div class="guide-card-icon" style="background:rgba(245,158,11,0.15);color:var(--warning)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
@@ -978,6 +986,14 @@
               </li>
             </ul>
           </div>
+        </div>
+
+        <!-- ── Section: Resources & Guides ── -->
+        <div class="enablement-section-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <h3>Resources &amp; Guides</h3>
+        </div>
+        <div class="guide-grid" style="margin-bottom:32px">
           <!-- Copilot for PM/SM -->
           <div class="guide-card">
             <div class="guide-card-icon" style="background:rgba(236,72,153,0.15);color:var(--pink)">
@@ -990,26 +1006,71 @@
               Open Presentation
             </a>
           </div>
-          <!-- Rollout Guide -->
+          <!-- Contributor Rollout Guide -->
           <div class="guide-card">
             <div class="guide-card-icon" style="background:rgba(59,130,246,0.15);color:var(--accent)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             </div>
-            <h4>EAS AI Dashboard — Rollout Guide</h4>
-            <p>Complete rollout presentation covering the EAS AI Adoption Dashboard setup, features walkthrough, and adoption strategy.</p>
-            <a href="../../ReferencesAndGuidance/EAS_AI_Dashboard_Rollout_Guide.pptx" download class="guide-link">
+            <h4>EAS AI Dashboard — Contributor Rollout Guide</h4>
+            <p>Complete contributor rollout presentation covering dashboard features, onboarding steps, and adoption strategy for teams.</p>
+            <a href="../../EAS_AI_Dashboard_Contributor_Rollout_Guide.pptx" download class="guide-link">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Download Rollout Guide (.pptx)
             </a>
           </div>
-          <!-- Training Sessions Header -->
-          <div class="guide-card guide-card-highlight">
-            <div class="guide-card-icon" style="background:rgba(16,185,129,0.15);color:var(--success)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 12 15 15 10"/></svg>
+          <!-- Official Microsoft Links -->
+          <div class="guide-card">
+            <div class="guide-card-icon" style="background:rgba(59,130,246,0.15);color:var(--accent)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             </div>
-            <h4>GitHub Copilot Enablement from Microsoft</h4>
-            <p>Official Microsoft training sessions and resources to help your team get productive with GitHub Copilot Business.</p>
+            <h4>Official Microsoft Enablement Resources</h4>
+            <ul class="guide-links-list">
+              <li>
+                <a href="https://learn.microsoft.com/en-us/copilot/github-copilot" target="_blank" rel="noopener">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  Microsoft Learn — GitHub Copilot
+                </a>
+              </li>
+              <li>
+                <a href="https://docs.github.com/en/copilot" target="_blank" rel="noopener">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  GitHub Copilot Documentation
+                </a>
+              </li>
+              <li>
+                <a href="https://resources.github.com/copilot-for-business/" target="_blank" rel="noopener">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  GitHub Copilot for Business — Resources
+                </a>
+              </li>
+              <li>
+                <a href="https://adoption.microsoft.com/en-us/copilot/" target="_blank" rel="noopener">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  Microsoft Copilot Adoption Center
+                </a>
+              </li>
+              <li>
+                <a href="https://learn.microsoft.com/en-us/training/paths/copilot/" target="_blank" rel="noopener">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  Microsoft Learn — Copilot Training Paths
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/features/copilot" target="_blank" rel="noopener">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  GitHub Copilot Features Overview
+                </a>
+              </li>
+            </ul>
           </div>
+        </div>
+
+        <!-- ── Section: Training Sessions ── -->
+        <div class="enablement-section-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <h3>Training Sessions</h3>
+        </div>
+        <div class="guide-grid">
           <!-- Session 1 -->
           <div class="guide-card guide-session-card">
             <div class="guide-session-meta">
@@ -1066,52 +1127,8 @@
               Watch Recording
             </a>
           </div>
-          <!-- Official Microsoft Links -->
-          <div class="guide-card">
-            <div class="guide-card-icon" style="background:rgba(59,130,246,0.15);color:var(--accent)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-            </div>
-            <h4>Official Microsoft Enablement Resources</h4>
-            <ul class="guide-links-list">
-              <li>
-                <a href="https://learn.microsoft.com/en-us/copilot/github-copilot" target="_blank" rel="noopener">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  Microsoft Learn — GitHub Copilot
-                </a>
-              </li>
-              <li>
-                <a href="https://docs.github.com/en/copilot" target="_blank" rel="noopener">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  GitHub Copilot Documentation
-                </a>
-              </li>
-              <li>
-                <a href="https://resources.github.com/copilot-for-business/" target="_blank" rel="noopener">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  GitHub Copilot for Business — Resources
-                </a>
-              </li>
-              <li>
-                <a href="https://adoption.microsoft.com/en-us/copilot/" target="_blank" rel="noopener">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  Microsoft Copilot Adoption Center
-                </a>
-              </li>
-              <li>
-                <a href="https://learn.microsoft.com/en-us/training/paths/copilot/" target="_blank" rel="noopener">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  Microsoft Learn — Copilot Training Paths
-                </a>
-              </li>
-              <li>
-                <a href="https://github.com/features/copilot" target="_blank" rel="noopener">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                  GitHub Copilot Features Overview
-                </a>
-              </li>
-            </ul>
-          </div>
         </div>
+
       </div>
     </div>
   </div>

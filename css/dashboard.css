@@ -1495,6 +1495,77 @@ tr:hover td { background: var(--bg-translucent); }
   font-weight: 500;
 }
 
+/* Enablement page — section headers */
+.enablement-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.enablement-section-header:not(:first-child) {
+  margin-top: 8px;
+}
+.enablement-section-header svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.enablement-section-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+}
+
+/* Enablement hero card */
+.enablement-hero {
+  background: linear-gradient(135deg, var(--bg-card), rgba(59,130,246,0.10));
+  border: 1px solid rgba(59,130,246,0.25);
+}
+.enablement-hero:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.15), var(--shadow);
+}
+
+/* Enablement alert card (Important Reminders) */
+.enablement-alert-card {
+  border-left: 3px solid var(--warning);
+  background: linear-gradient(135deg, var(--bg-card), rgba(245,158,11,0.04));
+}
+
+/* Button-style guide link */
+.guide-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+}
+.guide-link-btn:hover {
+  background: var(--accent-hover);
+  color: #fff;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+}
+
+/* Session card hover accent */
+.guide-session-card {
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+.guide-session-card:hover {
+  border-left-color: var(--danger);
+}
+
 /* Links list */
 .guide-links-list {
   list-style: none;
@@ -1531,6 +1602,9 @@ tr:hover td { background: var(--bg-translucent); }
   .guide-card-highlight { flex-direction: column; align-items: center; text-align: center; }
   .guide-tabs { gap: 2px; }
   .guide-tab { padding: 8px 14px; font-size: 12px; }
+  .enablement-section-header h3 { font-size: 14px; }
+  .enablement-hero { flex-direction: column; align-items: center; text-align: center; }
+  .guide-link-btn { width: 100%; justify-content: center; }
   .prompt-role-filters { gap: 4px; }
   .prompt-role-pill { padding: 6px 10px; font-size: 11px; }
   .prompt-card { padding: 14px; }
