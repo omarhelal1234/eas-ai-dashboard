@@ -7500,15 +7500,14 @@ async function initSpotlightBanner() {
   try {
   // Remove any previous empty state
   document.querySelectorAll('.spotlight-empty').forEach(el => el.remove());
-  console.log('[Spotlight] v20260416b — initSpotlightBanner called');
+
+  const quarterId = EAS_DB.getSelectedQuarter();
+  let slides = [];
 
   // Check localStorage cache
   const cacheKey = 'eas_banner_selection';
   const cacheDateKey = 'eas_banner_date';
   const today = new Date().toISOString().split('T')[0];
-  const quarterId = EAS_DB.getSelectedQuarter();
-
-  let slides = [];
   const cached = localStorage.getItem(cacheKey);
   const cachedDate = localStorage.getItem(cacheDateKey);
   const cachedQuarter = localStorage.getItem('eas_banner_quarter');
@@ -7518,22 +7517,32 @@ async function initSpotlightBanner() {
   }
 
   if (!slides.length) {
-    // Fetch fresh
-    let candidates = [], config = {};
-    console.log('[Spotlight] Fetching banner data... quarterId=' + quarterId);
-    console.log('[Spotlight] fetchBannerCandidates exists:', typeof EAS_DB.fetchBannerCandidates);
-    console.log('[Spotlight] fetchBannerConfig exists:', typeof EAS_DB.fetchBannerConfig);
-    try {
-      [candidates, config] = await Promise.all([
-        EAS_DB.fetchBannerCandidates(quarterId),
-        EAS_DB.fetchBannerConfig()
-      ]);
-    } catch (err) {
-      console.error('[Spotlight] Fetch error:', err);
-    }
-    console.log('[Spotlight] candidates:', candidates.length, 'config keys:', Object.keys(config));
+    // Fetch directly via Supabase client (bypass EAS_DB to avoid cache-buster issues)
+    const sb = getSupabaseClient();
 
-    // Fallback config if fetch returned empty (RLS timing / auth race)
+    // Fetch candidates
+    let candidateQuery = sb.from('v_banner_candidates').select('*');
+    if (quarterId && quarterId !== 'all') {
+      candidateQuery = candidateQuery.or('quarter_id.eq.' + quarterId + ',quarter_id.is.null');
+    }
+    const { data: rawCandidates, error: cErr } = await candidateQuery;
+    if (cErr) console.error('[Spotlight] candidates error:', cErr.message);
+    const candidates = (rawCandidates || []).sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      if (b.like_count !== a.like_count) return b.like_count - a.like_count;
+      return (b.metric_value || 0) - (a.metric_value || 0);
+    });
+
+    // Fetch config
+    const { data: rawConfig, error: cfgErr } = await sb.from('featured_banner_config').select('*');
+    if (cfgErr) console.error('[Spotlight] config error:', cfgErr.message);
+    const config = {};
+    (rawConfig || []).forEach(r => { config[r.item_type] = { slots: r.slots, is_active: r.is_active }; });
+
+    console.log('[Spotlight] candidates:', candidates.length, 'config:', JSON.stringify(config));
+
+    // Fallback config if fetch returned empty
     const defaultSlots = { task: 3, accomplishment: 3, prompt: 2, use_case: 2 };
 
     // Selection algorithm: per type, take pinned first, then fill remaining slots
@@ -7548,15 +7557,14 @@ async function initSpotlightBanner() {
       const selected = [...pinned.slice(0, maxSlots), ...rest.slice(0, maxSlots - Math.min(pinned.length, maxSlots))];
       slides.push(...selected);
     });
-    console.log('[Spotlight] Selected slides:', slides.length);
 
-    // Only cache if we got real data — avoid caching empty results from transient failures
+    // Only cache if we got real data
     if (slides.length) {
       try {
         localStorage.setItem(cacheKey, JSON.stringify(slides));
         localStorage.setItem(cacheDateKey, today);
         localStorage.setItem('eas_banner_quarter', quarterId);
-      } catch(e) { /* quota exceeded - ignore */ }
+      } catch(e) { /* quota exceeded */ }
     }
   }
 
