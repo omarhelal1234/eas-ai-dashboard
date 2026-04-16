@@ -140,10 +140,6 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     Skills Library
   </div>
-  <div class="nav-item" data-page="guidelines" data-view-key="web.guidelines">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-    Guidelines
-  </div>
   <div class="nav-item" data-page="enablement" data-view-key="web.enablement">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 12 15 15 10"/></svg>
     Copilot Enablement
@@ -705,110 +701,7 @@
     </div>
   </div>
 
-  <!-- Guidelines Page -->
-  <div id="page-guidelines" class="page hidden">
-    <div class="page-header">
-      <div>
-        <h2>Guidelines</h2>
-        <div class="subtitle">Getting started with GitHub Copilot and AI tools at Ejada</div>
-      </div>
-    </div>
-    <div class="page-content">
-      <div class="guide-section" id="guide-guidelines">
-        <div class="guide-grid">
-          <!-- Getting Started card -->
-          <div class="guide-card guide-card-highlight">
-            <div class="guide-card-icon" style="background:rgba(59,130,246,0.15);color:var(--accent)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-            </div>
-            <h4>Getting Started — GitHub Enterprise Login</h4>
-            <p>Access the Ejada GitHub Enterprise portal to begin your AI-powered development journey.</p>
-            <a href="https://github.com/enterprises/ejadasa/" target="_blank" rel="noopener" class="guide-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              Open GitHub Enterprise Portal
-            </a>
-          </div>
-          <!-- Access Types -->
-          <div class="guide-card">
-            <div class="guide-card-icon" style="background:rgba(139,92,246,0.15);color:var(--purple)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <h4>Copilot Access Types</h4>
-            <div class="guide-access-types">
-              <div class="guide-access-card">
-                <span class="guide-access-badge dev">Developer</span>
-                <strong>GitHub Enterprise + GitHub Copilot Business</strong>
-                <p>Full repository access with Copilot code suggestions in IDE (VS Code, IntelliJ, etc.)</p>
-              </div>
-              <div class="guide-access-card">
-                <span class="guide-access-badge nondev">Non-Developer</span>
-                <strong>GitHub Copilot Business Only</strong>
-                <p>Copilot Chat only — no repository access. For PMs, BAs, Architects, Consultants, Designers, Testers, etc.</p>
-              </div>
-            </div>
-          </div>
-          <!-- How to Get Access -->
-          <div class="guide-card">
-            <div class="guide-card-icon" style="background:rgba(16,185,129,0.15);color:var(--success)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            </div>
-            <h4>How to Get Access</h4>
-            <ol class="guide-steps">
-              <li>Prepare a list of resources at <strong>project level</strong> or <strong>department level</strong></li>
-              <li>Raise an <strong>IT ticket</strong> specifying the correct access type (Developer vs Non-Developer)</li>
-              <li>Obtain <strong>Manager Approval</strong> &amp; <strong>Mohamed Al Banna's Approval</strong></li>
-              <li>Once approved, set up your IDE plugin or Copilot Chat</li>
-            </ol>
-          </div>
-          <!-- Important Reminders -->
-          <div class="guide-card">
-            <div class="guide-card-icon" style="background:rgba(245,158,11,0.15);color:var(--warning)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            </div>
-            <h4>Important Reminders</h4>
-            <ul class="guide-reminders">
-              <li>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                <strong>Stop using personally subscribed or Public AI.</strong> All AI usage must go through Ejada-approved enterprise tools.
-              </li>
-              <li>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                <strong>Developers:</strong> Integrate your IDE (VS Code, IntelliJ, etc.) with the GitHub Copilot Plugin.
-              </li>
-              <li>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <strong>Non-Developers:</strong> Use <a href="https://m365.cloud.microsoft/chat" target="_blank" rel="noopener">Microsoft Copilot Chat</a> for everyday AI assistance.
-              </li>
-            </ul>
-          </div>
-          <!-- Copilot for PM/SM -->
-          <div class="guide-card">
-            <div class="guide-card-icon" style="background:rgba(236,72,153,0.15);color:var(--pink)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            </div>
-            <h4>Copilot for PMs &amp; Scrum Masters</h4>
-            <p>Explore how GitHub Copilot can help project managers and scrum masters with planning, documentation, and more.</p>
-            <a href="https://ejadasharepoint.sharepoint.com/:p:/s/CloudCenterofExcellence/IQAvKD6ou_DjQ6ntelOWzS5jAdmKV7RO2WbHIR1OFeIc4bI?e=EVdFDp" target="_blank" rel="noopener" class="guide-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              Open Presentation
-            </a>
-          </div>
-          <!-- Rollout Guide -->
-          <div class="guide-card">
-            <div class="guide-card-icon" style="background:rgba(59,130,246,0.15);color:var(--accent)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            </div>
-            <h4>EAS AI Dashboard — Rollout Guide</h4>
-            <p>Complete rollout presentation covering the EAS AI Adoption Dashboard setup, features walkthrough, and adoption strategy.</p>
-            <a href="../../ReferencesAndGuidance/EAS_AI_Dashboard_Rollout_Guide.pptx" download class="guide-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download Rollout Guide (.pptx)
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- AI News Page -->
   <div id="page-ainews" class="page hidden">
@@ -1014,12 +907,102 @@
     <div class="page-header">
       <div>
         <h2>Copilot Enablement</h2>
-        <div class="subtitle">Official Microsoft training sessions and resources</div>
+        <div class="subtitle">Getting started with GitHub Copilot, AI tools, and official training resources at Ejada</div>
       </div>
     </div>
     <div class="page-content">
       <div class="guide-section" id="guide-enablement">
         <div class="guide-grid">
+          <!-- Getting Started card -->
+          <div class="guide-card guide-card-highlight">
+            <div class="guide-card-icon" style="background:rgba(59,130,246,0.15);color:var(--accent)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            </div>
+            <h4>Getting Started — GitHub Enterprise Login</h4>
+            <p>Access the Ejada GitHub Enterprise portal to begin your AI-powered development journey.</p>
+            <a href="https://github.com/enterprises/ejadasa/" target="_blank" rel="noopener" class="guide-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open GitHub Enterprise Portal
+            </a>
+          </div>
+          <!-- Access Types -->
+          <div class="guide-card">
+            <div class="guide-card-icon" style="background:rgba(139,92,246,0.15);color:var(--purple)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <h4>Copilot Access Types</h4>
+            <div class="guide-access-types">
+              <div class="guide-access-card">
+                <span class="guide-access-badge dev">Developer</span>
+                <strong>GitHub Enterprise + GitHub Copilot Business</strong>
+                <p>Full repository access with Copilot code suggestions in IDE (VS Code, IntelliJ, etc.)</p>
+              </div>
+              <div class="guide-access-card">
+                <span class="guide-access-badge nondev">Non-Developer</span>
+                <strong>GitHub Copilot Business Only</strong>
+                <p>Copilot Chat only — no repository access. For PMs, BAs, Architects, Consultants, Designers, Testers, etc.</p>
+              </div>
+            </div>
+          </div>
+          <!-- How to Get Access -->
+          <div class="guide-card">
+            <div class="guide-card-icon" style="background:rgba(16,185,129,0.15);color:var(--success)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <h4>How to Get Access</h4>
+            <ol class="guide-steps">
+              <li>Prepare a list of resources at <strong>project level</strong> or <strong>department level</strong></li>
+              <li>Raise an <strong>IT ticket</strong> specifying the correct access type (Developer vs Non-Developer)</li>
+              <li>Obtain <strong>Manager Approval</strong> &amp; <strong>Mohamed Al Banna's Approval</strong></li>
+              <li>Once approved, set up your IDE plugin or Copilot Chat</li>
+            </ol>
+          </div>
+          <!-- Important Reminders -->
+          <div class="guide-card">
+            <div class="guide-card-icon" style="background:rgba(245,158,11,0.15);color:var(--warning)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h4>Important Reminders</h4>
+            <ul class="guide-reminders">
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                <strong>Stop using personally subscribed or Public AI.</strong> All AI usage must go through Ejada-approved enterprise tools.
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <strong>Developers:</strong> Integrate your IDE (VS Code, IntelliJ, etc.) with the GitHub Copilot Plugin.
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <strong>Non-Developers:</strong> Use <a href="https://m365.cloud.microsoft/chat" target="_blank" rel="noopener">Microsoft Copilot Chat</a> for everyday AI assistance.
+              </li>
+            </ul>
+          </div>
+          <!-- Copilot for PM/SM -->
+          <div class="guide-card">
+            <div class="guide-card-icon" style="background:rgba(236,72,153,0.15);color:var(--pink)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h4>Copilot for PMs &amp; Scrum Masters</h4>
+            <p>Explore how GitHub Copilot can help project managers and scrum masters with planning, documentation, and more.</p>
+            <a href="https://ejadasharepoint.sharepoint.com/:p:/s/CloudCenterofExcellence/IQAvKD6ou_DjQ6ntelOWzS5jAdmKV7RO2WbHIR1OFeIc4bI?e=EVdFDp" target="_blank" rel="noopener" class="guide-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open Presentation
+            </a>
+          </div>
+          <!-- Rollout Guide -->
+          <div class="guide-card">
+            <div class="guide-card-icon" style="background:rgba(59,130,246,0.15);color:var(--accent)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h4>EAS AI Dashboard — Rollout Guide</h4>
+            <p>Complete rollout presentation covering the EAS AI Adoption Dashboard setup, features walkthrough, and adoption strategy.</p>
+            <a href="../../ReferencesAndGuidance/EAS_AI_Dashboard_Rollout_Guide.pptx" download class="guide-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download Rollout Guide (.pptx)
+            </a>
+          </div>
+          <!-- Training Sessions Header -->
           <div class="guide-card guide-card-highlight">
             <div class="guide-card-icon" style="background:rgba(16,185,129,0.15);color:var(--success)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 12 15 15 10"/></svg>
@@ -1065,6 +1048,20 @@
             <h4>GitHub Copilot for Business — Fundamentals (Session 1)</h4>
             <p>Introduction to GitHub Copilot for Business — setup, licensing, first steps, and getting productive from day one.</p>
             <a href="https://ejadasharepoint.sharepoint.com/:v:/s/CloudCenterofExcellence/IQB2TbE5FmB8SoR3G2RQvfD8AV21jASdzOLuNdmeFIz33CE?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&e=GwEWeC" target="_blank" rel="noopener" class="guide-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Watch Recording
+            </a>
+          </div>
+          <!-- Microsoft 365 Copilot for PMs & Scrum Masters -->
+          <div class="guide-card guide-session-card">
+            <div class="guide-session-meta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>Video Recording</span>
+              <span class="guide-session-date">365 Copilot</span>
+            </div>
+            <h4>Microsoft 365 Copilot for PMs &amp; Scrum Masters</h4>
+            <p>Learn how PMs and Scrum Masters can leverage Microsoft 365 Copilot across Word, Excel, PowerPoint, Teams, and Outlook for planning, reporting, and daily workflows.</p>
+            <a href="https://ejadasharepoint-my.sharepoint.com/:v:/g/personal/oibrahim_ejada_com/IQD244K4cyXqT4T7sXu_E52WAfsE34kRRo8Hoo289ORFBqA?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D&e=Jk2hhu" target="_blank" rel="noopener" class="guide-link">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="5 3 19 12 5 21 5 3"/></svg>
               Watch Recording
             </a>
