@@ -1173,7 +1173,7 @@ const EAS_DB = (() => {
   async function fetchInactiveMembers(practice, daysSince = 14) {
     const { data: users, error } = await sb
       .from('copilot_users')
-      .select('id, name, email, practice, nudged_at, status')
+      .select('id, name, email, practice, nudged_at, status, ide_days_active, ide_last_active_date')
       .eq('practice', practice)
       .eq('status', 'access granted')
       .order('name', { ascending: true });
@@ -1216,11 +1216,22 @@ const EAS_DB = (() => {
     return (users || []).filter(u => {
       const emailKey = (u.email || '').trim().toLowerCase();
       const lastTask = emailKey ? lastTaskByEmail.get(emailKey) : null;
-      if (!lastTask) return true;
-      return new Date(lastTask) < cutoff;
+      // User is active if they have a recent task
+      if (lastTask && new Date(lastTask) >= cutoff) return false;
+      // User is active if they have recent IDE activity
+      if (u.ide_last_active_date) {
+        const ideDate = new Date(u.ide_last_active_date);
+        if (ideDate >= cutoff) return false;
+      }
+      return true;
     }).map(u => {
       const emailKey = (u.email || '').trim().toLowerCase();
       const lastTask = emailKey ? lastTaskByEmail.get(emailKey) : null;
+      const ideActive = u.ide_last_active_date ? new Date(u.ide_last_active_date) : null;
+      // Last activity = most recent of task or IDE
+      const lastActivity = (lastTask && ideActive)
+        ? (new Date(lastTask) > ideActive ? lastTask : u.ide_last_active_date)
+        : (lastTask || u.ide_last_active_date || null);
       return {
         id:           u.id,
         name:         u.name,
@@ -1228,10 +1239,16 @@ const EAS_DB = (() => {
         practice:     u.practice,
         hasLoggedTask: Boolean(lastTask),
         lastTaskDate: lastTask || null,
+        lastActivity: lastActivity,
+        ideDaysActive: Number(u.ide_days_active) || 0,
+        ideLastActive: u.ide_last_active_date || null,
         nudgedAt:     u.nudged_at,
         status:       u.status,
         daysSinceTask: lastTask
           ? Math.floor((Date.now() - new Date(lastTask).getTime()) / 86400000)
+          : null,
+        daysSinceActivity: lastActivity
+          ? Math.floor((Date.now() - new Date(lastActivity).getTime()) / 86400000)
           : null
       };
     });

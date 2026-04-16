@@ -561,7 +561,7 @@
         </div>
         <div style="overflow-x:auto">
           <table aria-label="Inactive members">
-            <thead><tr><th>Name</th><th>Email</th><th>Last Task</th><th>Days Inactive</th><th>Last Nudged</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Last Activity</th><th>Days Inactive</th><th>Last Nudged</th><th>Actions</th></tr></thead>
             <tbody id="mypractice-inactive-tbody"></tbody>
           </table>
         </div>
@@ -3304,12 +3304,14 @@ async function renderMyPractice() {
   document.getElementById('mypractice-inactive-tbody').innerHTML = inactive.length === 0
     ? '<tr><td colspan="6" style="text-align:center;color:var(--success);padding:20px">All team members are active!</td></tr>'
     : inactive.map(u => {
-      const days = u.daysSinceTask !== null ? `${u.daysSinceTask} days` : 'Never logged';
+      const days = u.daysSinceActivity !== null ? `${u.daysSinceActivity} days` : 'Never';
       const lastNudged = u.nudgedAt ? new Date(u.nudgedAt).toLocaleDateString() : 'Never';
+      const lastAct = u.lastActivity ? new Date(u.lastActivity).toLocaleDateString() : 'Never';
+      const ideTag = u.ideDaysActive > 0 ? ` <span style="font-size:11px;color:var(--text-muted)" title="IDE active ${u.ideDaysActive} days">(IDE: ${u.ideDaysActive}d)</span>` : '';
       return `<tr>
-        <td style="font-weight:600">${u.name}</td>
+        <td style="font-weight:600">${u.name}${ideTag}</td>
         <td style="color:var(--text-muted)">${u.email}</td>
-        <td>${u.lastTaskDate ? new Date(u.lastTaskDate).toLocaleDateString() : 'Never'}</td>
+        <td>${lastAct}</td>
         <td style="color:var(--warning);font-weight:600">${days}</td>
         <td style="color:var(--text-muted)">${lastNudged}</td>
         <td><button class="btn btn-secondary" style="font-size:12px;padding:4px 12px" onclick="nudgeInactive('${u.id}','${u.name}')">Nudge</button></td>

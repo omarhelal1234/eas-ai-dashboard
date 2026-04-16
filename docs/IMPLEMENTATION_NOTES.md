@@ -6,6 +6,40 @@
 
 ## Changes Made
 
+### 0ac. April 17, 2026 — Fix Inaccurate Practice Summary for SPOCs
+
+**Problems identified:**
+
+1. **`licensed_users` counted ALL copilot_users** — not filtered by `status = 'access granted'`. E.g., BFSI showed 59 but should be 57; EPS showed 6 but should be 0 (all pending).
+2. **`active_users` relied on stale `has_logged_task` boolean** — 9 users had `has_logged_task = true` but zero tasks in the DB (flag was set during Excel import but never synced). GRC showed 2 active but really 0.
+3. **"Active" definition was task-only** — users with IDE activity (`ide_days_active > 0`, recent `ide_last_active_date`) but no platform task submissions were classified as inactive. E.g., BFSI had 10+ users using Copilot in IDE but marked inactive.
+4. **`fetchInactiveMembers` used task-only logic** — same as above; the inactive members table showed IDE-active users as needing attention.
+
+**Fixes applied:**
+
+- **`get_practice_summary` RPC** — `licensed_users` now `WHERE lower(status) = 'access granted'`; `active_users` now `WHERE (EXISTS tasks OR ide_days_active > 0)`.
+- **`practice_summary` view** — dropped and recreated with same logic.
+- **`get_executive_summary` RPC** — `copilot_adoption.active_users` now uses same tasks+IDE logic instead of `has_logged_task`.
+- **Data fix** — set `has_logged_task = false` for 9 users with stale true flag (no tasks in DB).
+- **`fetchInactiveMembers` in `db.js`** — now fetches `ide_days_active` and `ide_last_active_date`; considers a user active if they have a recent task OR recent IDE activity within the cutoff period. Returns `lastActivity`, `ideDaysActive`, `ideLastActive`, `daysSinceActivity`.
+- **Inactive table UI in `index.html`** — header changed from "Last Task" to "Last Activity"; shows IDE days badge next to name; uses `daysSinceActivity` (max of task date and IDE date) for inactive duration.
+- **`001_schema.sql`** — updated practice_summary view definition to match live DB.
+
+**Before → After counts:**
+
+| Practice | Licensed (old→new) | Active (old→new) |
+|---|---|---|
+| BFSI | 59→57 | 9→15 |
+| CES | 13→13 | 3→2 |
+| EPCS | 11→9 | 3→6 |
+| EPS | 6→0 | 0→0 |
+| ERP Solutions | 86→85 | 22→23 |
+| GRC | 4→4 | 2→0 |
+
+**Migrations:** `fix_practice_summary_accurate_counts`, `fix_active_users_include_ide_activity`, `fix_executive_summary_active_users`.
+
+---
+
 ### 0ab. April 17, 2026 — Fix Accomplishment Approval Workflow (Mandatory SPOC + Admin)
 
 **Problem:** Accomplishments shared the same approval routing as tasks, which meant accomplishments with < 5 saved hours were auto-approved. The business requirement is that accomplishments must **always** be reviewed by both SPOC and Admin — no auto-approval regardless of hours. Additionally, when a SPOC approved an accomplishment, it would be marked as fully approved instead of advancing to admin review.
