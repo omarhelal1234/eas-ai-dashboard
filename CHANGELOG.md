@@ -10,7 +10,7 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
-- 2026-04-16 (copilot) — **Admin Override: Approve Any Task** — Admin can now approve tasks at any approval stage (including `spoc_review`) directly, bypassing the normal SPOC→Admin flow. The state machine in `approveSubmission()` checks `userRole === 'admin'` first and sets `nextStatus = 'approved'` immediately. No UI changes needed — admin already sees all pending tasks. (feat/approval)
+- 2026-04-16 (copilot) — **Admin Override: Approve Any Task** — Admin can now approve tasks at any approval stage (including `spoc_review`) directly, bypassing the normal SPOC→Admin flow. The state machine in `approveSubmission()` checks `userRole === 'admin'` first and sets `nextStatus = 'approved'` immediately. Dashboard `index.html` now shows Approve/Reject buttons inline for admin on all pending items, and the detail modal `canAct` check allows admin to act on any pending status. (feat/approval)
 
 - 2026-04-16 (copilot) — **Team Lead Role** — New `team_lead` role allowing SPOCs to delegate scoped SPOC-like capabilities to practice contributors. Team leads see only their assigned members' tasks, approvals, and data. Includes: SQL migration `020_team_lead_role.sql` (table `team_lead_assignments`, RLS policies, helper functions), `auth.js` (`isTeamLead()`), `db.js` (team lead CRUD + approval scoping), `index.html` (sidebar visibility, My Practice scoping, approval access, Team Lead Management UI/modal for SPOCs, export updates), `admin.html` (role dropdowns, cleanup on role change). (feat/roles+db+ui)
 

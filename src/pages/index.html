@@ -2982,7 +2982,16 @@ async function renderApprovals() {
           <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)" title="${a.submission_description || ''}">${a.submission_description || '-'}</td>
           <td><span class="status-badge ${statusBadgeClass}">${statusLabel}</span></td>
           <td>${layerLabel}</td>
-          <td><button class="btn btn-xs btn-secondary" onclick="viewApprovalDetail('${a.id}')">View</button></td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-xs btn-secondary" onclick="viewApprovalDetail('${a.id}')">View</button>
+            ${!['approved','rejected'].includes(a.approval_status) && (
+              (userRole === 'admin') ||
+              ((userRole === 'spoc' || userRole === 'team_lead') && a.approval_status === 'spoc_review' && a.practice === userPractice)
+            ) ? `
+              <button class="btn btn-xs" style="background:var(--success);color:#fff;margin-left:4px" onclick="handleApprovalAction('${a.id}','approve')">Approve</button>
+              <button class="btn btn-xs" style="background:var(--danger);color:#fff;margin-left:4px" onclick="promptRejectApproval('${a.id}')">Reject</button>
+            ` : ''}
+          </td>
         </tr>
       `;
     }).join('');
@@ -3079,11 +3088,11 @@ async function viewApprovalDetail(approvalId) {
     document.getElementById('approval-detail-title').textContent = `${approval.submission_type === 'task' ? 'Task' : 'Accomplishment'} Submission Detail`;
     document.getElementById('approval-detail-body').innerHTML = detailRows;
 
-    // Show approve/reject actions ONLY for items at the user's approval layer
-    // Admin can only act on admin_review items (not ai_review or spoc_review)
+    // Show approve/reject actions for items the user can act on
+    // Admin can act on ANY pending status (override capability)
     // SPOC can only act on spoc_review items for their practice
     const canAct = isPending && (
-      (userRole === 'admin' && approval.approval_status === 'admin_review') ||
+      (userRole === 'admin') ||
       (userRole === 'spoc' && approval.approval_status === 'spoc_review' && approval.practice === EAS_Auth.getUserPractice()) ||
       (userRole === 'team_lead' && approval.approval_status === 'spoc_review' && approval.practice === EAS_Auth.getUserPractice())
     );
@@ -3158,6 +3167,18 @@ async function handleApprovalAction(approvalId, action) {
     console.error('handleApprovalAction error:', err);
     showToast('Error: ' + err.message, 'error');
     document.querySelectorAll('#approval-detail-actions .btn').forEach(b => b.disabled = false);
+  }
+}
+
+function promptRejectApproval(approvalId) {
+  const reason = prompt('Enter rejection reason:');
+  if (reason !== null && reason.trim()) {
+    EAS_DB.rejectSubmission(approvalId, reason).then(result => {
+      if (result) { showToast('Submission rejected', 'warning'); renderApprovals(); }
+      else { showToast('Failed to reject submission', 'error'); }
+    }).catch(err => showToast('Error: ' + err.message, 'error'));
+  } else if (reason !== null) {
+    showToast('Please provide a reason for rejection', 'error');
   }
 }
 
