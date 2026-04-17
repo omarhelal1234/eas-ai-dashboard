@@ -724,60 +724,50 @@
     <div class="page-header">
       <div>
         <h2>AI News</h2>
-        <div class="subtitle">Stay up to date with the latest AI developments</div>
+        <div class="subtitle">Stay up to date with the latest AI developments &bull; <span id="ainews-last-updated" style="color:var(--text-muted)">Loading...</span></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="ainews-refresh-btn" id="ainews-refresh-btn" data-role="admin" onclick="handleAiNewsRefresh()" title="Manually refresh news feed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh Now
+        </button>
       </div>
     </div>
     <div class="page-content">
-      <div class="guide-section" id="guide-ainews">
-        <div class="guide-grid">
-          <div class="guide-card guide-card-highlight">
-            <div class="guide-card-icon" style="background:rgba(6,182,212,0.15);color:var(--info)">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            <h4>Latest AI Developments</h4>
-            <p>Stay up to date with the most impactful AI news and updates relevant to enterprise development.</p>
-          </div>
-          <div class="guide-card">
-            <div class="guide-news-item">
-              <span class="guide-news-date">2026</span>
-              <h4>GitHub Copilot Workspace</h4>
-              <p>GitHub's AI-native development environment now generally available — plan, build, test, and run code with natural language.</p>
-              <a href="https://github.blog/news-insights/product-news/" target="_blank" rel="noopener" class="guide-link">Read on GitHub Blog</a>
-            </div>
-          </div>
-          <div class="guide-card">
-            <div class="guide-news-item">
-              <span class="guide-news-date">2026</span>
-              <h4>Microsoft Copilot for Microsoft 365</h4>
-              <p>Enterprise-grade AI embedded into Word, Excel, PowerPoint, Teams, and Outlook — transforming daily productivity for non-developers.</p>
-              <a href="https://adoption.microsoft.com/en-us/copilot/" target="_blank" rel="noopener" class="guide-link">Microsoft Copilot Adoption Hub</a>
-            </div>
-          </div>
-          <div class="guide-card">
-            <div class="guide-news-item">
-              <span class="guide-news-date">2026</span>
-              <h4>GitHub Copilot Extensions</h4>
-              <p>Extend Copilot's capabilities with third-party tools and custom agents directly within your IDE and GitHub.com.</p>
-              <a href="https://github.com/features/copilot/extensions" target="_blank" rel="noopener" class="guide-link">Explore Extensions</a>
-            </div>
-          </div>
-          <div class="guide-card">
-            <div class="guide-news-item">
-              <span class="guide-news-date">2025</span>
-              <h4>AI Code Generation — Industry Trends</h4>
-              <p>Studies show 55% productivity boost with AI pair programming. Enterprise adoption continues to accelerate across Saudi Arabia and globally.</p>
-              <a href="https://github.blog/news-insights/research/" target="_blank" rel="noopener" class="guide-link">GitHub Research</a>
-            </div>
-          </div>
-          <div class="guide-card">
-            <div class="guide-news-item">
-              <span class="guide-news-date">2025</span>
-              <h4>Responsible AI in Enterprise</h4>
-              <p>Microsoft's framework for building trustworthy AI systems — fairness, reliability, safety, privacy, inclusiveness, transparency, and accountability.</p>
-              <a href="https://www.microsoft.com/en-us/ai/responsible-ai" target="_blank" rel="noopener" class="guide-link">Microsoft Responsible AI</a>
-            </div>
-          </div>
+      <div class="ainews-filters">
+        <div class="ainews-topic-pills" id="ainews-topic-pills">
+          <button class="ainews-pill active" data-topic="all" onclick="filterAiNews('topic', 'all')">All</button>
+          <button class="ainews-pill" data-topic="new_model" onclick="filterAiNews('topic', 'new_model')">New Models</button>
+          <button class="ainews-pill" data-topic="new_skill" onclick="filterAiNews('topic', 'new_skill')">New Skills</button>
+          <button class="ainews-pill" data-topic="api_update" onclick="filterAiNews('topic', 'api_update')">API Updates</button>
+          <button class="ainews-pill" data-topic="research" onclick="filterAiNews('topic', 'research')">Research</button>
+          <button class="ainews-pill" data-topic="enterprise" onclick="filterAiNews('topic', 'enterprise')">Enterprise</button>
+          <button class="ainews-pill" data-topic="industry" onclick="filterAiNews('topic', 'industry')">Industry</button>
         </div>
+        <div class="ainews-source-row" id="ainews-source-row">
+          <span class="ainews-source-label">Sources:</span>
+          <button class="ainews-source-badge" data-source="anthropic" style="background:rgba(217,119,6,0.12);color:#fbbf24;border-color:rgba(217,119,6,0.25)" onclick="toggleAiNewsSource('anthropic')">Anthropic</button>
+          <button class="ainews-source-badge" data-source="openai" style="background:rgba(16,185,129,0.12);color:#34d399;border-color:rgba(16,185,129,0.25)" onclick="toggleAiNewsSource('openai')">OpenAI</button>
+          <button class="ainews-source-badge" data-source="google" style="background:rgba(59,130,246,0.12);color:#60a5fa;border-color:rgba(59,130,246,0.25)" onclick="toggleAiNewsSource('google')">Google</button>
+          <button class="ainews-source-badge" data-source="github" style="background:rgba(168,85,247,0.12);color:#c084fc;border-color:rgba(168,85,247,0.25)" onclick="toggleAiNewsSource('github')">GitHub</button>
+          <button class="ainews-source-badge" data-source="microsoft" style="background:rgba(6,182,212,0.12);color:#22d3ee;border-color:rgba(6,182,212,0.25)" onclick="toggleAiNewsSource('microsoft')">Microsoft</button>
+          <button class="ainews-source-badge" data-source="huggingface" style="background:rgba(251,146,60,0.12);color:#fb923c;border-color:rgba(251,146,60,0.25)" onclick="toggleAiNewsSource('huggingface')">Hugging Face</button>
+          <button class="ainews-source-badge" data-source="verge" style="background:rgba(244,63,94,0.12);color:#fb7185;border-color:rgba(244,63,94,0.25)" onclick="toggleAiNewsSource('verge')">The Verge</button>
+          <button class="ainews-source-badge" data-source="techcrunch" style="background:rgba(34,197,94,0.12);color:#4ade80;border-color:rgba(34,197,94,0.25)" onclick="toggleAiNewsSource('techcrunch')">TechCrunch</button>
+          <button class="ainews-source-badge" data-source="skills_sh" style="background:rgba(139,92,246,0.12);color:#a78bfa;border-color:rgba(139,92,246,0.25)" onclick="toggleAiNewsSource('skills_sh')">skills.sh</button>
+        </div>
+      </div>
+      <div class="ainews-results-bar">
+        <span id="ainews-result-count"></span>
+      </div>
+      <div class="ainews-feed" id="ainews-feed"></div>
+      <div class="ainews-load-more" id="ainews-load-more" style="display:none">
+        <button class="ainews-load-more-btn" onclick="loadMoreAiNews()">Load More (<span id="ainews-remaining">0</span> remaining)</button>
+      </div>
+      <div class="ainews-empty" id="ainews-empty" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        <h4>No news articles yet</h4>
+        <p>News will appear here after the daily feed refresh runs.</p>
       </div>
     </div>
   </div>
@@ -2220,6 +2210,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
     if (item.dataset.page === 'prompts') loadPromptLibrary();
     if (item.dataset.page === 'exec-summary') renderExecSummary();
     if (item.dataset.page === 'ide-usage') renderIDEUsage();
+    if (item.dataset.page === 'ainews') renderAiNews();
   });
 });
 
@@ -4647,6 +4638,190 @@ function updatePromptCounts() {
     const countEl = section.querySelector('.prompt-count');
     if (countEl) countEl.textContent = count + ' prompt' + (count !== 1 ? 's' : '');
   });
+}
+
+// ======== AI NEWS FEED ========
+
+const _aiNewsState = {
+  items: [],
+  total: 0,
+  offset: 0,
+  limit: 20,
+  activeTopic: 'all',
+  excludedSources: new Set(),
+  loaded: false,
+};
+
+const AI_NEWS_SOURCE_NAMES = {
+  anthropic: 'Anthropic', openai: 'OpenAI', google: 'Google',
+  github: 'GitHub', microsoft: 'Microsoft', huggingface: 'Hugging Face',
+  verge: 'The Verge', techcrunch: 'TechCrunch', skills_sh: 'skills.sh',
+};
+
+const AI_NEWS_SOURCE_COLORS = {
+  anthropic:   { bg: 'rgba(217,119,6,0.15)',  text: '#fbbf24' },
+  openai:      { bg: 'rgba(16,185,129,0.15)', text: '#34d399' },
+  google:      { bg: 'rgba(59,130,246,0.15)', text: '#60a5fa' },
+  github:      { bg: 'rgba(168,85,247,0.15)', text: '#c084fc' },
+  microsoft:   { bg: 'rgba(6,182,212,0.15)',  text: '#22d3ee' },
+  huggingface: { bg: 'rgba(251,146,60,0.15)', text: '#fb923c' },
+  verge:       { bg: 'rgba(244,63,94,0.15)',  text: '#fb7185' },
+  techcrunch:  { bg: 'rgba(34,197,94,0.15)',  text: '#4ade80' },
+  skills_sh:   { bg: 'rgba(139,92,246,0.15)', text: '#a78bfa' },
+};
+
+const AI_NEWS_TOPIC_COLORS = {
+  new_model:  { bg: 'rgba(59,130,246,0.15)',  text: '#60a5fa' },
+  new_skill:  { bg: 'rgba(34,197,94,0.15)',   text: '#4ade80' },
+  api_update: { bg: 'rgba(6,182,212,0.15)',   text: '#22d3ee' },
+  research:   { bg: 'rgba(251,146,60,0.15)',  text: '#fb923c' },
+  enterprise: { bg: 'rgba(168,85,247,0.15)',  text: '#c084fc' },
+  industry:   { bg: 'rgba(244,63,94,0.15)',   text: '#fb7185' },
+};
+
+const AI_NEWS_TOPIC_LABELS = {
+  new_model: 'New Model', new_skill: 'New Skill', api_update: 'API Update',
+  research: 'Research', enterprise: 'Enterprise', industry: 'Industry',
+};
+
+function timeAgo(dateStr) {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60)    return 'just now';
+  if (seconds < 3600)  return Math.floor(seconds / 60) + 'm ago';
+  if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+  const days = Math.floor(seconds / 86400);
+  if (days === 1) return '1 day ago';
+  if (days < 30) return days + ' days ago';
+  return new Date(dateStr).toLocaleDateString();
+}
+
+async function renderAiNews() {
+  const feed = document.getElementById('ainews-feed');
+  const empty = document.getElementById('ainews-empty');
+  const loadMore = document.getElementById('ainews-load-more');
+
+  _aiNewsState.offset = 0;
+  _aiNewsState.items = [];
+
+  feed.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 12px"></div>Loading news...</div>';
+  empty.style.display = 'none';
+  loadMore.style.display = 'none';
+
+  const queryOpts = { limit: _aiNewsState.limit, offset: 0 };
+  if (_aiNewsState.activeTopic !== 'all') queryOpts.topic = _aiNewsState.activeTopic;
+
+  const { items, total } = await EAS_DB.fetchAiNews(queryOpts);
+  _aiNewsState.items = items;
+  _aiNewsState.total = total;
+  _aiNewsState.offset = items.length;
+  _aiNewsState.loaded = true;
+
+  const lastUpdated = await EAS_DB.getAiNewsLastUpdated();
+  const el = document.getElementById('ainews-last-updated');
+  el.textContent = lastUpdated ? 'Last updated: ' + timeAgo(lastUpdated) : 'Not yet refreshed';
+
+  renderAiNewsCards();
+}
+
+function renderAiNewsCards() {
+  const feed = document.getElementById('ainews-feed');
+  const empty = document.getElementById('ainews-empty');
+  const loadMore = document.getElementById('ainews-load-more');
+
+  const filtered = _aiNewsState.items.filter(i => !_aiNewsState.excludedSources.has(i.source));
+
+  if (filtered.length === 0) {
+    feed.innerHTML = '';
+    empty.style.display = 'block';
+    loadMore.style.display = 'none';
+    document.getElementById('ainews-result-count').textContent = '0 articles';
+    return;
+  }
+
+  empty.style.display = 'none';
+  document.getElementById('ainews-result-count').textContent =
+    `${_aiNewsState.total} article${_aiNewsState.total !== 1 ? 's' : ''}`;
+
+  feed.innerHTML = filtered.map((item, idx) => {
+    const srcColor = AI_NEWS_SOURCE_COLORS[item.source] || { bg: 'rgba(255,255,255,0.08)', text: '#94a3b8' };
+    const topicColor = AI_NEWS_TOPIC_COLORS[item.topic] || { bg: 'rgba(255,255,255,0.08)', text: '#94a3b8' };
+    const isFeatured = idx === 0;
+    const srcName = AI_NEWS_SOURCE_NAMES[item.source] || item.source;
+    const topicLabel = AI_NEWS_TOPIC_LABELS[item.topic] || item.topic;
+    const linkLabel = `Read on ${srcName} &rarr;`;
+
+    return `<div class="ainews-card${isFeatured ? ' ainews-card-featured' : ''}">
+      <div class="ainews-card-meta">
+        <span class="ainews-badge" style="background:${srcColor.bg};color:${srcColor.text}">${DOMPurify.sanitize(srcName)}</span>
+        <span class="ainews-badge" style="background:${topicColor.bg};color:${topicColor.text}">${DOMPurify.sanitize(topicLabel)}</span>
+        <span class="ainews-card-time">${timeAgo(item.published_at)}</span>
+      </div>
+      <div class="ainews-card-title">${DOMPurify.sanitize(item.title)}</div>
+      ${item.summary ? `<div class="ainews-card-summary">${DOMPurify.sanitize(item.summary)}</div>` : ''}
+      <a href="${DOMPurify.sanitize(item.url)}" target="_blank" rel="noopener" class="ainews-card-link">${linkLabel}</a>
+    </div>`;
+  }).join('');
+
+  const remaining = _aiNewsState.total - _aiNewsState.offset;
+  if (remaining > 0) {
+    loadMore.style.display = 'block';
+    document.getElementById('ainews-remaining').textContent = remaining;
+  } else {
+    loadMore.style.display = 'none';
+  }
+}
+
+async function loadMoreAiNews() {
+  const queryOpts = {
+    limit: _aiNewsState.limit,
+    offset: _aiNewsState.offset,
+  };
+  if (_aiNewsState.activeTopic !== 'all') queryOpts.topic = _aiNewsState.activeTopic;
+
+  const { items } = await EAS_DB.fetchAiNews(queryOpts);
+  _aiNewsState.items.push(...items);
+  _aiNewsState.offset += items.length;
+
+  renderAiNewsCards();
+}
+
+function filterAiNews(type, value) {
+  if (type === 'topic') {
+    _aiNewsState.activeTopic = value;
+    document.querySelectorAll('#ainews-topic-pills .ainews-pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.topic === value);
+    });
+    renderAiNews();
+  }
+}
+
+function toggleAiNewsSource(source) {
+  const badge = document.querySelector(`.ainews-source-badge[data-source="${source}"]`);
+  if (_aiNewsState.excludedSources.has(source)) {
+    _aiNewsState.excludedSources.delete(source);
+    badge.classList.remove('dimmed');
+  } else {
+    _aiNewsState.excludedSources.add(source);
+    badge.classList.add('dimmed');
+  }
+  renderAiNewsCards();
+}
+
+async function handleAiNewsRefresh() {
+  const btn = document.getElementById('ainews-refresh-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;margin:0"></div> Refreshing...';
+
+  try {
+    const result = await EAS_DB.triggerAiNewsRefresh();
+    showToast(`News refreshed: ${result.inserted} new articles`);
+    await renderAiNews();
+  } catch (err) {
+    showToast('Refresh failed: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Refresh Now';
+  }
 }
 
 // ======== MODALS ========
