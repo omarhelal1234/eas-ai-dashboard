@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>My Task Status - EAS AI Dashboard</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-weight='bold' fill='%233b82f6'>E</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -38,7 +38,9 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 20px;
+  padding: 20px env(safe-area-inset-right, 20px) 20px env(safe-area-inset-left, 20px);
 }
 
 .container {
@@ -388,6 +390,13 @@ tbody tr:hover {
   th, td {
     padding: 10px 12px;
   }
+}
+
+/* iPhone landscape */
+@media (max-height: 500px) and (orientation: landscape) {
+  .header { padding: 12px 20px; gap: 8px; }
+  .stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  .container { padding: 0 calc(16px + env(safe-area-inset-left, 0px)) 0 calc(16px + env(safe-area-inset-right, 0px)); }
 }
 </style>
 </head>

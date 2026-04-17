@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Sign Up — EAS AI Adoption Tracker</title>
 <script>if(localStorage.getItem('eas-theme')==='light')document.documentElement.setAttribute('data-theme','light')</script>
 <link rel="stylesheet" href="../../css/variables.css">
@@ -18,10 +18,12 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  padding: 20px env(safe-area-inset-right, 20px) 20px env(safe-area-inset-left, 20px);
 }
 
 .signup-container {
@@ -381,6 +383,17 @@ body {
   .signup-card { padding: 24px 20px; }
   .form-row { grid-template-columns: 1fr; }
   .copilot-toggle { flex-direction: column; }
+}
+
+/* iPhone landscape — compact signup */
+@media (max-height: 500px) and (orientation: landscape) {
+  body { align-items: flex-start; padding-top: 12px; }
+  .signup-brand { margin-bottom: 12px; }
+  .signup-brand .logo-icon { width: 36px; height: 36px; border-radius: 8px; margin-bottom: 8px; }
+  .signup-card { padding: 16px 20px; }
+  .form-group { margin-bottom: 8px; }
+  .form-group input, .form-group select { padding: 8px 10px; font-size: 13px; }
+  .form-row { grid-template-columns: 1fr 1fr; gap: 8px; }
 }
 </style>
 </head>
