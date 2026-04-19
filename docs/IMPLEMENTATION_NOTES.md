@@ -801,6 +801,16 @@ Any layer reject → rejected
 - **Trade-off:** Kept old hardcoded HTML inside a `<template>` tag (hidden, not rendered) as a reference fallback; can be removed after validation.
 - **Escape:** `escapeHtml()` function used when rendering prompt text to prevent XSS.
 
+## 2026-04-20 — Practice-Scoped Views for SPOC and Team Lead
+
+**Change:** Tasks, Licensed AI Users, and Projects views in `index.html` now automatically filter to the user's own practice (SPOC) or assigned team members (team_lead). Practice filter dropdowns are locked (disabled) for both roles.
+
+**Approach:** Filter at render time. `_tlMemberEmails` (module-level array) is pre-fetched at init via `EAS_DB.fetchTeamLeadMemberEmails()` for team_lead users, so all three render functions stay synchronous. SPOC uses `EAS_Auth.getUserPractice()` directly.
+
+**Why not filter at data load:** Destructive — would lose cross-practice data from `data` object, breaking admin views and quarter-change refreshes.
+
+**Scope:** `src/pages/index.html` only. DB RLS write restrictions for SPOCs were already in place (no change needed there).
+
 ### 0. April 12, 2026 — Approvals UI Fix
 
 - Added `getUserId()` to the auth module to support approvals queries without runtime errors.
