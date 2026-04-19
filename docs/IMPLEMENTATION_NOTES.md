@@ -6,6 +6,47 @@
 
 ## Changes Made
 
+### 0ag. April 19, 2026 — Fix: Batch Recover 12 Incomplete Signup Profiles
+
+**Problem discovered:**
+After deploying signup_contributor RPC (fix 0ae), we discovered a systemic issue: 12 users had successfully created auth accounts but their profiles (users + copilot_users rows) were never created:
+- rsadek, smagdy, bhegazy, mmabdallah, salmatrafi, asgomaa, magaber, abelllah, y.akl, aallhidan, m.habashy, aelahi
+- All created auth accounts and logged in successfully
+- But login failed with "Account not found in the system" because profiles didn't exist
+
+**Root cause:**
+These accounts were created before signup_contributor RPC was deployed. They went through the signup flow, auth account was created, but the profile creation step (RPC call) either failed silently or the RPC didn't exist yet.
+
+**Fixes applied:**
+
+1. **Created `recover_incomplete_profile()` function** — Admin recovery function that:
+   - Takes: email, practice, has_copilot flag
+   - Looks up auth account by email
+   - Checks if profile already exists
+   - Calls signup_contributor to create profile with minimal data
+   - Returns success/error JSONB response
+
+2. **Batch recovered all 12 accounts** — Called recover_incomplete_profile for each account:
+   - Practice: defaulted to 'EPCS' (common practice)
+   - Status: 'pending' (no copilot access initially)
+   - Name: derived from email prefix (rsadek → rsadek, etc.)
+   - All 12 accounts now have complete profiles and can login successfully
+
+3. **Improved login error handling** — Updated login.html error message:
+   - Shows the user's email address
+   - Guides them to contact SPOC or admin (eas@ejada.com)
+   - Added console logging for RPC errors
+   - Distinguishes between data-missing errors vs RPC errors
+
+**Prevention:**
+- Added recover_incomplete_profile() function for future manual recovery
+- Improved login error messages to catch similar issues earlier
+- Next: consider adding a startup check to detect and auto-fix incomplete profiles
+
+**Testing:** All 12 recovered accounts can now login successfully.
+
+---
+
 ### 0af. April 19, 2026 — Fix: Profile Completion from Auth Metadata on Login
 
 **Problem:**

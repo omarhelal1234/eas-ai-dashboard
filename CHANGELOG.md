@@ -10,6 +10,8 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-19 (claude) — **Fix: Batch recover 12 incomplete signup profiles** — Discovered systemic issue where 12 users signed up but profiles were never created (auth account exists, users/copilot_users empty). This occurred because signup_contributor RPC didn't exist before April 19. Created recover_incomplete_profile() function and batch-recovered all 12 accounts (rsadek, smagdy, bhegazy, mmabdallah, salmatrafi, asgomaa, magaber, abelllah, y.akl, aallhidan, m.habashy, aelahi). All defaulted to EPCS practice, pending status (no copilot). Improved login error message to show user's email and guide them to contact SPOC/admin. (fix/auth+db+batch-recovery)
+
 - 2026-04-19 (claude) — **Fix: Enable profile completion on login from auth metadata** — When newly signed-up users cleared browser cache or logged in from a different device, the localStorage `eas_pending_signup` was no longer available. Login page would fail with "Account not found in the system". Updated login.html to fallback to extracting signup data from `auth.user.user_metadata` (which contains full_name, practice, skill, has_copilot stored during signup). Now profile is completed automatically from metadata when no localStorage data exists. Fixes backlog access for confirmed users. (fix/auth+login)
 
 - 2026-04-19 (claude) — **Fix IDE data period banner** — Banner now shows the unified date range of the latest sync batch only (collapsing per-user period strings to a single "Mar 2026 to Apr 2026" label), instead of concatenating all historical periods from every past sync. (fix/ide-ui)
