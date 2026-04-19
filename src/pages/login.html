@@ -374,24 +374,47 @@ body {
 
       if (profileErr || !userProfile) {
         // Check if there's a pending signup that needs profile completion
+        let signupData = null;
+        
+        // 1. First, try to get data from localStorage (email confirmation flow)
         const pending = localStorage.getItem('eas_pending_signup');
         if (pending) {
           try {
-            const p = JSON.parse(pending);
+            signupData = JSON.parse(pending);
+          } catch (_) { /* invalid JSON */ }
+        }
+        
+        // 2. If no pending data, try to get from auth user_metadata (auto-confirm flow)
+        if (!signupData && data.user.user_metadata) {
+          const meta = data.user.user_metadata;
+          if (meta.full_name && meta.practice) {
+            signupData = {
+              name: meta.full_name,
+              email: data.user.email,
+              practice: meta.practice,
+              skill: meta.skill || '',
+              has_copilot: meta.has_copilot === true
+            };
+          }
+        }
+        
+        // 3. If we have signup data from either source, complete the profile
+        if (signupData) {
+          try {
             const { data: rpcResult, error: rpcErr } = await sb.rpc('signup_contributor', {
               p_auth_id:     data.user.id,
-              p_name:        p.name,
-              p_email:       p.email,
-              p_practice:    p.practice,
-              p_skill:       p.skill,
-              p_has_copilot: p.has_copilot
+              p_name:        signupData.name,
+              p_email:       signupData.email,
+              p_practice:    signupData.practice,
+              p_skill:       signupData.skill,
+              p_has_copilot: signupData.has_copilot
             });
 
             if (!rpcErr && rpcResult && rpcResult.success) {
               localStorage.removeItem('eas_pending_signup');
               localStorage.setItem('eas_user_profile', JSON.stringify({
-                id: rpcResult.user_id, name: p.name, email: p.email,
-                role: 'contributor', practice: p.practice, is_active: true
+                id: rpcResult.user_id, name: signupData.name, email: signupData.email,
+                role: 'contributor', practice: signupData.practice, is_active: true
               }));
               window.location.href = 'index.html';
               return;
