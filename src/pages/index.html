@@ -351,6 +351,9 @@
         <div style="overflow-x:auto">
           <table aria-label="Task log">
             <thead>
+              <tr>
+                <th>Practice</th>
+                <th>Week</th>
                 <th>Project</th>
                 <th>Employee</th>
                 <th>Task</th>
@@ -409,7 +412,7 @@
     <div class="page-header">
       <div>
         <h2>Licensed AI Tool Access</h2>
-        <div class="subtitle">GitHub Copilot & M365 Copilot user access management across practices</div>
+        <div class="subtitle">GitHub Copilot user access management and IDE telemetry across practices</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="btn btn-secondary" onclick="openExportModal('copilot')" aria-label="Export copilot users">
@@ -434,7 +437,7 @@
         </div>
         <div style="overflow-x:auto">
           <table aria-label="Copilot users">
-            <thead><tr><th>Practice</th><th>Name</th><th>Email</th><th>Role/Skill</th><th>GH Copilot</th><th>M365 Copilot</th><th>Has Logged</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Practice</th><th>Name</th><th>Email</th><th>Role/Skill</th><th title="GitHub Copilot license status and Grafana IDE telemetry stats (days active, code generations). Data synced from GitHub Copilot dashboard via Grafana.">GH Copilot ⓘ</th><th title="Whether this licensed user has submitted at least one approved AI task in the EAS tracker. Adoption rate = (Has Logged / Total Licensed) × 100%.">Has Logged ⓘ</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="copilot-tbody"></tbody>
           </table>
         </div>
@@ -2782,17 +2785,17 @@ function renderCopilot() {
     <div class="kpi-card"><div class="kpi-label">Total Licensed Users</div><div class="kpi-value blue">${totalUsers}</div><div class="kpi-sub">across all practices</div></div>
     <div class="kpi-card"><div class="kpi-label">Has Logged Task</div><div class="kpi-value green">${hasLoggedCount}</div><div class="kpi-sub">${adoptionPct}% adoption</div></div>
     <div class="kpi-card" style="border-left:3px solid #3b82f6"><div class="kpi-label">💙 GH Copilot Active</div><div class="kpi-value" style="color:#3b82f6">${ghActive}</div><div class="kpi-sub">of ${totalUsers} users</div></div>
-    <div class="kpi-card" style="border-left:3px solid #8b5cf6"><div class="kpi-label">💜 M365 Copilot Active</div><div class="kpi-value purple">${m365Active}</div><div class="kpi-sub">of ${totalUsers} users</div></div>
   `;
 
   document.getElementById('copilot-count-label').textContent = `Showing ${filtered.length} of ${data.copilotUsers.length} users`;
   document.getElementById('copilot-tbody').innerHTML = filtered.map(u => {
-    const ghBadge = u.githubCopilotStatus === 'active'
+    const isGhActive = u.githubCopilotStatus === 'active';
+    const ghBadge = isGhActive
       ? '<span class="status-badge" style="background:rgba(59,130,246,0.15);color:#3b82f6;font-size:11px">Active</span>'
       : '<span class="status-badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;font-size:11px">Inactive</span>';
-    const m365Badge = u.m365CopilotStatus === 'active'
-      ? '<span class="status-badge" style="background:rgba(139,92,246,0.15);color:#8b5cf6;font-size:11px">Active</span>'
-      : '<span class="status-badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;font-size:11px">Inactive</span>';
+    const ideStats = (u.ideDaysActive > 0)
+      ? `<div style="font-size:10px;color:var(--text-muted);margin-top:3px" title="Grafana IDE telemetry: ${u.ideDaysActive} days active · ${u.ideCodeGenerations} code generations · ${u.ideCodeAcceptances} acceptances">${u.ideDaysActive}d · ${u.ideCodeGenerations} gens · ${u.ideCodeAcceptances} acc</div>`
+      : (isGhActive ? '<div style="font-size:10px;color:var(--text-muted);margin-top:3px">No IDE data yet</div>' : '');
     const loggedBadge = u.hasLoggedTask
       ? '<span style="color:var(--success);font-weight:600">✓ Yes</span>'
       : '<span style="color:var(--text-muted)">✗ No</span>';
@@ -2802,8 +2805,7 @@ function renderCopilot() {
       <td>${u.name}</td>
       <td style="color:var(--text-muted)">${u.email}</td>
       <td>${u.skill}</td>
-      <td>${ghBadge}</td>
-      <td>${m365Badge}</td>
+      <td>${ghBadge}${ideStats}</td>
       <td>${loggedBadge}</td>
       <td>${statusBadge(u.status === 'access granted' ? 'Completed' : u.status)}</td>
       <td class="row-actions">
