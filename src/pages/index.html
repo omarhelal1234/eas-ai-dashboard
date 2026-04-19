@@ -2768,10 +2768,14 @@ function renderAccomplishments() {
 function renderCopilot() {
   if (!data) return;
   const search = (document.getElementById('copilot-search').value || '').toLowerCase();
+  const _cRole = EAS_Auth.getUserRole();
+  const _cPractice = EAS_Auth.getUserPractice();
   const fPractice = document.getElementById('copilot-filter-practice').value;
 
   let filtered = data.copilotUsers.filter(u => {
-    if (fPractice && u.practice !== fPractice) return false;
+    if (_cRole === 'spoc') { if (u.practice !== _cPractice) return false; }
+    else if (_cRole === 'team_lead') { if (!_tlMemberEmails.includes(u.email)) return false; }
+    else if (fPractice && u.practice !== fPractice) return false;
     if (search) {
       const hay = [u.name, u.email, u.skill, u.practice].join(' ').toLowerCase();
       if (!hay.includes(search)) return false;
@@ -2779,20 +2783,28 @@ function renderCopilot() {
     return true;
   });
 
-  // KPIs — only count access-granted users as "licensed"
-  const licensedUsers = data.copilotUsers.filter(u => u.status && u.status.toLowerCase() === 'access granted');
+  // KPIs — scope base set to role
+  const kpiBase = (_cRole === 'spoc')
+    ? data.copilotUsers.filter(u => u.practice === _cPractice)
+    : (_cRole === 'team_lead')
+      ? data.copilotUsers.filter(u => _tlMemberEmails.includes(u.email))
+      : data.copilotUsers;
+  const kpiSublabel = (_cRole === 'spoc') ? `in ${_cPractice}`
+    : (_cRole === 'team_lead') ? 'in my team'
+    : 'across all practices';
+  const licensedUsers = kpiBase.filter(u => u.status && u.status.toLowerCase() === 'access granted');
   const totalUsers = licensedUsers.length;
   const hasLoggedCount = licensedUsers.filter(u => u.hasLoggedTask).length;
   const ghActive = licensedUsers.filter(u => u.githubCopilotStatus === 'active').length;
   const m365Active = licensedUsers.filter(u => u.m365CopilotStatus === 'active').length;
   const adoptionPct = totalUsers > 0 ? ((hasLoggedCount / totalUsers) * 100).toFixed(1) : '0.0';
   document.getElementById('copilot-kpis').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Total Licensed Users</div><div class="kpi-value blue">${totalUsers}</div><div class="kpi-sub">across all practices</div></div>
+    <div class="kpi-card"><div class="kpi-label">Total Licensed Users</div><div class="kpi-value blue">${totalUsers}</div><div class="kpi-sub">${kpiSublabel}</div></div>
     <div class="kpi-card"><div class="kpi-label">Has Logged Task</div><div class="kpi-value green">${hasLoggedCount}</div><div class="kpi-sub">${adoptionPct}% adoption</div></div>
     <div class="kpi-card" style="border-left:3px solid #3b82f6"><div class="kpi-label">💙 GH Copilot Active</div><div class="kpi-value" style="color:#3b82f6">${ghActive}</div><div class="kpi-sub">of ${totalUsers} users</div></div>
   `;
 
-  document.getElementById('copilot-count-label').textContent = `Showing ${filtered.length} of ${data.copilotUsers.length} users`;
+  document.getElementById('copilot-count-label').textContent = `Showing ${filtered.length} of ${kpiBase.length} users`;
   document.getElementById('copilot-tbody').innerHTML = filtered.map(u => {
     const isGhActive = u.githubCopilotStatus === 'active';
     const ghBadge = isGhActive
