@@ -2837,7 +2837,11 @@ function renderCopilot() {
 function renderProjects() {
   if (!data) return;
   const search = (document.getElementById('project-search').value || '').toLowerCase();
-  const fPractice = document.getElementById('project-filter-practice').value;
+  const _pRole = EAS_Auth.getUserRole();
+  const _pPractice = EAS_Auth.getUserPractice();
+  const fPractice = (_pRole === 'spoc' || _pRole === 'team_lead')
+    ? _pPractice
+    : document.getElementById('project-filter-practice').value;
 
   let filtered = data.projects.filter(p => {
     if (fPractice && p.practice !== fPractice) return false;
