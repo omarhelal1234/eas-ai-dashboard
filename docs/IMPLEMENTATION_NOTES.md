@@ -1,3 +1,29 @@
+---
+
+## April 19, 2026 — Core-Function Bug Fixes (6 bugs)
+
+### 1. `updateTask` auto-approve path — `js/db.js`
+**Bug:** When a non-admin edits a task with < 5 hours saved, `updateTask` reset `approval_status` to `'pending'` and then called `createSubmissionApproval` which returned `{ autoApproved: true }`. Unlike `submitTaskWithApproval`, which explicitly re-stamps `approval_status = 'approved'`, the edit path only set `approval_id = null` and left the status as `'pending'` forever.
+**Fix:** Added `if (approval?.autoApproved)` branch that writes `{ approval_id: null, approval_status: 'approved' }` and logs `AUTO_APPROVE`, mirroring the insert path.
+
+### 2. `updateSubmissionApproval` wrong column name — `js/db.js`
+**Bug:** Line 1478 mapped `updates.rejectedReason → payload.rejected_reason` but the actual Supabase column is `rejection_reason`. The rejection reason was silently discarded on any call that used `updateSubmissionApproval` with a `rejectedReason` argument.
+**Fix:** Changed `payload.rejected_reason` → `payload.rejection_reason`.
+
+### 3. Login page missing profile fields and cache timestamp — `src/pages/login.html`
+**Bug:** After successful login, the profile was fetched with only `id, name, role, practice` (missing `email`, `is_active`). The timestamp `eas_user_profile_ts` was never written, so `auth.js`'s 5-minute TTL cache never activated — every call to `getUserProfile()` across the whole session triggered a fresh DB round-trip. Also, downstream code (e.g., `changePassword`) that expects `profile.email` would find it missing from the cached object.
+**Fix:** Extended the SELECT to `id, name, email, role, practice, is_active`. Added `localStorage.setItem('eas_user_profile_ts', String(Date.now()))` after storing the profile.
+
+### 4 & 5. Premature modal close before async save — `src/pages/index.html`
+**Bug:** Both `saveProject()` and `saveTask()` (edit path) called `closeModal(...)` *before* the `await EAS_DB.update/insert` resolved. If the DB call failed, the modal was already closed and the user's filled-in form data was gone.
+**Fix:** Moved `closeModal(...)` calls to *after* the `if (!result) { ... return; }` guard, so the modal only closes on success. For `saveTask`, `_editingId`/`_editingType` cleanup and modal title reset were also moved inside the success branch.
+
+### 6. Double success toast on new task submission — `src/pages/index.html`
+**Bug:** `Phase8.submitWithApproval` shows its own toast (e.g., "Task submitted — SPOC review (3.0 hrs saved)") and `saveTask()` also unconditionally called `showToast(resultMsg)` afterward, causing two toasts for every new submission.
+**Fix:** Made the outer toast conditional — only fires for the edit path (`if (isEdit) showToast(...)`).
+
+---
+
 # Phase 8 Approval Workflow Implementation - Complete Summary
 
 **Date:** April 11, 2026  

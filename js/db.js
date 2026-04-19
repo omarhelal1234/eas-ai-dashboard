@@ -618,7 +618,14 @@ const EAS_DB = (() => {
       }
       const savedHours = (data.time_without_ai || 0) - (data.time_with_ai || 0);
       const approval = await createSubmissionApproval('task', data.id, savedHours, data.practice);
-      if (approval) {
+      if (approval?.autoApproved) {
+        // Auto-approved: clear approval_id and mark task as approved directly
+        await sb.from('tasks').update({
+          approval_id: null,
+          approval_status: 'approved'
+        }).eq('id', data.id);
+        await logActivity('AUTO_APPROVE', 'tasks', data.id, { saved_hours: savedHours, reason: 'edit_less_than_5h' });
+      } else if (approval) {
         await sb.from('tasks').update({
           approval_id: approval.id
         }).eq('id', data.id);
@@ -1475,7 +1482,7 @@ const EAS_DB = (() => {
     if (updates.aiValidationResult !== undefined) payload.ai_validation_result = updates.aiValidationResult;
     if (updates.approverName !== undefined) payload.approver_name = updates.approverName;
     if (updates.approvalNotes !== undefined) payload.approval_notes = updates.approvalNotes;
-    if (updates.rejectedReason !== undefined) payload.rejected_reason = updates.rejectedReason;
+    if (updates.rejectedReason !== undefined) payload.rejection_reason = updates.rejectedReason;
 
     const { data, error } = await sb.from('submission_approvals').update(payload).eq('id', approvalId).select().single();
     if (error) { console.error('updateSubmissionApproval error:', error.message); return null; }

@@ -368,7 +368,7 @@ body {
       // Fetch user role from users table
       const { data: userProfile, error: profileErr } = await sb
         .from('users')
-        .select('id, name, role, practice')
+        .select('id, name, email, role, practice, is_active')
         .eq('auth_id', data.user.id)
         .single();
 
@@ -436,8 +436,9 @@ Please contact your practice SPOC or admin (eas@ejada.com) with your email (${da
         return;
       }
 
-      // Store user profile in localStorage for quick access
+      // Store user profile in localStorage for quick access (with TTL timestamp for auth.js cache)
       localStorage.setItem('eas_user_profile', JSON.stringify(userProfile));
+      localStorage.setItem('eas_user_profile_ts', String(Date.now()));
 
       // Update last_login
       await sb.from('users').update({ last_login: new Date().toISOString() }).eq('id', userProfile.id);

@@ -5050,10 +5050,8 @@ async function saveTask() {
     bypassApproval: document.getElementById('f-bypass-approval') ? document.getElementById('f-bypass-approval').checked : false
   };
 
-  // Capture editing state BEFORE closeModal clears it
   const editId = _editingId;
   const editType = _editingType;
-  closeModal('task');
 
   let result;
   let isEdit = false;
@@ -5061,21 +5059,25 @@ async function saveTask() {
     isEdit = true;
     showToast('Updating task (will require re-approval)...');
     result = await EAS_DB.updateTask(editId, taskData);
-    _editingId = null; _editingType = null;
-    document.querySelector('#modal-task .modal h3').textContent = 'Log AI Task';
-    document.querySelector('#modal-task .btn-primary').textContent = 'Save Task';
   } else {
     showToast('Saving task with approval workflow...');
     // Phase 8: Submit with approval workflow
     result = await Phase8.submitWithApproval('task', taskData);
   }
   if (!result) { showToast('Failed to save task — check console', 'error'); return; }
+
+  closeModal('task');
+  if (isEdit) {
+    _editingId = null; _editingType = null;
+    document.querySelector('#modal-task .modal h3').textContent = 'Log AI Task';
+    document.querySelector('#modal-task .btn-primary').textContent = 'Save Task';
+  }
   // Refresh data from Supabase
   const selectedQuarter = EAS_DB.getSelectedQuarter();
   data = await EAS_DB.fetchAllData(selectedQuarter);
   EAS_Utils.sanitizeDataset(data);
-  const resultMsg = isEdit ? 'Task updated — pending re-approval by Admin/SPOC' : 'Task logged successfully with approval workflow!';
-  showToast(resultMsg);
+  // Only show a toast for edits — new submissions already show a toast inside Phase8.submitWithApproval
+  if (isEdit) showToast('Task updated — pending re-approval by Admin/SPOC');
   renderDashboard();
   renderTasks();
   updateNavCounts();
@@ -5308,8 +5310,6 @@ async function saveProject() {
     revenueType: document.getElementById('fp-revenue').value.trim() || null
   };
 
-  closeModal('project');
-
   const editId = document.getElementById('fp-id').value;
   let result;
   if (editId) {
@@ -5321,6 +5321,8 @@ async function saveProject() {
   }
 
   if (!result) { showToast('Failed to save project — check console', 'error'); return; }
+
+  closeModal('project');
 
   const selectedQuarter = EAS_DB.getSelectedQuarter();
   data = await EAS_DB.fetchAllData(selectedQuarter);
