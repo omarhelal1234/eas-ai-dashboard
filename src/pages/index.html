@@ -1653,9 +1653,9 @@ npm run compile</code></pre>
       <textarea id="f-notes" rows="2"></textarea>
     </div>
     <div class="modal-actions" style="display:flex;justify-content:space-between;align-items:center">
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+      <label id="f-bypass-wrapper" style="display:none;align-items:center;gap:6px;font-size:13px">
         <input type="checkbox" id="f-bypass-approval" style="width:16px;height:16px;cursor:pointer" onchange="toggleBypassApproval()">
-        <span id="f-bypass-label" style="display:none">Skip approval (admin only)</span>
+        <span id="f-bypass-label">Skip approval (admin only)</span>
       </label>
       <div style="display:flex;gap:8px">
         <button class="btn btn-secondary" onclick="closeModal('task')">Cancel</button>
@@ -4909,7 +4909,7 @@ function openModal(type) {
         Phase8.initSavedHoursCalculation('f-time-without', 'f-time-with', 'f-saved-hours-display');
         // Show/hide admin bypass based on user role
         const role = EAS_Auth.getUserRole();
-        document.getElementById('f-bypass-label').style.display = role === 'admin' ? 'inline' : 'none';
+        document.getElementById('f-bypass-wrapper').style.display = role === 'admin' ? 'flex' : 'none';
         console.log('  → Task modal ready, role:', role);
       } else if (type === 'accomplishment') {
         console.log('  → Setting up accomplishment modal...');
@@ -4979,7 +4979,7 @@ function openModal(type) {
       Phase8.initEmployeeAutocomplete('f-employee', 'f-practice');
       Phase8.initSavedHoursCalculation('f-time-without', 'f-time-with', 'f-saved-hours-display');
       const role = EAS_Auth.getUserRole();
-      document.getElementById('f-bypass-label').style.display = role === 'admin' ? 'inline' : 'none';
+      document.getElementById('f-bypass-wrapper').style.display = role === 'admin' ? 'flex' : 'none';
     }
     const modal = document.getElementById('modal-' + type);
     if (!modal) {
@@ -5399,6 +5399,9 @@ async function saveProject() {
 function editProject(id) {
   const proj = data.projects.find(p => p.id === id);
   if (!proj) return;
+  // Open modal first (which resets all fields + fp-id to ''), then override with edit values
+  openModal('project');
+  document.getElementById('project-modal-title-dash').textContent = 'Edit Project';
   document.getElementById('fp-id').value = id;
   document.getElementById('fp-practice').value = proj.practice || '';
   document.getElementById('fp-name').value = proj.projectName || '';
@@ -5409,8 +5412,6 @@ function editProject(id) {
   document.getElementById('fp-end').value = proj.endDate ? proj.endDate.split('T')[0] : '';
   document.getElementById('fp-value').value = proj.contractValue || '';
   document.getElementById('fp-revenue').value = proj.revenueType || '';
-  document.getElementById('project-modal-title-dash').textContent = 'Edit Project';
-  openModal('project');
 }
 
 function deleteProjectConfirm(id) {

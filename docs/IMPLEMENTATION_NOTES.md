@@ -1,5 +1,21 @@
 ---
 
+## April 19, 2026 — 3 Bug Fixes: Project Duplication, Checkbox Visibility, Signup Grafana Stats
+
+### 1. SPOC project edit duplicates instead of updating — `src/pages/index.html`
+**Root cause:** `editProject(id)` set `fp-id` to the project UUID, then called `openModal('project')`. Inside `openModal`, the `type === 'project'` branch always resets `fp-id` to `''` (as part of the "fresh open" reset added in BUG-01 fix). So by the time `saveProject()` ran, `editId` was empty and it fell into the `insertProject` branch, creating a duplicate.
+**Fix:** Reordered `editProject` to call `openModal('project')` first (letting it reset everything), then populate all fields including `fp-id` afterwards.
+
+### 2. Bypass-approval checkbox visible to non-admins — `src/pages/index.html`
+**Root cause:** The `<label>` wrapper around the bypass checkbox + span had no visibility control. The JS only toggled `display` on the inner `<span id="f-bypass-label">`, leaving the bare checkbox element always rendered for non-admins.
+**Fix:** Added `id="f-bypass-wrapper"` to the `<label>`, defaulted it to `display:none`, removed individual span hide. JS now toggles the wrapper's `display` (`flex`/`none`) based on admin role — both checkbox and label text hidden together.
+
+### 3. Signup doesn't pick up existing Grafana stats — `sql/024_signup_contributor_upsert_grafana_stats.sql`
+**Root cause:** `signup_contributor` did a plain `INSERT INTO copilot_users`. With the `copilot_users_email_unique` constraint (added in migration 017), if a row already existed for the user's email (seeded by Grafana/IDE sync), the function would throw a unique-constraint error. Even when no conflict occurred, new users always started with all `ide_*` columns at 0.
+**Fix:** Changed to `INSERT … ON CONFLICT (email) DO UPDATE SET` — on conflict, profile fields (`practice`, `name`, `role_skill`, `status`) are updated from the signup data while all `ide_*` Grafana columns are left untouched. Migration 024 applied.
+
+---
+
 ## April 19, 2026 — Core-Function Bug Fixes (6 bugs)
 
 ### 1. `updateTask` auto-approve path — `js/db.js`
