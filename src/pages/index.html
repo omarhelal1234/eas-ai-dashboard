@@ -7032,6 +7032,11 @@ async function boot() {
   
   // 5. Initialize UI (only if data loaded)
   if (data) {
+    // Pre-fetch team lead member emails so render functions stay synchronous
+    if (EAS_Auth.getUserRole() === 'team_lead') {
+      const tlProfile = await EAS_Auth.getUserProfile();
+      _tlMemberEmails = await EAS_DB.fetchTeamLeadMemberEmails(tlProfile?.id);
+    }
     populateFilters();
     await updateNavCounts();
     // Pre-load issues data and like data (not quarter-filtered)
