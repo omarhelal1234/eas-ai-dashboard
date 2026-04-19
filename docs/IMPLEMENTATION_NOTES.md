@@ -1018,3 +1018,48 @@ If issues arise:
 HTML entry points were relocated from the repository root into `src/pages/`. Shared assets in `css/` and `js/` now resolve via `../../css/…` and `../../js/…`. Cross-page navigation between pages in `src/pages/` stays flat (e.g. `window.location.href = 'login.html'`).
 
 See `docs/CODE_ARCHITECTURE.md` §2 for the authoritative tree and path convention, and `.github/copilot-instructions.md` for the mandatory workflow governing future changes (skills, Supabase MCP, full docs sweep, commit & push).
+
+---
+
+## April 19, 2026 — 11-Bug Fix from Manual Test Run (BUG-01 – BUG-11)
+
+### BUG-01: Modal forms not reset on cancel/reopen — `src/pages/index.html`
+Root cause: form field resets only ran after a successful save. Cancel left all fields dirty.
+Fix: Added explicit field resets at the top of each modal's `openModal` branch (`type === 'task'`, `'accomplishment'`, `'project'`) so every fresh open starts clean regardless of prior cancel or save.
+
+### BUG-02: `contract_value` persists as 0 instead of null — `src/pages/index.html`
+Root cause: `parseFloat('') || 0` evaluated blank numeric input to 0.
+Fix: Changed `|| 0` to `|| null` in `saveProject`.
+
+### BUG-03: `quality_rating` JS validation missing — `src/pages/index.html`
+Root cause: HTML `max="5"` only hints, it doesn't prevent paste or programmatic values. No JS guard existed.
+Fix: Added a pre-save check in `saveTask` — if quality is entered and outside [1,5], show error and abort.
+
+### BUG-04: Employee dropdown hidden after practice change — `js/phase8-submission.js`
+Root cause 1: Practice-change handler loaded users into `allUsers` and called `renderDropdownOptions` but never called `showDropdown`, so the div stayed `display:none` until the user manually focused the search field.
+Root cause 2: `initEmployeeDropdown` was called on every `openModal`, accumulating redundant `addEventListener` registrations on both the practice select and search input.
+Fix: Added `if (practice) showDropdown()` after `loadUsers` in the practice-change handler. Added `data-attribute` guards (`empDropdownListenerAttached`, `empSearchListenerAttached`) to prevent duplicate listener registration.
+
+### BUG-05: Orphaned `submission_approvals` rows after auto-approve-on-edit — `js/db.js`
+Root cause: `updateTask`/`updateAccomplishment` attempted to DELETE the old approval row, but if RLS blocked that operation the error was silently ignored and the row remained in `spoc_review` state.
+Fix: Wrapped the DELETE in an error check; on failure, falls back to UPDATE with `approval_status='superseded'` so the row leaves the review queue even without delete rights.
+
+### BUG-06: `approval_status` copy drift — `js/db.js`
+Root cause: `submitTaskWithApproval` and `submitAccomplishmentWithApproval` only wrote `approval_id` to the submission row when linking a new approval record; `approval_status` in `tasks`/`accomplishments` was never synced to `spoc_review` or `admin_review`.
+Fix: Extended the update payload to include `approval_status: approval.approval_status` when linking.
+
+### BUG-07: Misleading toast on bypass-approval — `js/phase8-submission.js`
+Root cause: The bypass path routes through `EAS_DB.insertTask` (not `submitTaskWithApproval`), which returns the raw task row with no `approval` object. `approval?.autoApproved` was falsy so the message defaulted to "SPOC review".
+Fix: Added `formData.bypassApproval` check first in the approval message branch.
+
+### BUG-08 & BUG-09: Multiple toasts per save action — `src/pages/index.html`
+Root cause: Both `saveTask` and `saveAccomplishment` fired an intermediate "Saving…" toast AND `Phase8.submitWithApproval` emitted its own success toast. The accomplishment handler also had a third trailing toast after `Phase8`.
+Fix: Removed the intermediate `showToast('Saving…')` calls. For accomplishments, the trailing toast is now conditional on `isEdit` only.
+
+### BUG-10: Missing `spoc_reviewed_*` audit fields on SPOC reject — `js/db.js`
+Root cause: `rejectSubmission` built a fixed payload with only rejection reason and `admin_reviewed_at`. It never checked the current approval stage or stamped SPOC-layer fields.
+Fix: Added a SELECT to fetch the current `approval_status` before updating. When status is `spoc_review`, payload is extended with `spoc_reviewed_by`, `spoc_reviewed_by_name`, and `spoc_reviewed_at`.
+
+### BUG-11: Admin sidebar missing practice label — `src/pages/index.html` + `js/auth.js`
+Root cause: `auth.js::updateUserDisplay` referenced `#user-display-practice` which was absent from the sidebar HTML; the element was apparently removed at some earlier point. Without it, `practiceEl` was always null and `getUserPractice()` was never rendered for any role.
+Fix: Added `<div id="user-display-practice">` to the `.user-info` section of the sidebar footer. `auth.js` already populates it correctly for all roles including admin.

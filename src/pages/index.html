@@ -160,6 +160,7 @@
       <div class="user-info">
         <div class="user-name" id="user-display-name">Loading...</div>
         <div class="user-role" id="user-display-role"></div>
+        <div id="user-display-practice" style="font-size:11px;color:var(--text-muted);margin-top:1px;opacity:0.8"></div>
       </div>
       <button class="btn-logout" onclick="EAS_Auth.signOut()" title="Sign Out" aria-label="Sign Out">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -4858,16 +4859,47 @@ function openModal(type) {
         console.log('  → Setting up task modal...');
         document.querySelector('#modal-task .modal h3').textContent = 'Log AI Task';
         document.querySelector('#modal-task .btn-primary').textContent = 'Save Task';
+        // Reset all task form fields on every fresh open (BUG-01 fix)
+        document.getElementById('f-practice').selectedIndex = 0;
+        document.getElementById('f-task').value = '';
+        document.getElementById('f-task-details').value = '';
+        document.getElementById('f-prompt').value = '';
+        document.getElementById('f-time-without').value = '';
+        document.getElementById('f-time-with').value = '';
+        document.getElementById('f-quality').value = '';
+        document.getElementById('f-notes').value = '';
+        document.getElementById('f-bypass-approval').checked = false;
+        const fCategory = document.getElementById('f-category');
+        if (fCategory) fCategory.selectedIndex = 0;
+        const fTool = document.getElementById('f-tool');
+        if (fTool) { fTool.selectedIndex = 0; }
+        const fStatus = document.getElementById('f-status');
+        if (fStatus) fStatus.selectedIndex = 0;
+        // Reset employee dropdown
+        const empSearchReset = document.getElementById('f-employee-search');
+        if (empSearchReset) {
+          empSearchReset.value = '';
+          empSearchReset.dataset.selectedUserId = '';
+          empSearchReset.dataset.selectedEmail = '';
+          empSearchReset.dataset.selectedName = '';
+          empSearchReset.style.borderColor = '';
+        }
+        document.getElementById('f-employee-id').value = '';
+        document.getElementById('f-employee-email').value = '';
+        // Reset project fields
+        updateProjectDropdown();
+        const projManualReset = document.getElementById('f-project-manual');
+        if (projManualReset) { projManualReset.style.display = 'none'; projManualReset.value = ''; }
         // Auto-populate week fields for new tasks
         const weekRange = EAS_Utils.getCurrentWeekRange();
         const weekNum = EAS_Utils.getQuarterWeekNumber(new Date(), EAS_DB.getQuarters());
         document.getElementById('f-week').value = weekNum;
         document.getElementById('f-weekstart').value = weekRange.start;
         document.getElementById('f-weekend').value = weekRange.end;
-        // Auto-fill employee name for contributors (uses new search input)
+        // Auto-fill employee name for contributors
         const userName = EAS_Auth.getUserName();
         const empSearchField = document.getElementById('f-employee-search');
-        if (userName && empSearchField && (!empSearchField.value || empSearchField.value === '')) {
+        if (userName && empSearchField) {
           empSearchField.value = userName;
         }
         // Phase 8: Initialize AI features (employee dropdown)
@@ -4883,6 +4915,19 @@ function openModal(type) {
         console.log('  → Setting up accomplishment modal...');
         document.querySelector('#modal-accomplishment .modal h3').textContent = 'Log Accomplishment';
         document.querySelector('#modal-accomplishment .btn-primary').textContent = 'Save';
+        // Reset accomplishment form fields on every fresh open (BUG-01 fix)
+        document.getElementById('fa-date').value = '';
+        document.getElementById('fa-practice').selectedIndex = 0;
+        document.getElementById('fa-project').value = '';
+        document.getElementById('fa-spoc').value = '';
+        document.getElementById('fa-employees').value = '';
+        document.getElementById('fa-title').value = '';
+        document.getElementById('fa-details').value = '';
+        document.getElementById('fa-before').value = '';
+        document.getElementById('fa-after').value = '';
+        document.getElementById('fa-impact').value = '';
+        document.getElementById('fa-gains').value = '';
+        document.getElementById('fa-effort').value = '';
         // Phase 8: Initialize for accomplishments
         Phase8.setCurrentSubmission('accomplishment');
       } else if (type === 'copilot') {
@@ -4899,7 +4944,17 @@ function openModal(type) {
       } else if (type === 'project') {
         console.log('  → Setting up project modal...');
         document.getElementById('project-modal-title-dash').textContent = 'Add Project';
+        // Reset all project form fields on every fresh open (BUG-01 fix)
         document.getElementById('fp-id').value = '';
+        document.getElementById('fp-name').value = '';
+        document.getElementById('fp-code').value = '';
+        document.getElementById('fp-customer').value = '';
+        document.getElementById('fp-pm').value = '';
+        document.getElementById('fp-start').value = '';
+        document.getElementById('fp-end').value = '';
+        document.getElementById('fp-value').value = '';
+        document.getElementById('fp-revenue').value = '';
+        document.getElementById('fp-practice').selectedIndex = 0;
         // Auto-select user's practice for SPOCs
         const userPractice = EAS_Auth.getUserPractice();
         if (userPractice && EAS_Auth.isSPOC()) document.getElementById('fp-practice').value = userPractice;
@@ -5009,6 +5064,10 @@ async function saveTask() {
   const timeWith = parseFloat(document.getElementById('f-time-with').value) || 0;
   if (timeWithout <= 0) { showToast('Time without AI must be greater than 0', 'error'); return; }
   if (timeWith >= timeWithout) { showToast('Time with AI must be less than time without AI — time saved must be positive', 'error'); return; }
+  const qualityRaw = document.getElementById('f-quality').value;
+  if (qualityRaw !== '' && (parseFloat(qualityRaw) < 1 || parseFloat(qualityRaw) > 5)) {
+    showToast('Quality rating must be between 1 and 5', 'error'); return;
+  }
 
   // Apply week defaults: if not entered, use current week Sun-Thu
   const weekRange = EAS_Utils.getCurrentWeekRange();
@@ -5057,10 +5116,8 @@ async function saveTask() {
   let isEdit = false;
   if (editId && editType === 'task') {
     isEdit = true;
-    showToast('Updating task (will require re-approval)...');
     result = await EAS_DB.updateTask(editId, taskData);
   } else {
-    showToast('Saving task with approval workflow...');
     // Phase 8: Submit with approval workflow
     result = await Phase8.submitWithApproval('task', taskData);
   }
@@ -5149,20 +5206,18 @@ async function saveAccomplishment() {
   let isEdit = false;
   if (editId && editType === 'accomplishment') {
     isEdit = true;
-    showToast('Updating accomplishment (will require re-approval)...');
     result = await EAS_DB.updateAccomplishment(editId, acc);
     _editingId = null; _editingType = null;
     document.querySelector('#modal-accomplishment .modal h3').textContent = 'Log Accomplishment';
     document.querySelector('#modal-accomplishment .btn-primary').textContent = 'Save';
   } else {
-    showToast('Saving accomplishment with approval workflow...');
     result = await Phase8.submitWithApproval('accomplishment', acc);
   }
   if (!result) { showToast('Failed to save accomplishment — check console', 'error'); return; }
   const selectedQuarter = EAS_DB.getSelectedQuarter();
   data = await EAS_DB.fetchAllData(selectedQuarter);
   EAS_Utils.sanitizeDataset(data);
-  showToast(isEdit ? 'Accomplishment updated — pending re-approval by Admin/SPOC' : 'Accomplishment submitted for approval!');
+  if (isEdit) showToast('Accomplishment updated — pending re-approval by Admin/SPOC');
   renderAccomplishments();
   updateNavCounts();
   // Reset form
@@ -5306,7 +5361,7 @@ async function saveProject() {
     projectManager: document.getElementById('fp-pm').value.trim() || null,
     startDate: document.getElementById('fp-start').value || null,
     endDate: document.getElementById('fp-end').value || null,
-    contractValue: parseFloat(document.getElementById('fp-value').value) || 0,
+    contractValue: parseFloat(document.getElementById('fp-value').value) || null,
     revenueType: document.getElementById('fp-revenue').value.trim() || null
   };
 

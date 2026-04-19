@@ -123,51 +123,61 @@ window.Phase8 = (() => {
       if (dropdown) dropdown.style.display = 'none';
     }
 
-    // On practice change, reload users
-    practiceSelect.addEventListener('change', async () => {
-      const practice = practiceSelect.value;
-      searchInput.value = '';
-      searchInput.dataset.selectedUserId = '';
-      searchInput.dataset.selectedEmail = '';
-      searchInput.dataset.selectedName = '';
-      document.getElementById('f-employee-id').value = '';
-      document.getElementById('f-employee-email').value = '';
-      await loadUsers(practice);
-    });
+    // On practice change, reload users — guard prevents duplicate listeners across modal re-opens
+    if (!practiceSelect.dataset.empDropdownListenerAttached) {
+      practiceSelect.dataset.empDropdownListenerAttached = 'true';
+      practiceSelect.addEventListener('change', async () => {
+        const practice = practiceSelect.value;
+        searchInput.value = '';
+        searchInput.dataset.selectedUserId = '';
+        searchInput.dataset.selectedEmail = '';
+        searchInput.dataset.selectedName = '';
+        document.getElementById('f-employee-id').value = '';
+        document.getElementById('f-employee-email').value = '';
+        await loadUsers(practice);
+        // Reveal dropdown immediately so user sees loaded employees without needing to re-focus
+        if (practice) { ensureDropdown(); showDropdown(); }
+      });
+    }
 
-    // On search input focus, show dropdown
-    searchInput.addEventListener('focus', () => {
-      ensureDropdown();
-      renderDropdownOptions(searchInput.value);
-      showDropdown();
-    });
+    // Guard search input listeners — only attach once per input element
+    if (!searchInput.dataset.empSearchListenerAttached) {
+      searchInput.dataset.empSearchListenerAttached = 'true';
 
-    // On search input typing, filter
-    searchInput.addEventListener('input', () => {
-      // Clear selected state when user types
-      searchInput.dataset.selectedUserId = '';
-      searchInput.dataset.selectedEmail = '';
-      searchInput.dataset.selectedName = '';
-      document.getElementById('f-employee-id').value = '';
-      document.getElementById('f-employee-email').value = '';
-      renderDropdownOptions(searchInput.value);
-      showDropdown();
-    });
+      // On search input focus, show dropdown
+      searchInput.addEventListener('focus', () => {
+        ensureDropdown();
+        renderDropdownOptions(searchInput.value);
+        showDropdown();
+      });
 
-    // On blur, hide dropdown and validate selection
-    searchInput.addEventListener('blur', () => {
-      setTimeout(() => {
-        hideDropdown();
-        // If typed value doesn't match a selection, warn
-        if (searchInput.value.trim() && !searchInput.dataset.selectedUserId) {
-          searchInput.style.borderColor = 'var(--danger)';
-        } else if (searchInput.dataset.selectedUserId) {
-          searchInput.style.borderColor = 'var(--success)';
-        } else {
-          searchInput.style.borderColor = '';
-        }
-      }, 200);
-    });
+      // On search input typing, filter
+      searchInput.addEventListener('input', () => {
+        // Clear selected state when user types
+        searchInput.dataset.selectedUserId = '';
+        searchInput.dataset.selectedEmail = '';
+        searchInput.dataset.selectedName = '';
+        document.getElementById('f-employee-id').value = '';
+        document.getElementById('f-employee-email').value = '';
+        renderDropdownOptions(searchInput.value);
+        showDropdown();
+      });
+
+      // On blur, hide dropdown and validate selection
+      searchInput.addEventListener('blur', () => {
+        setTimeout(() => {
+          hideDropdown();
+          // If typed value doesn't match a selection, warn
+          if (searchInput.value.trim() && !searchInput.dataset.selectedUserId) {
+            searchInput.style.borderColor = 'var(--danger)';
+          } else if (searchInput.dataset.selectedUserId) {
+            searchInput.style.borderColor = 'var(--success)';
+          } else {
+            searchInput.style.borderColor = '';
+          }
+        }, 200);
+      });
+    }
 
     // Pre-load users if practice is already selected
     if (practiceSelect.value) {
@@ -257,7 +267,9 @@ window.Phase8 = (() => {
         // Show appropriate message based on hours-based routing
         const savedHours = (formData.timeWithout || 0) - (formData.timeWith || 0);
         let approvalMsg;
-        if (approval?.autoApproved) {
+        if (formData.bypassApproval) {
+          approvalMsg = 'auto-approved (admin bypass)';
+        } else if (approval?.autoApproved) {
           approvalMsg = 'Auto-approved';
         } else if (savedHours > 10) {
           approvalMsg = 'SPOC → Admin review';

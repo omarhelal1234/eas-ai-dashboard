@@ -612,9 +612,15 @@ const EAS_DB = (() => {
 
     // Create new approval workflow for the update (unless admin)
     if (!isAdmin && data) {
-      // Delete the old approval record to prevent orphans
+      // Retire old approval record — delete preferred; fall back to marking superseded (BUG-05 fix)
       if (data.approval_id) {
-        await sb.from('submission_approvals').delete().eq('id', data.approval_id);
+        const { error: delErr } = await sb.from('submission_approvals').delete().eq('id', data.approval_id);
+        if (delErr) {
+          await sb.from('submission_approvals').update({
+            approval_status: 'superseded',
+            rejection_reason: 'Superseded by task edit'
+          }).eq('id', data.approval_id);
+        }
       }
       const savedHours = (data.time_without_ai || 0) - (data.time_with_ai || 0);
       const approval = await createSubmissionApproval('task', data.id, savedHours, data.practice);
@@ -722,9 +728,15 @@ const EAS_DB = (() => {
 
     // Create new approval workflow for the update (unless admin)
     if (!isAdmin && data) {
-      // Delete the old approval record to prevent orphans
+      // Retire old approval record — delete preferred; fall back to marking superseded (BUG-05 fix)
       if (data.approval_id) {
-        await sb.from('submission_approvals').delete().eq('id', data.approval_id);
+        const { error: delErr } = await sb.from('submission_approvals').delete().eq('id', data.approval_id);
+        if (delErr) {
+          await sb.from('submission_approvals').update({
+            approval_status: 'superseded',
+            rejection_reason: 'Superseded by accomplishment edit'
+          }).eq('id', data.approval_id);
+        }
       }
       const savedHours = data.effort_saved || 0;
       const approval = await createSubmissionApproval('accomplishment', data.id, savedHours, data.practice);
@@ -1512,10 +1524,11 @@ const EAS_DB = (() => {
       return { task, approval: { autoApproved: true, approval_status: 'approved' } };
     }
 
-    // Normal approval flow: link approval record to task
+    // Normal approval flow: link approval record to task and sync status (BUG-06 fix)
     if (approval) {
-      await sb.from('tasks').update({ 
-        approval_id: approval.id
+      await sb.from('tasks').update({
+        approval_id: approval.id,
+        approval_status: approval.approval_status
       }).eq('id', task.id);
     }
 
@@ -1537,9 +1550,11 @@ const EAS_DB = (() => {
     const approval = await createSubmissionApproval('accomplishment', acc.id, savedHours, practice);
 
     // Accomplishments always require full review (SPOC → Admin), no auto-approve
+    // Also sync approval_status back to the accomplishment row (BUG-06 fix)
     if (approval) {
       await sb.from('accomplishments').update({
-        approval_id: approval.id
+        approval_id: approval.id,
+        approval_status: approval.approval_status
       }).eq('id', acc.id);
     }
 
@@ -1758,12 +1773,28 @@ const EAS_DB = (() => {
    */
   async function rejectSubmission(approvalId, rejectionReason) {
     const profile = await EAS_Auth.getUserProfile();
+
+    // Fetch current approval stage to stamp the correct audit fields (BUG-10 fix)
+    const { data: currentApproval } = await sb
+      .from('submission_approvals')
+      .select('approval_status')
+      .eq('id', approvalId)
+      .single();
+
+    const now = new Date().toISOString();
     const payload = {
       approval_status: 'rejected',
       rejection_reason: rejectionReason || 'No reason provided',
       admin_approved: false,
-      admin_reviewed_at: new Date().toISOString()
+      admin_reviewed_at: now
     };
+
+    // Stamp SPOC audit fields when rejection happens at spoc_review stage
+    if (currentApproval?.approval_status === 'spoc_review') {
+      payload.spoc_reviewed_by = profile?.id;
+      payload.spoc_reviewed_by_name = profile?.name;
+      payload.spoc_reviewed_at = now;
+    }
 
     const { data: approval, error } = await sb
       .from('submission_approvals')
