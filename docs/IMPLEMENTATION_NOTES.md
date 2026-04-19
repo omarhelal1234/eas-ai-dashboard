@@ -6,6 +6,33 @@
 
 ## Changes Made
 
+### 0af. April 19, 2026 — Fix: Profile Completion from Auth Metadata on Login
+
+**Problem:**
+After the `signup_contributor` RPC was created (fix 0ae), users could complete signup successfully. However, if they cleared their browser cache or logged in from a different device, they would get "Account not found in the system" error because:
+1. The localStorage key `eas_pending_signup` was cleared
+2. The login page only checked localStorage as a fallback
+3. Even though their profile was created during initial signup, the login page couldn't find it without the localStorage data
+
+**Root cause:**
+The login flow didn't leverage the `auth.user.user_metadata` which contains the signup data stored during initial signup (via `sb.auth.signUp({ options: { data: {...} } })`).
+
+**Fix applied:**
+Updated login.html to implement a two-tier fallback when user profile is not found:
+1. First, try to get signup data from localStorage (for email-confirmation flow)
+2. If not found, extract from `auth.user.user_metadata` (for auto-confirm flow)
+3. Use either source to call `signup_contributor` RPC to complete profile
+4. If profile creation succeeds, cache it and redirect to index.html
+
+This ensures that:
+- Users with cleared cache can still login and complete profile
+- Users on different devices can login and complete profile
+- Cross-device/cross-browser signup works correctly
+
+**Testing:** Login with devtrial@ejada.com after clearing cache now works correctly.
+
+---
+
 ### 0ae. April 19, 2026 — Fix: Create Missing signup_contributor RPC Function
 
 **Problem:** 
