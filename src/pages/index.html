@@ -2640,13 +2640,17 @@ function renderTasks() {
   const fd = getFilteredData();
   if (!fd) return;
   const search = (document.getElementById('task-search').value || '').toLowerCase();
+  const _tRole = EAS_Auth.getUserRole();
+  const _tPractice = EAS_Auth.getUserPractice();
   const fPractice = document.getElementById('task-filter-practice').value;
   const fCategory = document.getElementById('task-filter-category').value;
   const fTool = document.getElementById('task-filter-tool').value;
   const fStatus = document.getElementById('task-filter-status').value;
 
   let filtered = fd.tasks.filter(t => {
-    if (fPractice && t.practice !== fPractice) return false;
+    if (_tRole === 'spoc') { if (t.practice !== _tPractice) return false; }
+    else if (_tRole === 'team_lead') { if (!_tlMemberEmails.includes(t.employeeEmail)) return false; }
+    else if (fPractice && t.practice !== fPractice) return false;
     if (fCategory && t.category !== fCategory) return false;
     if (fTool && t.aiTool !== fTool) return false;
     if (fStatus && t.status !== fStatus) return false;
