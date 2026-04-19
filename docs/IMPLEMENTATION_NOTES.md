@@ -6,6 +6,32 @@
 
 ## Changes Made
 
+### 0ae. April 19, 2026 — Fix: Create Missing signup_contributor RPC Function
+
+**Problem:** 
+New users could create auth accounts but profile setup would fail with error: "Account created but profile setup failed: column 'remarks' of relation 'copilot_users' does not exist". The issue was that the `signup_contributor()` RPC function—called during signup to create both `users` and `copilot_users` rows—was never implemented.
+
+**Root cause:**
+- The function was referenced in `signup.html` (line 777) and documented in BRD/CODE_ARCHITECTURE but never created in SQL
+- Additionally, the function was trying to reference the `remarks` column which was dropped on April 17 when `remarks` and `status` were unified
+
+**Fix applied:**
+Created `CREATE OR REPLACE FUNCTION public.signup_contributor()` as a SECURITY DEFINER RPC that:
+1. Accepts: `p_auth_id`, `p_name`, `p_email`, `p_practice`, `p_skill`, `p_has_copilot`
+2. Creates a `users` row with role = `'contributor'`
+3. Creates a `copilot_users` row with status based on `p_has_copilot` flag:
+   - If `true`: status = `'access granted'`
+   - If `false`: status = `'pending'`
+4. Uses only existing columns (`status`, not `remarks`)
+5. Returns JSONB response with success/error, user_id, copilot_id, and status
+6. Grants EXECUTE to `anon` and `authenticated` roles for signup flow
+
+**Migration:** `024_create_signup_contributor_rpc`
+
+**Testing:** Signup flow now works end-to-end for new users.
+
+---
+
 ### 0ad. April 17, 2026 — Block Negative Time Saved + Fix Saved Hours Calc + Accomplishments in Scoring
 
 **Three issues addressed:**
