@@ -418,11 +418,18 @@ body {
               }));
               window.location.href = 'index.html';
               return;
+            } else if (rpcErr) {
+              console.error('Profile completion error:', rpcErr.message);
             }
-          } catch (_) { /* fall through to error */ }
+          } catch (e) {
+            console.error('Profile completion exception:', e);
+          }
         }
 
-        showError('Account not found in the system. Contact your admin.');
+        // Profile not found and couldn't be completed
+        const errorMsg = `Your account was created but your profile needs to be completed. 
+Please contact your practice SPOC or admin (eas@ejada.com) with your email (${data.user.email}) to complete registration.`;
+        showError(errorMsg);
         await sb.auth.signOut();
         btn.classList.remove('loading');
         btn.disabled = false;
