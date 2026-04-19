@@ -6527,11 +6527,18 @@ function populateFilters() {
   const tools = data.lovs?.aiTools || [];
 
   // Task filter dropdowns
+  const _filterRole = EAS_Auth.getUserRole();
+  const _filterPractice = EAS_Auth.getUserPractice();
   const practiceSelects = ['task-filter-practice', 'acc-filter-practice', 'copilot-filter-practice', 'project-filter-practice', 'lb-filter-practice', 'uc-filter-practice', 'approvals-filter-practice', 'issue-filter-practice'];
   practiceSelects.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     practices.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; el.appendChild(o); });
+    // Lock practice filter to own practice for SPOC and team_lead
+    if ((_filterRole === 'spoc' || _filterRole === 'team_lead') && _filterPractice) {
+      el.value = _filterPractice;
+      el.disabled = true;
+    }
   });
 
   const catSel = document.getElementById('task-filter-category');
