@@ -2839,6 +2839,14 @@ function renderProjects() {
   const search = (document.getElementById('project-search').value || '').toLowerCase();
   const _pRole = EAS_Auth.getUserRole();
   const _pPractice = EAS_Auth.getUserPractice();
+
+  // Fail closed: if spoc/team_lead has no practice assigned, show nothing
+  if ((_pRole === 'spoc' || _pRole === 'team_lead') && !_pPractice) {
+    document.getElementById('projects-tbody').innerHTML =
+      '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted)">Practice not assigned — contact admin</td></tr>';
+    return;
+  }
+
   const fPractice = (_pRole === 'spoc' || _pRole === 'team_lead')
     ? _pPractice
     : document.getElementById('project-filter-practice').value;
@@ -7061,8 +7069,12 @@ async function boot() {
   if (data) {
     // Pre-fetch team lead member emails so render functions stay synchronous
     if (EAS_Auth.getUserRole() === 'team_lead') {
-      const tlProfile = await EAS_Auth.getUserProfile();
-      _tlMemberEmails = await EAS_DB.fetchTeamLeadMemberEmails(tlProfile?.id);
+      try {
+        const tlProfile = await EAS_Auth.getUserProfile();
+        _tlMemberEmails = await EAS_DB.fetchTeamLeadMemberEmails(tlProfile?.id);
+      } catch (err) {
+        console.warn('Failed to pre-fetch team lead member emails — defaulting to empty:', err);
+      }
     }
     populateFilters();
     await updateNavCounts();
