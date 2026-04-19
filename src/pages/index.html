@@ -2258,13 +2258,15 @@ function renderDashboard() {
   const t = fd.summary.totals;
   const qLabel = EAS_DB.getQuarterLabel(EAS_DB.getSelectedQuarter());
   const allTaskCount = fd.tasks.length;
+  const totalLicensed = fd.summary.practices.reduce((s, p) => s + p.licensedUsers, 0);
+  const totalActive = fd.summary.practices.reduce((s, p) => s + p.activeUsers, 0);
   document.getElementById('kpi-grid').innerHTML = `
     <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue">${allTaskCount}</div><div class="kpi-sub">${t.tasks} approved · ${qLabel}</div></div>
     <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value green">${fmt(t.timeSaved, 0)}</div><div class="kpi-sub">of ${fmt(t.timeWithout, 0)} total hrs</div></div>
     <div class="kpi-card"><div class="kpi-label">Avg Efficiency</div><div class="kpi-value yellow">${fmt(t.efficiency, 1)}%</div><div class="kpi-sub">time reduction</div></div>
     <div class="kpi-card"><div class="kpi-label">Avg Quality</div><div class="kpi-value purple">${fmt(t.quality, 1)}/5</div><div class="kpi-sub">rating</div></div>
     <div class="kpi-card"><div class="kpi-label">Active Projects</div><div class="kpi-value cyan">${t.projects}</div><div class="kpi-sub">across 6 practices</div></div>
-    <div class="kpi-card"><div class="kpi-label">Copilot Users</div><div class="kpi-value pink">${data.copilotUsers.length}</div><div class="kpi-sub">access granted</div></div>
+    <div class="kpi-card"><div class="kpi-label">Copilot Users</div><div class="kpi-value pink">${totalLicensed}</div><div class="kpi-sub">${totalActive} active · task + IDE</div></div>
   `;
 
   // Featured Banner Spotlight — synchronous, uses already-loaded data
@@ -2580,6 +2582,7 @@ function renderPractices() {
       </div>
       <div class="practice-stats">
         <div><div class="practice-stat-label">Hours Saved</div><div class="practice-stat-value" style="color:var(--success)">${fmt(p.timeSaved, 0)}</div></div>
+        <div><div class="practice-stat-label">Active Users</div><div class="practice-stat-value" style="color:var(--accent)">${p.activeUsers}</div></div>
         <div><div class="practice-stat-label">Efficiency</div><div class="practice-stat-value" style="color:var(--warning)">${fmt(p.efficiency, 0)}%</div></div>
         <div><div class="practice-stat-label">Quality</div><div class="practice-stat-value" style="color:var(--purple)">${fmt(p.quality, 1)}</div></div>
       </div>
@@ -2604,6 +2607,8 @@ function showPracticeDetail(practice) {
       <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value green">${fmt(info.timeSaved, 1)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Efficiency</div><div class="kpi-value yellow">${fmt(info.efficiency, 1)}%</div></div>
       <div class="kpi-card"><div class="kpi-label">Quality</div><div class="kpi-value purple">${fmt(info.quality, 1)}/5</div></div>
+      <div class="kpi-card"><div class="kpi-label">Licensed Users</div><div class="kpi-value pink">${info.licensedUsers || 0}</div><div class="kpi-sub">access granted</div></div>
+      <div class="kpi-card"><div class="kpi-label">Active Users</div><div class="kpi-value cyan">${info.activeUsers || 0}</div><div class="kpi-sub">task + IDE activity</div></div>
     </div>
     <div class="table-card">
       <div class="table-header"><h3>Tasks (${tasks.length})</h3></div>
