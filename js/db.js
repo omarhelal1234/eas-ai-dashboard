@@ -287,7 +287,7 @@ const EAS_DB = (() => {
       hasLoggedTask: u.has_logged_task,
       lastTaskDate:  u.last_task_date,
       copilotAccessDate: u.copilot_access_date,
-      githubCopilotStatus: u.github_copilot_status || 'inactive',
+      githubCopilotStatus: u.ide_days_active > 0 ? 'active' : (u.github_copilot_status || 'inactive'),
       m365CopilotStatus:   u.m365_copilot_status || 'inactive',
       githubCopilotActivatedAt: u.github_copilot_activated_at,
       m365CopilotActivatedAt:   u.m365_copilot_activated_at,

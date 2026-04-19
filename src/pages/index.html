@@ -353,7 +353,7 @@
             <thead>
               <tr>
                 <th>Practice</th>
-                <th>Week</th>
+                <th>Date</th>
                 <th>Project</th>
                 <th>Employee</th>
                 <th>Task</th>
@@ -680,7 +680,7 @@
         </div>
         <div style="overflow-x:auto">
           <table aria-label="My tasks">
-            <thead><tr><th>Week</th><th>Project</th><th>Task</th><th>Category</th><th>AI Tool</th><th>Without AI</th><th>With AI</th><th>Saved</th><th>Status</th><th>Approval</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Date</th><th>Project</th><th>Task</th><th>Category</th><th>AI Tool</th><th>Without AI</th><th>With AI</th><th>Saved</th><th>Status</th><th>Approval</th><th>Actions</th></tr></thead>
             <tbody id="mytasks-tbody"></tbody>
           </table>
         </div>
@@ -2618,10 +2618,10 @@ function showPracticeDetail(practice) {
       <div class="table-header"><h3>Tasks (${tasks.length})</h3></div>
       <div style="overflow-x:auto">
         <table aria-label="Practice tasks detail">
-          <thead><tr><th>Week</th><th>Project</th><th>Employee</th><th>Task</th><th>Category</th><th>Tool</th><th>Without AI</th><th>With AI</th><th>Saved</th><th>Status</th></tr></thead>
+          <thead><tr><th>Date</th><th>Project</th><th>Employee</th><th>Task</th><th>Category</th><th>Tool</th><th>Without AI</th><th>With AI</th><th>Saved</th><th>Status</th></tr></thead>
           <tbody>
             ${tasks.map(t => `<tr>
-              <td>${t.week}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.project}">${t.project}</td>
+              <td style="white-space:nowrap">${t.weekStart ? new Date(t.weekStart).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'2-digit'}) : '-'}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.project}">${t.project}</td>
               <td>${t.employee}</td><td>${t.task}</td><td>${t.category}</td><td>${t.aiTool}</td>
               <td>${fmt(t.timeWithout)}</td><td>${fmt(t.timeWith)}</td><td style="color:var(--success);font-weight:600">${fmt(t.timeSaved)}</td><td>${statusBadge(t.status)}</td>
             </tr>`).join('')}
@@ -2666,7 +2666,7 @@ function renderTasks() {
   document.getElementById('tasks-tbody').innerHTML = pageItems.map(t => `
     <tr${t.approvalStatus !== 'approved' ? ' style="opacity:0.75"' : ''}>
       <td><span style="color:${practiceColors[t.practice] || '#94a3b8'};font-weight:600">${t.practice}</span></td>
-      <td>${t.week}</td>
+      <td style="white-space:nowrap">${t.weekStart ? new Date(t.weekStart).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'2-digit'}) : '-'}</td>
       <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.project}">${t.project}</td>
       <td>${t.employee}</td>
       <td>${t.task}</td>
@@ -3289,6 +3289,15 @@ async function renderMyPractice() {
     <div class="kpi-card"><div class="kpi-label">Inactive</div><div class="kpi-value" style="color:var(--warning)">${inactive.length}</div><div class="kpi-sub">need attention</div></div>
   `;
 
+  // Build sets for activity lookup — fetchInactiveMembers uses ALL tasks (not approval-filtered)
+  // so it correctly reflects today's pending submissions too.
+  const inactiveEmailSet = new Set(inactive.map(u => (u.email || '').toLowerCase()));
+  const copilotEmailSet = new Set(
+    (data.copilotUsers || [])
+      .filter(u => u.practice === practice && u.status === 'access granted')
+      .map(u => (u.email || '').toLowerCase())
+  );
+
   // Team table
   document.getElementById('mypractice-team-count').textContent = `${teamData.length} members`;
   document.getElementById('mypractice-team-tbody').innerHTML = teamData.map((e, i) => {
@@ -3298,9 +3307,16 @@ async function renderMyPractice() {
       ? earned.map(b => `<span class="badge-icon" title="${b.title}: ${b.description}">${b.icon}</span>`).join('')
       : '<span style="color:var(--text-muted);font-size:12px">—</span>';
     const lastActive = e.lastTask ? new Date(e.lastTask).toLocaleDateString() : 'Never';
+    const emailLower = (e.email || '').toLowerCase();
+    const isKnownCopilot = copilotEmailSet.has(emailLower);
+    // For copilot-licensed users: trust fetchInactiveMembers (checks all tasks by created_at).
+    // For others (no copilot record): fall back to leaderboard lastTask (approved only).
     const daysSince = e.lastTask ? Math.floor((Date.now() - new Date(e.lastTask).getTime()) / 86400000) : null;
-    const statusCls = daysSince === null ? 'status-pending' : daysSince > 14 ? 'status-pending' : 'status-completed';
-    const statusTxt = daysSince === null ? 'No tasks' : daysSince > 14 ? 'Inactive' : 'Active';
+    const isInactive = isKnownCopilot
+      ? inactiveEmailSet.has(emailLower)
+      : (daysSince === null || daysSince > 14);
+    const statusCls = isInactive ? 'status-pending' : 'status-completed';
+    const statusTxt = (!isKnownCopilot && daysSince === null) ? 'No tasks' : isInactive ? 'Inactive' : 'Active';
     return `<tr>
       <td><span style="font-weight:600">${i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : ''}${e.name}</span></td>
       <td>${e.tasks}</td>
@@ -3698,7 +3714,7 @@ async function renderMyTasks() {
   document.getElementById('mytasks-tbody').innerHTML = myTasks.length === 0
     ? '<tr><td colspan="11" style="text-align:center;padding:30px"><div class="empty-state"><h3>No tasks yet</h3><p>Click "+ Log Task" to record your first AI task!</p></div></td></tr>'
     : myTasks.map(t => `<tr${t.approvalStatus !== 'approved' ? ' style="opacity:0.7"' : ''}>
-      <td>${t.week}</td>
+      <td style="white-space:nowrap">${t.weekStart ? new Date(t.weekStart).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'2-digit'}) : '-'}</td>
       <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.project}">${t.project}</td>
       <td>${t.task}</td>
       <td>${t.category}</td>
