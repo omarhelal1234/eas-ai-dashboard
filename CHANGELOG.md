@@ -10,6 +10,10 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-19 (claude) — **IDE usage sync from Grafana dump (2026-03-22 → 2026-04-18)** — Parsed `IDE_Dump_19_Apr_26.json` (NDJSON, 3,087 daily records, 377 unique users). Created `scripts/sync_grafana_json.py` to aggregate per-user metrics and generate UPDATEs. Executed 8 batches of SQL against `copilot_users`; 32 EAS participants matched and updated across `ide_days_active`, `ide_total_interactions`, `ide_code_generations`, `ide_code_acceptances`, `ide_agent_days`, `ide_chat_days`, `ide_loc_suggested`, `ide_loc_added`, `ide_last_active_date`, `ide_data_period`. (data-sync/ide)
+
+- 2026-04-19 (claude) — Replace all GRC projects: deleted 16 stale/duplicate entries and inserted 9 clean authoritative records (ANB CR VAT Reconciliation, ARB Counter Fraud Analytics Renewal, ARB Digital Core Banking, Experian BAU DigiCore, QNBAA BAU, SIMAH Enhancements, VAT Application Support, ANB Consumer Loans Reconciliation, ANB IT Managed Services 2025) (projects/data)
+
 - 2026-04-18 (claude) — feat: live AI news feed — daily-refreshed from 8 RSS sources + skills.sh, filterable by topic and source, admin manual refresh (ai-news)
 
 - 2026-04-17 (claude) — **iPhone orientation compatibility** — Fixed all iOS Safari orientation issues: (1) Added `viewport-fit=cover` to all 6 HTML pages for notch/safe-area support. (2) Replaced `100vh` with `100dvh` (dynamic viewport height) across shared CSS and inline styles — fixes the iOS address bar overlap. (3) Added `env(safe-area-inset-*)` padding to page content, headers, mobile toggle, and toast notifications — prevents content from being hidden behind the notch or home indicator. (4) Added `@media (max-height: 500px) and (orientation: landscape)` queries across all pages — compacts KPIs, charts, headers, modals, login/signup forms, and carousel for phone landscape mode. (5) Added `-webkit-text-size-adjust: 100%` to prevent font inflation on orientation change. (fix/mobile+ios)
