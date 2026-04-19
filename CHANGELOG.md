@@ -10,6 +10,10 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-19 (claude) — **Fix IDE data period banner** — Banner now shows the unified date range of the latest sync batch only (collapsing per-user period strings to a single "Mar 2026 to Apr 2026" label), instead of concatenating all historical periods from every past sync. (fix/ide-ui)
+
+- 2026-04-19 (claude) — **Fix: Create missing signup_contributor RPC function** — Account creation failed at profile setup because signup_contributor() RPC was never implemented. Created SECURITY DEFINER function that creates users + copilot_users rows, handling copilot status based on has_copilot flag (access granted vs pending). Function properly uses status column (remarks was dropped April 17). Restored signup flow. (fix/db+auth)
+
 - 2026-04-19 (claude) — **Reflect IDE data on main dashboard** — Main "Copilot Users" KPI now shows licensed count + "N active · task + IDE" sub-text (computed from practice_summary). Practice cards now include "Active Users" stat alongside hours saved/efficiency/quality. Practice detail KPI grid now includes "Licensed Users" and "Active Users" cards sourced from practice_summary.active_users (which counts task-loggers + ide_days_active > 0). (feat/dashboard+ui)
 
 - 2026-04-19 (claude) — **IDE usage sync from Grafana dump (2026-03-22 → 2026-04-18)** — Parsed `IDE_Dump_19_Apr_26.json` (NDJSON, 3,087 daily records, 377 unique users). Created `scripts/sync_grafana_json.py` to aggregate per-user metrics and generate UPDATEs. Executed 8 batches of SQL against `copilot_users`; 32 EAS participants matched and updated across `ide_days_active`, `ide_total_interactions`, `ide_code_generations`, `ide_code_acceptances`, `ide_agent_days`, `ide_chat_days`, `ide_loc_suggested`, `ide_loc_added`, `ide_last_active_date`, `ide_data_period`. (data-sync/ide)

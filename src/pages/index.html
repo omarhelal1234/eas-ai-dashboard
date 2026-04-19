@@ -7116,15 +7116,24 @@ boot();
   }
 
   function updateIDEPeriod() {
-    const wp = ideAllStats.filter(u => u.ideDataPeriod);
+    const wp = ideAllStats.filter(u => u.ideDataPeriod && u.ideDataUpdatedAt);
     if (!wp.length) { document.getElementById('ide-period-banner').style.display = 'none'; return; }
-    const periods = [...new Set(wp.map(u => periodToMonths(u.ideDataPeriod)))];
-    document.getElementById('ide-period-text').textContent = periods.join(', ');
-    const dates = wp.filter(u => u.ideDataUpdatedAt).map(u => new Date(u.ideDataUpdatedAt));
-    if (dates.length) {
-      const latest = new Date(Math.max(...dates));
-      document.getElementById('ide-updated-at').textContent = `Last synced: ${latest.toLocaleDateString()} ${latest.toLocaleTimeString()}`;
-    }
+    // Find the most recent sync date (day precision) and show only that batch's period
+    const allDates = wp.map(u => new Date(u.ideDataUpdatedAt));
+    const latestMs = Math.max(...allDates);
+    const latest = new Date(latestMs);
+    const latestDay = latest.toISOString().slice(0, 10); // YYYY-MM-DD
+    const latestBatch = wp.filter(u => u.ideDataUpdatedAt.slice(0, 10) === latestDay);
+    const periods = [...new Set(latestBatch.map(u => periodToMonths(u.ideDataPeriod)))];
+    // Collapse to a single "start to end" range across individual user periods in this batch
+    const allStarts = latestBatch.map(u => u.ideDataPeriod.split(' to ')[0]).filter(Boolean).sort();
+    const allEnds   = latestBatch.map(u => u.ideDataPeriod.split(' to ').at(-1)).filter(Boolean).sort();
+    const rangeStart = allStarts[0], rangeEnd = allEnds[allEnds.length - 1];
+    const label = rangeStart && rangeEnd
+      ? periodToMonths(`${rangeStart} to ${rangeEnd}`)
+      : periods.join(', ');
+    document.getElementById('ide-period-text').textContent = label;
+    document.getElementById('ide-updated-at').textContent = `Last synced: ${latest.toLocaleDateString()} ${latest.toLocaleTimeString()}`;
     document.getElementById('ide-period-banner').style.display = '';
   }
 
