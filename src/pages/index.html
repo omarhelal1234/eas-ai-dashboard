@@ -2165,6 +2165,7 @@ function updateChartTheme() {
 // ======== STATE ========
 let data = null; // Populated from Supabase in boot()
 let charts = {};
+let _tlMemberEmails = []; // pre-fetched at init for team_lead scoped views
 const practiceColors = {
   'BFSI': '#3b82f6', 'CES': '#10b981', 'ERP': '#f59e0b',
   'EPS': '#8b5cf6', 'GRC': '#ec4899', 'EPCS': '#06b6d4'
