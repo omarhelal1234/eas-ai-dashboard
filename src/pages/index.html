@@ -531,29 +531,52 @@
 
   <!-- ======== MY DEPARTMENT (dept_spoc) ======== -->
   <div id="page-mydepartment" class="page hidden">
-    <div class="page-header">
-      <div>
-        <h2 id="mydept-title">My Department</h2>
-        <div class="subtitle" id="mydept-subtitle">Department dashboard</div>
+    <!-- Enhanced Department Header -->
+    <div class="dept-header">
+      <div class="dept-header-left">
+        <div class="dept-header-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        </div>
+        <div class="dept-header-info">
+          <h2 id="mydept-title">My Department</h2>
+          <div class="dept-header-meta" id="mydept-subtitle">
+            <span id="mydept-meta-practices">0 practices</span>
+            <span class="meta-dot" aria-hidden="true"></span>
+            <span id="mydept-meta-quarter">All Quarters</span>
+          </div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
+      <div class="dept-header-actions">
         <select class="quarter-selector" id="mydept-filter-quarter" aria-label="Filter by quarter"></select>
+        <button class="btn btn-secondary" onclick="openExportModal('mydepartment')" aria-label="Export department data">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export
+        </button>
       </div>
     </div>
 
-    <!-- Dept KPI row -->
-    <div class="kpi-grid" id="mydept-kpis"></div>
+    <!-- Department KPI Cards -->
+    <div class="dept-kpi-grid" id="mydept-kpis"></div>
 
-    <!-- Practice cards grid -->
-    <div id="mydept-practices-section" style="margin-top:24px">
-      <h3 style="margin-bottom:16px;font-size:16px;font-weight:600">Practices</h3>
-      <div id="mydept-practice-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px"></div>
+    <!-- Practice Cards Section -->
+    <div class="dept-practices-section" id="mydept-practices-section">
+      <div class="dept-section-header">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Practices
+        </h3>
+        <span class="dept-section-badge" id="mydept-practices-count">0 practices</span>
+      </div>
+      <div class="dept-practice-grid" id="mydept-practice-cards"></div>
     </div>
 
     <!-- Practice drill-down panel (hidden until a card is clicked) -->
     <div id="mydept-detail-panel" style="display:none;margin-top:32px">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-        <button class="btn btn-secondary" style="font-size:13px;padding:6px 14px" onclick="closeDeptDrillDown()">&#8592; Back to Department</button>
+      <div class="dept-drilldown-bar">
+        <button class="btn btn-secondary" onclick="closeDeptDrillDown()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to Department
+        </button>
         <h3 id="mydept-detail-title" style="font-size:16px;font-weight:600;margin:0"></h3>
       </div>
       <div id="mydept-mypractice-scope"></div>
@@ -563,8 +586,11 @@
   <!-- SPOC: My Practice Page -->
   <div id="page-mypractice" class="page hidden">
     <!-- Back button shown only when drilling down from My Department -->
-    <div id="dept-drilldown-back-bar" style="display:none;margin-bottom:12px">
-      <button class="btn btn-secondary" style="font-size:13px;padding:6px 14px" onclick="closeDeptDrillDown()">&#8592; Back to Department</button>
+    <div id="dept-drilldown-back-bar" class="dept-drilldown-bar" style="display:none">
+      <button class="btn btn-secondary" onclick="closeDeptDrillDown()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Department
+      </button>
     </div>
     <div class="page-header">
       <div>
@@ -3451,12 +3477,20 @@ async function renderMyDepartment() {
   const practiceNames = (practices || []).map(p => p.name);
 
   const deptName = dept?.name || 'Department';
-  document.getElementById('mydept-title').textContent = deptName;
-  document.getElementById('mydept-subtitle').textContent =
-    `${practiceNames.length} practice${practiceNames.length !== 1 ? 's' : ''} — ${quarterId && quarterId !== 'all' ? EAS_DB.getQuarterLabel(quarterId) : 'All Quarters'}`;
+  document.getElementById('mydept-title').textContent = deptName + ' Department';
+  document.getElementById('mydept-meta-practices').textContent =
+    `${practiceNames.length} practice${practiceNames.length !== 1 ? 's' : ''}`;
+  document.getElementById('mydept-meta-quarter').textContent =
+    quarterId && quarterId !== 'all' ? EAS_DB.getQuarterLabel(quarterId) : 'All Quarters';
+  document.getElementById('mydept-practices-count').textContent =
+    `${practiceNames.length} practice${practiceNames.length !== 1 ? 's' : ''}`;
 
   if (practiceNames.length === 0) {
-    document.getElementById('mydept-kpis').innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No active practices in this department.</p>';
+    document.getElementById('mydept-kpis').innerHTML = `
+      <div class="dept-empty-state" style="grid-column:1/-1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <p>No active practices in this department.</p>
+      </div>`;
     document.getElementById('mydept-practice-cards').innerHTML = '';
     return;
   }
@@ -3474,15 +3508,54 @@ async function renderMyDepartment() {
     : 0;
   const activeUsers = new Set(allTasks.map(t => t.employeeEmail).filter(Boolean)).size;
 
+  // Enhanced KPI cards with icons and color accents
   document.getElementById('mydept-kpis').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value green">${EAS_Utils.fmtInt(totalTasks)}</div><div class="kpi-sub">${EAS_Utils.sanitize(deptName)}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value yellow">${fmt(totalSaved, 0)}</div><div class="kpi-sub">across department</div></div>
-    <div class="kpi-card"><div class="kpi-label">Avg Efficiency</div><div class="kpi-value purple">${fmt(avgEff, 1)}%</div><div class="kpi-sub">time reduction</div></div>
-    <div class="kpi-card"><div class="kpi-label">Active Contributors</div><div class="kpi-value blue">${EAS_Utils.fmtInt(activeUsers)}</div><div class="kpi-sub">this quarter</div></div>
+    <div class="dept-kpi-card dept-kpi-card--tasks dept-animate-in">
+      <div class="dept-kpi-top">
+        <div class="dept-kpi-icon dept-kpi-icon--tasks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+      </div>
+      <div class="dept-kpi-value" style="color:var(--success)">${EAS_Utils.fmtInt(totalTasks)}</div>
+      <div class="dept-kpi-label">Total Tasks</div>
+    </div>
+    <div class="dept-kpi-card dept-kpi-card--hours dept-animate-in">
+      <div class="dept-kpi-top">
+        <div class="dept-kpi-icon dept-kpi-icon--hours">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+      </div>
+      <div class="dept-kpi-value" style="color:var(--warning)">${fmt(totalSaved, 0)}</div>
+      <div class="dept-kpi-label">Hours Saved</div>
+    </div>
+    <div class="dept-kpi-card dept-kpi-card--efficiency dept-animate-in">
+      <div class="dept-kpi-top">
+        <div class="dept-kpi-icon dept-kpi-icon--efficiency">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+      </div>
+      <div class="dept-kpi-value" style="color:var(--purple)">${fmt(avgEff, 1)}%</div>
+      <div class="dept-kpi-label">Avg Efficiency</div>
+    </div>
+    <div class="dept-kpi-card dept-kpi-card--users dept-animate-in">
+      <div class="dept-kpi-top">
+        <div class="dept-kpi-icon dept-kpi-icon--users">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+      </div>
+      <div class="dept-kpi-value" style="color:var(--accent)">${EAS_Utils.fmtInt(activeUsers)}</div>
+      <div class="dept-kpi-label">Active Contributors</div>
+    </div>
   `;
 
-  // Render practice cards
-  document.getElementById('mydept-practice-cards').innerHTML = practiceNames.map(pName => {
+  // Practice color assignment (reuse existing practiceColors or assign)
+  const pColors = EAS_Utils.practiceColors;
+  const fallbackColors = EAS_Utils.chartColors;
+
+  // Render enhanced practice cards with progress bars
+  const maxTasks = Math.max(...practiceNames.map(pName => allTasks.filter(t => t.practice === pName).length), 1);
+
+  document.getElementById('mydept-practice-cards').innerHTML = practiceNames.map((pName, idx) => {
     const pTasks = allTasks.filter(t => t.practice === pName);
     const pSaved = pTasks.reduce((s, t) => s + (t.timeSaved || 0), 0);
     const pEff = pTasks.length > 0
@@ -3491,16 +3564,41 @@ async function renderMyDepartment() {
     const pUsers = new Set(pTasks.map(t => t.employeeEmail).filter(Boolean)).size;
     const safeP = EAS_Utils.sanitize(pName);
     const safePAttr = pName.replace(/'/g, "\\'");
+    const dotColor = pColors[pName] || fallbackColors[idx % fallbackColors.length];
+    const progressPct = maxTasks > 0 ? Math.round((pTasks.length / maxTasks) * 100) : 0;
+
     return `
-      <div class="table-card" style="padding:18px;cursor:pointer" onclick="openDeptDrillDown('${safePAttr}')">
-        <div style="font-weight:700;font-size:15px;margin-bottom:10px;color:var(--text-primary)">${safeP}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
-          <div><div style="color:var(--text-muted)">Tasks</div><div style="font-weight:600;color:var(--success)">${pTasks.length}</div></div>
-          <div><div style="color:var(--text-muted)">Efficiency</div><div style="font-weight:600;color:var(--primary)">${fmt(pEff, 1)}%</div></div>
-          <div><div style="color:var(--text-muted)">Hours Saved</div><div style="font-weight:600;color:var(--warning)">${fmt(pSaved, 0)}</div></div>
-          <div><div style="color:var(--text-muted)">Contributors</div><div style="font-weight:600">${pUsers}</div></div>
+      <div class="dept-practice-card dept-animate-in" onclick="openDeptDrillDown('${safePAttr}')" role="button" tabindex="0" aria-label="View ${safeP} practice details" onkeydown="if(event.key==='Enter')openDeptDrillDown('${safePAttr}')">
+        <div class="dept-practice-card-header">
+          <span class="dept-practice-card-name">
+            <span class="practice-dot" style="background:${dotColor}"></span>
+            ${safeP}
+          </span>
+          <span class="dept-practice-card-arrow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </span>
         </div>
-        <button class="btn btn-secondary" style="width:100%;margin-top:14px;font-size:13px">View Practice &#9658;</button>
+        <div class="dept-practice-stats">
+          <div class="dept-practice-stat">
+            <span class="dept-practice-stat-label">Tasks</span>
+            <span class="dept-practice-stat-value" style="color:var(--success)">${pTasks.length}</span>
+          </div>
+          <div class="dept-practice-stat">
+            <span class="dept-practice-stat-label">Efficiency</span>
+            <span class="dept-practice-stat-value" style="color:var(--purple)">${fmt(pEff, 1)}%</span>
+          </div>
+          <div class="dept-practice-stat">
+            <span class="dept-practice-stat-label">Hours Saved</span>
+            <span class="dept-practice-stat-value" style="color:var(--warning)">${fmt(pSaved, 0)}</span>
+          </div>
+          <div class="dept-practice-stat">
+            <span class="dept-practice-stat-label">Contributors</span>
+            <span class="dept-practice-stat-value">${pUsers}</span>
+          </div>
+        </div>
+        <div class="dept-practice-progress">
+          <div class="dept-practice-progress-fill" style="width:${progressPct}%;background:${dotColor}"></div>
+        </div>
       </div>
     `;
   }).join('');
@@ -5852,6 +5950,7 @@ function openExportModal(pageContext) {
       'copilot': ['exp-xl-copilot'],
       'projects': ['exp-xl-projects'],
       'mypractice': ['exp-xl-summary', 'exp-xl-tasks', 'exp-pdf-mypractice', 'exp-ppt-practices'],
+      'mydepartment': ['exp-xl-summary', 'exp-xl-tasks', 'exp-pdf-dashboard', 'exp-ppt-dashboard'],
       'leaderboard': ['exp-xl-leaderboard', 'exp-pdf-leaderboard', 'exp-ppt-leaderboard'],
       'mytasks': ['exp-xl-tasks', 'exp-pdf-mytasks']
     };

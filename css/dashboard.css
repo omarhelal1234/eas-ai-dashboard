@@ -2433,3 +2433,357 @@ tr:hover td { background: var(--bg-translucent); }
   .ainews-card-meta { gap: 4px; }
   .ainews-card-time { margin-left: 0; width: 100%; margin-top: 4px; }
 }
+
+/* ============================================================
+   My Department View — Enhanced UI
+   ============================================================ */
+
+/* Department Header */
+.dept-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 28px 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+.dept-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dept-header-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dept-header-icon svg {
+  width: 24px;
+  height: 24px;
+  color: white;
+  stroke: white;
+  fill: none;
+}
+.dept-header-info h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+.dept-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.dept-header-meta .meta-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.5;
+}
+.dept-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Department KPI Cards — Enhanced */
+.dept-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 24px 32px;
+}
+.dept-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dept-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.dept-kpi-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3);
+}
+.dept-kpi-card:hover::before {
+  opacity: 1;
+}
+.dept-kpi-card--tasks::before { background: var(--success); }
+.dept-kpi-card--hours::before { background: var(--warning); }
+.dept-kpi-card--efficiency::before { background: var(--purple); }
+.dept-kpi-card--users::before { background: var(--accent); }
+
+.dept-kpi-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.dept-kpi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dept-kpi-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+.dept-kpi-icon--tasks { background: rgba(16, 185, 129, 0.12); color: var(--success); }
+.dept-kpi-icon--hours { background: rgba(245, 158, 11, 0.12); color: var(--warning); }
+.dept-kpi-icon--efficiency { background: rgba(139, 92, 246, 0.12); color: var(--purple); }
+.dept-kpi-icon--users { background: rgba(59, 130, 246, 0.12); color: var(--accent); }
+
+.dept-kpi-trend {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.dept-kpi-trend--up { background: rgba(16, 185, 129, 0.12); color: var(--success); }
+.dept-kpi-trend--neutral { background: var(--bg-translucent-hover); color: var(--text-muted); }
+
+.dept-kpi-value {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.dept-kpi-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Department Practices Section */
+.dept-practices-section {
+  padding: 0 32px 32px;
+}
+.dept-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-top: 8px;
+}
+.dept-section-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dept-section-header h3 svg {
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+}
+.dept-section-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--bg-translucent-hover);
+  color: var(--text-secondary);
+}
+
+/* Practice Cards Grid */
+.dept-practice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.dept-practice-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dept-practice-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3);
+}
+.dept-practice-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.dept-practice-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.dept-practice-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dept-practice-card-name .practice-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dept-practice-card-arrow {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-translucent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.dept-practice-card:hover .dept-practice-card-arrow {
+  background: var(--accent);
+  color: white;
+}
+.dept-practice-card-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Practice card stats grid */
+.dept-practice-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.dept-practice-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dept-practice-stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.dept-practice-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+/* Practice card progress bar */
+.dept-practice-progress {
+  height: 6px;
+  background: var(--bg-translucent-hover);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.dept-practice-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(90deg, var(--accent), var(--purple));
+}
+
+/* Drill-down back bar */
+.dept-drilldown-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--bg-translucent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.dept-drilldown-bar .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+/* Animations */
+@keyframes deptFadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dept-animate-in {
+  animation: deptFadeInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0;
+}
+.dept-animate-in:nth-child(1) { animation-delay: 0.05s; }
+.dept-animate-in:nth-child(2) { animation-delay: 0.1s; }
+.dept-animate-in:nth-child(3) { animation-delay: 0.15s; }
+.dept-animate-in:nth-child(4) { animation-delay: 0.2s; }
+.dept-animate-in:nth-child(5) { animation-delay: 0.25s; }
+.dept-animate-in:nth-child(6) { animation-delay: 0.3s; }
+
+/* Empty state */
+.dept-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.dept-empty-state svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+.dept-empty-state p {
+  font-size: 14px;
+  max-width: 300px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .dept-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .dept-header { flex-direction: column; gap: 16px; padding: 20px 16px; }
+  .dept-kpi-grid { grid-template-columns: 1fr; padding: 16px; }
+  .dept-practices-section { padding: 0 16px 24px; }
+  .dept-practice-grid { grid-template-columns: 1fr; }
+}
