@@ -562,6 +562,10 @@
 
   <!-- SPOC: My Practice Page -->
   <div id="page-mypractice" class="page hidden">
+    <!-- Back button shown only when drilling down from My Department -->
+    <div id="dept-drilldown-back-bar" style="display:none;margin-bottom:12px">
+      <button class="btn btn-secondary" style="font-size:13px;padding:6px 14px" onclick="closeDeptDrillDown()">&#8592; Back to Department</button>
+    </div>
     <div class="page-header">
       <div>
         <h2>My Practice</h2>
@@ -3001,12 +3005,12 @@ async function renderApprovals() {
     const profile = await EAS_Auth.getUserProfile();
     const userId = typeof EAS_Auth.getUserId === 'function' ? EAS_Auth.getUserId() : profile?.id;
     
-    if (!userRole || !['admin', 'spoc', 'team_lead'].includes(userRole)) {
+    if (!userRole || !['admin', 'spoc', 'dept_spoc', 'team_lead'].includes(userRole)) {
       document.getElementById('approvals-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px">Access denied</td></tr>';
       return;
     }
 
-    document.getElementById('approvals-subtitle').textContent = userRole === 'admin' ? 'All submissions pending review' : userRole === 'team_lead' ? `${userPractice} — My Team Approvals` : `${userPractice} — Pending approvals`;
+    document.getElementById('approvals-subtitle').textContent = userRole === 'admin' ? 'All submissions pending review' : userRole === 'dept_spoc' ? 'Department — All Practice Approvals' : userRole === 'team_lead' ? `${userPractice} — My Team Approvals` : `${userPractice} — Pending approvals`;
 
     // Fetch pending approvals and history
     const [pending, history] = await Promise.all([
@@ -3458,7 +3462,7 @@ async function renderMyDepartment() {
   }
 
   // Aggregate KPIs across all practices in the department
-  const allTasks = (data.tasks || []).filter(t =>
+  const allTasks = (data?.tasks || []).filter(t =>
     practiceNames.includes(t.practice) &&
     t.approvalStatus === 'approved' &&
     (quarterId === 'all' || !quarterId || t.quarterId === quarterId)
@@ -3504,19 +3508,20 @@ async function renderMyDepartment() {
 
 async function openDeptDrillDown(practiceName) {
   _deptDrillPractice = practiceName;
-  document.getElementById('mydept-practices-section').style.display = 'none';
-  document.getElementById('mydept-kpis').style.display = 'none';
-  const panel = document.getElementById('mydept-detail-panel');
-  panel.style.display = '';
-  document.getElementById('mydept-detail-title').textContent = practiceName;
+  // Navigate to #page-mypractice (where renderMyPractice renders its content)
+  // and show a back button so the user can return to My Department.
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById('page-mypractice').classList.remove('hidden');
+  document.getElementById('dept-drilldown-back-bar').style.display = '';
   await renderMyPractice(practiceName);
 }
 
 function closeDeptDrillDown() {
   _deptDrillPractice = null;
-  document.getElementById('mydept-detail-panel').style.display = 'none';
-  document.getElementById('mydept-practices-section').style.display = '';
-  document.getElementById('mydept-kpis').style.display = '';
+  document.getElementById('dept-drilldown-back-bar').style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  document.getElementById('page-mydepartment').classList.remove('hidden');
+  renderMyDepartment();
 }
 
 // ======== TEAM LEAD MANAGEMENT (SPOC) ========
@@ -7175,6 +7180,8 @@ async function boot() {
       headerCtx.textContent = 'Administrator — All Practices';
     } else if (role === 'executive') {
       headerCtx.textContent = `Executive: ${name} — Multi-Practice`;
+    } else if (role === 'dept_spoc') {
+      headerCtx.textContent = `Dept SPOC: ${name} — All Practices`;
     } else if (role === 'spoc') {
       headerCtx.textContent = `SPOC: ${name} — ${practice}`;
     } else {

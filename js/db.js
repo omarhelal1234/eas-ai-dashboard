@@ -1586,6 +1586,10 @@ const EAS_DB = (() => {
       if (userRole === 'admin') {
         // Admin sees items at their layer (admin_review) + all other pending for visibility
         query = query.in('approval_status', ['pending', 'admin_review', 'spoc_review']);
+      } else if (userRole === 'dept_spoc') {
+        // Dept SPOC sees spoc_review items across all practices in their department.
+        // RLS (dept_spoc_approvals_select) restricts rows to their department practices.
+        query = query.eq('approval_status', 'spoc_review');
       } else if (userRole === 'spoc') {
         // Any SPOC in a practice can approve any task for that practice.
         // Match by practice rather than individual spoc_id.

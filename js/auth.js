@@ -120,7 +120,9 @@ const EAS_Auth = (() => {
       return false;
     }
 
-    const profile = await getUserProfile();
+    // Always force-refresh on page load: prevents stale localStorage cache
+    // from hiding new columns (e.g. department_id) or role changes.
+    const profile = await getUserProfile(true);
     if (!profile) {
       await signOut();
       return false;
