@@ -1487,6 +1487,30 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 </div>
 
 
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="modal-reset-password">
+  <div class="modal" style="max-width:480px">
+    <h3 style="display:flex;align-items:center;gap:8px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" width="22" height="22"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      Reset Password
+    </h3>
+    <div style="margin:16px 0 8px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">User</label>
+      <div id="rp-email" style="padding:8px 12px;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;font-size:14px;margin-top:4px"></div>
+    </div>
+    <div style="margin:12px 0">
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">New Password</label>
+      <input type="password" id="rp-password" placeholder="Min 8 characters" minlength="8"
+        style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:14px;margin-top:4px;outline:none"
+        onkeydown="if(event.key==='Enter') _doResetPassword()">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-reset-password')">Cancel</button>
+      <button class="btn btn-primary" onclick="_doResetPassword()">Set Password</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirm Dialog -->
 <div class="confirm-overlay" id="confirm-dialog">
   <div class="confirm-box">
@@ -3729,6 +3753,52 @@ async function sendAdoptionAgentQuery() {
 function escapeHtml(text) {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
   return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// ============ ADMIN RESET PASSWORD ============
+const RESET_PASSWORD_URL = SUPABASE_URL + '/functions/v1/admin-reset-password';
+
+function resetUserPassword(email) {
+  if (!email) return;
+  document.getElementById('rp-email').textContent = email;
+  document.getElementById('rp-password').value = '';
+  openModal('modal-reset-password');
+  setTimeout(() => document.getElementById('rp-password').focus(), 100);
+}
+
+async function _doResetPassword() {
+  const email = document.getElementById('rp-email').textContent.trim();
+  const password = document.getElementById('rp-password').value;
+  if (!password || password.length < 8) {
+    showToast('Password must be at least 8 characters', 'error');
+    return;
+  }
+  try {
+    showToast('Resetting password…', 'info');
+    const session = await EAS_Auth.getSession();
+    if (!session) {
+      showToast('You must be logged in', 'error');
+      return;
+    }
+    const res = await fetch(RESET_PASSWORD_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Failed to reset password', 'error');
+      return;
+    }
+    closeModal('modal-reset-password');
+    showToast(`Password reset for ${email}`, 'success');
+  } catch (err) {
+    console.error('_doResetPassword error:', err);
+    showToast('Network error: ' + err.message, 'error');
+  }
 }
 
 
