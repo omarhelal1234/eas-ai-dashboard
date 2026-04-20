@@ -1,5 +1,15 @@
 ---
 
+## April 20, 2026 — Admin Reset Password
+
+Replaced the Magic Link action in the admin user table with a "Reset Password" action. Motivation: magic links are one-time login URLs, not passwords — admins needed to set a known temporary password (e.g., `12345678`) for users who are locked out.
+
+A new Edge Function (`admin-reset-password`) mirrors the `admin-magic-link` auth pattern: verifies caller JWT, confirms admin role in `public.users`, then calls `supabase.auth.admin.updateUserById` with the new password via the service role key. The service role key stays server-side.
+
+`listUsers({ perPage: 1000 })` is used to look up the target user by email since the Supabase JS SDK v2 Admin API has no `getUserByEmail`. Acceptable for ~120 users; can be optimised with a direct SQL lookup if user count grows significantly.
+
+---
+
 ## April 19, 2026 — 3 Bug Fixes: Project Duplication, Checkbox Visibility, Signup Grafana Stats
 
 ### 1. SPOC project edit duplicates instead of updating — `src/pages/index.html`

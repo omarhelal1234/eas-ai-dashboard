@@ -10,6 +10,8 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-20 (claude) — Replace magic link button with admin-set password action; new Edge Function admin-reset-password (admin panel)
+
 - 2026-04-20 (claude) — restrict Tasks, Licensed AI Users, and Projects views to own practice for SPOC; restrict Tasks and Licensed AI Users to assigned team members for Team Lead; Projects scoped to practice for Team Lead (index.html)
 
 - 2026-04-19 (claude) — **Fix: 3 bugs — task date display, GH Copilot active status, My Practice inactive badge** — (1) Task Log / My Tasks / Practice modal: replaced week-number column with formatted `weekStart` date (e.g. "13 Apr 26"); updated all 3 "Week" headers to "Date". (2) `fetchCopilotUsers` now derives `githubCopilotStatus` from `ide_days_active > 0` — the `github_copilot_status` DB column defaults to `'inactive'` and is never written, so Grafana telemetry is the correct signal. (3) My Practice team table "Active/Inactive" badge now uses `fetchInactiveMembers` result (which scans ALL tasks by `created_at`, not just approved ones) for copilot-licensed users; only non-licensed users fall back to the leaderboard's approved `last_task_date`. (fix/ui+db)
