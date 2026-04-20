@@ -1049,6 +1049,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             <option value="">All Roles</option>
             <option value="admin">Admin</option>
             <option value="spoc">SPOC</option>
+            <option value="dept_spoc">Dept SPOC</option>
             <option value="team_lead">Team Lead</option>
             <option value="contributor">Contributor</option>
             <option value="viewer">Viewer</option>
@@ -1455,11 +1456,16 @@ tr:hover td { background: rgba(255,255,255,0.02); }
         <label>Practice</label>
         <select id="eu-practice"></select>
       </div>
+      <div class="form-group" id="eu-department-group" style="display:none">
+        <label>Department</label>
+        <select id="eu-department"></select>
+      </div>
       <div class="form-group">
         <label>Role</label>
-        <select id="eu-role" onchange="toggleExecPractices()">
+        <select id="eu-role" onchange="toggleRoleFields()">
           <option value="admin">Admin</option>
           <option value="spoc">SPOC</option>
+          <option value="dept_spoc">Dept SPOC</option>
           <option value="team_lead">Team Lead</option>
           <option value="contributor">Contributor</option>
           <option value="viewer">Viewer</option>
@@ -3810,7 +3816,7 @@ async function renderAdminUsers() {
   if (!_adminUsers.length) {
     const { data, error } = await sb
       .from('users')
-      .select('id, auth_id, email, name, role, practice, is_active, last_login, created_at')
+      .select('id, auth_id, email, name, role, practice, department_id, is_active, last_login, created_at')
       .order('practice', { ascending: true })
       .order('name', { ascending: true });
     if (error) {
@@ -3959,36 +3965,59 @@ async function editUser(userId) {
     });
   }
 
-  toggleExecPractices();
+  // Populate department dropdown
+  const deptSelect = document.getElementById('eu-department');
+  if (deptSelect) {
+    const { data: depts } = await getSupabaseClient().from('departments').select('id, name').eq('is_active', true).order('name');
+    deptSelect.innerHTML = '<option value="">— Select Department —</option>' +
+      (depts || []).map(d => `<option value="${d.id}"${user.department_id === d.id ? ' selected' : ''}>${EAS_Utils.sanitize(d.name)}</option>`).join('');
+  }
+  toggleRoleFields();
   document.getElementById('user-modal-title').textContent = 'Edit User — ' + (user.name || user.email);
   openModal('modal-edit-user');
 }
 
-function toggleExecPractices() {
+function toggleRoleFields() {
   const role = document.getElementById('eu-role').value;
   const execRow = document.getElementById('exec-practices-row');
   const practiceGroup = document.getElementById('eu-practice-group');
+  const deptGroup = document.getElementById('eu-department-group');
   if (role === 'executive') {
     if (execRow) execRow.style.display = '';
     if (practiceGroup) practiceGroup.style.display = 'none';
+    if (deptGroup) deptGroup.style.display = 'none';
+  } else if (role === 'dept_spoc') {
+    if (execRow) execRow.style.display = 'none';
+    if (practiceGroup) practiceGroup.style.display = 'none';
+    if (deptGroup) deptGroup.style.display = '';
   } else {
     if (execRow) execRow.style.display = 'none';
     if (practiceGroup) practiceGroup.style.display = '';
+    if (deptGroup) deptGroup.style.display = 'none';
   }
 }
+
+// Keep old name as alias so existing callers still work
+const toggleExecPractices = toggleRoleFields;
 
 async function saveUser() {
   const id = document.getElementById('eu-id').value;
   const role = document.getElementById('eu-role').value;
   const updates = {
     name: document.getElementById('eu-name').value.trim(),
-    practice: role === 'executive' ? null : document.getElementById('eu-practice').value,
+    practice: (role === 'executive' || role === 'dept_spoc') ? null : document.getElementById('eu-practice').value,
+    department_id: role === 'dept_spoc' ? (document.getElementById('eu-department').value || null) : null,
     role: role,
     is_active: document.getElementById('eu-active').value === 'true'
   };
 
   if (!updates.name) {
     showToast('Name is required', 'error');
+    return;
+  }
+
+  if (role === 'dept_spoc' && !updates.department_id) {
+    showToast('Please select a department for Dept SPOC', 'error');
     return;
   }
 
@@ -4002,9 +4031,7 @@ async function saveUser() {
   // Handle executive practice assignments
   if (role === 'executive') {
     const selectedPractices = [...document.querySelectorAll('.exec-practice-cb:checked')].map(cb => cb.value);
-    // Delete existing assignments
     await sb.from('executive_practices').delete().eq('user_id', id);
-    // Insert new assignments
     if (selectedPractices.length > 0) {
       const { error: epError } = await sb
         .from('executive_practices')
@@ -4014,7 +4041,6 @@ async function saveUser() {
       }
     }
   } else {
-    // Clean up executive_practices if role changed away from executive
     await sb.from('executive_practices').delete().eq('user_id', id);
   }
 
