@@ -1486,37 +1486,6 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   </div>
 </div>
 
-<!-- Magic Link Result Modal -->
-<div class="modal-overlay" id="modal-magic-link">
-  <div class="modal" style="max-width:560px">
-    <h3 style="display:flex;align-items:center;gap:8px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" width="22" height="22"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-      Magic Login Link
-    </h3>
-    <p style="margin:12px 0 8px;font-size:13px;color:var(--text-muted)">Share this one-time link with the user. It expires in ~1 hour.</p>
-    <div style="margin:12px 0">
-      <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">User Email</label>
-      <div id="ml-email" style="padding:8px 12px;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;font-size:14px;margin-top:4px"></div>
-    </div>
-    <div style="margin:12px 0">
-      <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Login Link</label>
-      <div style="display:flex;gap:8px;margin-top:4px">
-        <input type="text" id="ml-link" readonly style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:13px;font-family:monospace">
-        <button class="btn btn-primary" onclick="copyMagicLink()" style="white-space:nowrap" title="Copy to clipboard">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copy
-        </button>
-      </div>
-    </div>
-    <div style="margin:12px 0;padding:10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:12px;color:var(--warning)">
-      ⚠️ <strong>Security:</strong> Anyone with this link can sign in as this user. Share it securely and never post it publicly.
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeModal('modal-magic-link')">Close</button>
-      <button class="btn btn-primary" onclick="window.open(document.getElementById('ml-link').value, '_blank')">Open in New Tab</button>
-    </div>
-  </div>
-</div>
 
 <!-- Confirm Dialog -->
 <div class="confirm-overlay" id="confirm-dialog">
@@ -3762,60 +3731,6 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, m => map[m]);
 }
 
-// ============ ADMIN MAGIC LINK ============
-const MAGIC_LINK_URL = SUPABASE_URL + '/functions/v1/admin-magic-link';
-
-async function generateMagicLink(email) {
-  if (!email) return;
-  confirmAction(
-    `Generate a one-time login link for ${email}? Anyone with this link can sign in as this user.`,
-    async () => { await _doGenerateMagicLink(email); }
-  );
-}
-
-async function _doGenerateMagicLink(email) {
-  try {
-    showToast('Generating magic link…', 'info');
-    const session = await EAS_Auth.getSession();
-    if (!session) {
-      showToast('You must be logged in', 'error');
-      return;
-    }
-    const res = await fetch(MAGIC_LINK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + session.access_token,
-      },
-      body: JSON.stringify({ email }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      showToast(data.error || 'Failed to generate link', 'error');
-      return;
-    }
-    // Show result modal
-    document.getElementById('ml-email').textContent = data.email;
-    document.getElementById('ml-link').value = data.action_link;
-    openModal('modal-magic-link');
-    showToast('Magic link generated', 'success');
-  } catch (err) {
-    console.error('generateMagicLink error:', err);
-    showToast('Network error: ' + err.message, 'error');
-  }
-}
-
-function copyMagicLink() {
-  const linkInput = document.getElementById('ml-link');
-  linkInput.select();
-  navigator.clipboard.writeText(linkInput.value).then(() => {
-    showToast('Link copied to clipboard', 'success');
-  }).catch(() => {
-    // Fallback
-    document.execCommand('copy');
-    showToast('Link copied', 'success');
-  });
-}
 
 // ============ MANAGE USERS ============
 let _adminUsers = [];
@@ -3894,8 +3809,8 @@ async function renderAdminUsers() {
         <button class="btn-icon" onclick="editUser('${u.id}')" title="Edit user">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <button class="btn-icon" onclick="generateMagicLink('${escapeHtml(u.email)}')" title="Generate login link" style="color:var(--accent)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <button class="btn-icon" onclick="resetUserPassword('${escapeHtml(u.email)}')" title="Reset password" style="color:var(--warning)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
         </button>
       </td>
     </tr>`;
