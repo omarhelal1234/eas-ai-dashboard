@@ -3268,10 +3268,11 @@ function promptRejectApproval(approvalId) {
 }
 
 // ======== SPOC: MY PRACTICE ========
-async function renderMyPractice() {
-  const practice = EAS_Auth.getUserPractice();
+async function renderMyPractice(overridePractice = null) {
+  const practice = overridePractice ?? EAS_Auth.getUserPractice();
   if (!practice) return;
-  const userRole = EAS_Auth.getUserRole();
+  // When called from My Department drill-down, treat as spoc scope
+  const userRole = overridePractice ? 'spoc' : EAS_Auth.getUserRole();
   const isTeamLead = userRole === 'team_lead';
   const quarterId = document.getElementById('mypractice-filter-quarter')?.value || EAS_DB.getSelectedQuarter();
 
@@ -3377,21 +3378,21 @@ async function renderMyPractice() {
         <td>${lastAct}</td>
         <td style="color:var(--warning);font-weight:600">${days}</td>
         <td style="color:var(--text-muted)">${lastNudged}</td>
-        <td><button class="btn btn-secondary" style="font-size:12px;padding:4px 12px" onclick="nudgeInactive('${u.id}','${u.name}')">Nudge</button></td>
+        <td><button class="btn btn-secondary" style="font-size:12px;padding:4px 12px" onclick="nudgeInactive('${u.id}','${u.name}',${overridePractice ? `'${overridePractice}'` : 'null'})">Nudge</button></td>
       </tr>`;
     }).join('');
 
   // Render team lead management section (SPOC only)
-  if (EAS_Auth.getUserRole() === 'spoc') {
+  if (EAS_Auth.getUserRole() === 'spoc' && !overridePractice) {
     renderTeamLeadManagement();
   }
 }
 
-async function nudgeInactive(userId, userName) {
+async function nudgeInactive(userId, userName, overridePractice = null) {
   const result = await EAS_DB.nudgeUser(userId);
   if (result) {
     showToast(`Nudge sent to ${userName}`);
-    renderMyPractice(); // Refresh
+    renderMyPractice(overridePractice); // Refresh
   } else {
     showToast('Failed to nudge user', 'error');
   }
