@@ -1,5 +1,17 @@
 ---
 
+## April 20, 2026 — Fix: Orphaned Approval Records in SPOC Queue
+
+**Symptom:** Tasks with low saved hours (e.g., 1h) appeared in the SPOC review queue even though they had been auto-approved.
+
+**Root cause:** `updateTask` (and `updateAccomplishment`) only deleted the approval record linked by `task.approval_id`. When a user double-clicked "Save" on an edit, two approval records were created in rapid succession. Only the second one got linked as `approval_id`. When the user then re-edited with lower hours triggering auto-approve, the first orphaned record (with the old high `saved_hours`) was never cleaned up. It remained in `submission_approvals` with `approval_status = 'spoc_review'` and showed up in the SPOC queue indefinitely.
+
+**Fix:** Changed the cleanup logic in both `updateTask` and `updateAccomplishment` to delete **all** non-terminal approval records for the `submission_id` (status in `pending`, `spoc_review`, `admin_review`) before creating the new approval, rather than only deleting the one referenced by `approval_id`. Applied a one-time DB cleanup to remove the existing orphaned records.
+
+**Affected file:** `js/db.js` — `updateTask` (line ~617) and `updateAccomplishment` (line ~733).
+
+---
+
 ## April 20, 2026 — Admin Reset Password
 
 Replaced the Magic Link action in the admin user table with a "Reset Password" action. Motivation: magic links are one-time login URLs, not passwords — admins needed to set a known temporary password (e.g., `12345678`) for users who are locked out.

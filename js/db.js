@@ -615,15 +615,20 @@ const EAS_DB = (() => {
 
     // Create new approval workflow for the update (unless admin)
     if (!isAdmin && data) {
-      // Retire old approval record — delete preferred; fall back to marking superseded (BUG-05 fix)
-      if (data.approval_id) {
-        const { error: delErr } = await sb.from('submission_approvals').delete().eq('id', data.approval_id);
-        if (delErr) {
-          await sb.from('submission_approvals').update({
-            approval_status: 'superseded',
-            rejection_reason: 'Superseded by task edit'
-          }).eq('id', data.approval_id);
-        }
+      // Retire ALL prior approval records for this task (not just approval_id-linked one).
+      // A double-click on edit can create orphaned spoc_review records that are never linked
+      // as approval_id but still pollute the SPOC queue (BUG-05 + orphan fix).
+      const { error: delAllErr } = await sb.from('submission_approvals')
+        .delete()
+        .eq('submission_id', data.id)
+        .in('approval_status', ['pending', 'spoc_review', 'admin_review']);
+      if (delAllErr) {
+        // Fallback: mark all non-terminal records as superseded
+        await sb.from('submission_approvals').update({
+          approval_status: 'superseded',
+          rejection_reason: 'Superseded by task edit'
+        }).eq('submission_id', data.id)
+          .in('approval_status', ['pending', 'spoc_review', 'admin_review']);
       }
       const savedHours = (data.time_without_ai || 0) - (data.time_with_ai || 0);
       const approval = await createSubmissionApproval('task', data.id, savedHours, data.practice);
@@ -731,15 +736,17 @@ const EAS_DB = (() => {
 
     // Create new approval workflow for the update (unless admin)
     if (!isAdmin && data) {
-      // Retire old approval record — delete preferred; fall back to marking superseded (BUG-05 fix)
-      if (data.approval_id) {
-        const { error: delErr } = await sb.from('submission_approvals').delete().eq('id', data.approval_id);
-        if (delErr) {
-          await sb.from('submission_approvals').update({
-            approval_status: 'superseded',
-            rejection_reason: 'Superseded by accomplishment edit'
-          }).eq('id', data.approval_id);
-        }
+      // Retire ALL prior approval records for this accomplishment (orphan fix — same as tasks).
+      const { error: delAllErr } = await sb.from('submission_approvals')
+        .delete()
+        .eq('submission_id', data.id)
+        .in('approval_status', ['pending', 'spoc_review', 'admin_review']);
+      if (delAllErr) {
+        await sb.from('submission_approvals').update({
+          approval_status: 'superseded',
+          rejection_reason: 'Superseded by accomplishment edit'
+        }).eq('submission_id', data.id)
+          .in('approval_status', ['pending', 'spoc_review', 'admin_review']);
       }
       const savedHours = data.effort_saved || 0;
       const approval = await createSubmissionApproval('accomplishment', data.id, savedHours, data.practice);
