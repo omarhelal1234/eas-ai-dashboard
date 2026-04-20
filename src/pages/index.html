@@ -3431,6 +3431,94 @@ async function nudgeInactive(userId, userName, overridePractice = null) {
   }
 }
 
+// ======== DEPT SPOC: MY DEPARTMENT ========
+let _deptDrillPractice = null;
+
+async function renderMyDepartment() {
+  const departmentId = EAS_Auth.getUserDepartmentId();
+  if (!departmentId) return;
+
+  const quarterId = document.getElementById('mydept-filter-quarter')?.value || EAS_DB.getSelectedQuarter();
+
+  // Fetch department name + its practices
+  const sb = getSupabaseClient();
+  const { data: dept } = await sb.from('departments').select('name').eq('id', departmentId).single();
+  const { data: practices } = await sb.from('practices').select('name').eq('department_id', departmentId).eq('is_active', true).order('name');
+  const practiceNames = (practices || []).map(p => p.name);
+
+  const deptName = dept?.name || 'Department';
+  document.getElementById('mydept-title').textContent = deptName;
+  document.getElementById('mydept-subtitle').textContent =
+    `${practiceNames.length} practice${practiceNames.length !== 1 ? 's' : ''} — ${quarterId && quarterId !== 'all' ? EAS_DB.getQuarterLabel(quarterId) : 'All Quarters'}`;
+
+  if (practiceNames.length === 0) {
+    document.getElementById('mydept-kpis').innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No active practices in this department.</p>';
+    document.getElementById('mydept-practice-cards').innerHTML = '';
+    return;
+  }
+
+  // Aggregate KPIs across all practices in the department
+  const allTasks = (data.tasks || []).filter(t =>
+    practiceNames.includes(t.practice) &&
+    t.approvalStatus === 'approved' &&
+    (quarterId === 'all' || !quarterId || t.quarterId === quarterId)
+  );
+  const totalTasks = allTasks.length;
+  const totalSaved = allTasks.reduce((s, t) => s + (t.timeSaved || 0), 0);
+  const avgEff = allTasks.length > 0
+    ? allTasks.reduce((s, t) => s + (t.efficiency || 0), 0) / allTasks.length
+    : 0;
+  const activeUsers = new Set(allTasks.map(t => t.employeeEmail).filter(Boolean)).size;
+
+  document.getElementById('mydept-kpis').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value green">${EAS_Utils.fmtInt(totalTasks)}</div><div class="kpi-sub">${EAS_Utils.sanitize(deptName)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value yellow">${fmt(totalSaved, 0)}</div><div class="kpi-sub">across department</div></div>
+    <div class="kpi-card"><div class="kpi-label">Avg Efficiency</div><div class="kpi-value purple">${fmt(avgEff, 1)}%</div><div class="kpi-sub">time reduction</div></div>
+    <div class="kpi-card"><div class="kpi-label">Active Contributors</div><div class="kpi-value blue">${EAS_Utils.fmtInt(activeUsers)}</div><div class="kpi-sub">this quarter</div></div>
+  `;
+
+  // Render practice cards
+  document.getElementById('mydept-practice-cards').innerHTML = practiceNames.map(pName => {
+    const pTasks = allTasks.filter(t => t.practice === pName);
+    const pSaved = pTasks.reduce((s, t) => s + (t.timeSaved || 0), 0);
+    const pEff = pTasks.length > 0
+      ? pTasks.reduce((s, t) => s + (t.efficiency || 0), 0) / pTasks.length
+      : 0;
+    const pUsers = new Set(pTasks.map(t => t.employeeEmail).filter(Boolean)).size;
+    const safeP = EAS_Utils.sanitize(pName);
+    const safePAttr = pName.replace(/'/g, "\\'");
+    return `
+      <div class="table-card" style="padding:18px;cursor:pointer" onclick="openDeptDrillDown('${safePAttr}')">
+        <div style="font-weight:700;font-size:15px;margin-bottom:10px;color:var(--text-primary)">${safeP}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+          <div><div style="color:var(--text-muted)">Tasks</div><div style="font-weight:600;color:var(--success)">${pTasks.length}</div></div>
+          <div><div style="color:var(--text-muted)">Efficiency</div><div style="font-weight:600;color:var(--primary)">${fmt(pEff, 1)}%</div></div>
+          <div><div style="color:var(--text-muted)">Hours Saved</div><div style="font-weight:600;color:var(--warning)">${fmt(pSaved, 0)}</div></div>
+          <div><div style="color:var(--text-muted)">Contributors</div><div style="font-weight:600">${pUsers}</div></div>
+        </div>
+        <button class="btn btn-secondary" style="width:100%;margin-top:14px;font-size:13px">View Practice &#9658;</button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function openDeptDrillDown(practiceName) {
+  _deptDrillPractice = practiceName;
+  document.getElementById('mydept-practices-section').style.display = 'none';
+  document.getElementById('mydept-kpis').style.display = 'none';
+  const panel = document.getElementById('mydept-detail-panel');
+  panel.style.display = '';
+  document.getElementById('mydept-detail-title').textContent = practiceName;
+  await renderMyPractice(practiceName);
+}
+
+function closeDeptDrillDown() {
+  _deptDrillPractice = null;
+  document.getElementById('mydept-detail-panel').style.display = 'none';
+  document.getElementById('mydept-practices-section').style.display = '';
+  document.getElementById('mydept-kpis').style.display = '';
+}
+
 // ======== TEAM LEAD MANAGEMENT (SPOC) ========
 
 /** Render team lead table in My Practice page (SPOC only) */
@@ -7042,6 +7130,7 @@ async function boot() {
   EAS_DB.populatePageQuarterSelector('mytasks-filter-quarter', () => renderMyTasks());
   EAS_DB.populatePageQuarterSelector('acc-filter-quarter', () => renderAccomplishments());
   EAS_DB.populatePageQuarterSelector('mypractice-filter-quarter', () => renderMyPractice());
+  EAS_DB.populatePageQuarterSelector('mydept-filter-quarter', () => renderMyDepartment());
   EAS_DB.populatePageQuarterSelector('exec-quarter-selector', () => renderExecSummary());
   
   // 2c. Wire week-start date change to auto-update week number
