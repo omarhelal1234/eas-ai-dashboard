@@ -10,6 +10,8 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-20 (claude) — add dept_spoc role with My Department dashboard, practice drill-down, and admin assignment UI (multi-department)
+
 - 2026-04-20 (claude) — Fix: orphaned spoc_review approval records caused by double-click edits; updateTask/updateAccomplishment now purge ALL pending approval records for the submission before creating a new one, preventing ghost items in the SPOC queue; cleaned up existing orphans from DB (js/db.js)
 
 - 2026-04-20 (claude) — Replace magic link button with admin-set password action; new Edge Function admin-reset-password (admin panel)

@@ -1111,3 +1111,22 @@ Fix: Added a SELECT to fetch the current `approval_status` before updating. When
 ### BUG-11: Admin sidebar missing practice label — `src/pages/index.html` + `js/auth.js`
 Root cause: `auth.js::updateUserDisplay` referenced `#user-display-practice` which was absent from the sidebar HTML; the element was apparently removed at some earlier point. Without it, `practiceEl` was always null and `getUserPractice()` was never rendered for any role.
 Fix: Added `<div id="user-display-practice">` to the `.user-info` section of the sidebar footer. `auth.js` already populates it correctly for all roles including admin.
+
+---
+
+## 2026-04-20 — Multi-Department `dept_spoc` Role
+
+**What:** Added `dept_spoc` as 7th role. Dept SPOCs oversee all practices in their assigned department with aggregated KPIs and full drill-down SPOC powers on any practice.
+
+**Schema changes:**
+- `users.department_id UUID FK` — set for dept_spoc, null for all other roles
+- `get_user_department_id()` — STABLE SECURITY DEFINER function (with `SET search_path = public`) used in RLS policies
+- 10 RLS policies added across 7 tables (tasks, accomplishments, submission_approvals, copilot_users, users, practice_spoc, projects)
+
+**Key design decisions:**
+- `renderMyPractice(overridePractice)` — existing function extended with optional parameter; when called from dept drill-down, `userRole` is treated as 'spoc' to suppress team-lead-only UI
+- `efficiency` field in `data.tasks` is stored as a raw percentage value (0–100) — do NOT multiply by 100 when displaying
+- Practice card onclick uses `safePAttr = pName.replace(/'/g, "\\'")` to prevent single-quote injection in HTML attribute context
+- `closeDeptDrillDown()` restores the dept overview by showing `#mydept-practices-section` (not `#mydept-practice-cards` directly) — make sure to target the wrapper, not the inner grid
+
+**Files changed:** sql/025_dept_spoc_role.sql, js/auth.js, src/pages/index.html, src/pages/admin.html

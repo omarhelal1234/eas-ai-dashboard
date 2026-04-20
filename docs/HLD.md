@@ -12,7 +12,7 @@
 ```
 ┌────────────────────────────────────────────────────────────┐
 │                    USERS (Browser)                         │
-│  Admin · SPOC · Team Lead · Contributor · Viewer · Executive  │
+│  Admin · Dept SPOC · SPOC · Team Lead · Contributor · Viewer · Executive  │
 ├────────────────────────────────────────────────────────────┤
 │           GitHub Pages (Static Hosting)                    │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐                   │
@@ -156,6 +156,18 @@ User → signup.html (2-step form)
 | PDF report | ✅ | ✅ | ✅ (scoped) | ✖ |
 | Dark/Light toggle | ✅ | ✅ | ✅ | ✅ |
 | Approval review (spoc_review) | ✅ | ✅ | ✅ (assigned members) | ✖ |
+
+### User Roles
+
+| Role | Description |
+|------|-------------|
+| `admin` | Full system access — user management, all CRUD, approval override |
+| `dept_spoc` | Department SPOC — oversees all practices within their assigned department. Full SPOC powers on any practice in their department; optional approval escalation. Scoped by department_id on the users row (one department per user). Admin-only assignment. |
+| `spoc` | Practice SPOC — manages one practice; reviews/approves submissions for that practice |
+| `team_lead` | Team lead — SPOC-like access scoped to assigned team members only |
+| `contributor` | Regular user — can submit tasks and accomplishments for their own practice |
+| `viewer` | Read-only access; controlled by `role_view_permissions` deny-list |
+| `executive` | Read-only access across assigned practices via RPC; no write access |
 
 ### Row Level Security (RLS)
 

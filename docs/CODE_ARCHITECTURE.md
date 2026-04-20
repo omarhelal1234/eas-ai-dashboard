@@ -97,6 +97,7 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │   └── 017_data_sync_phase.sql # Data Sync: Grafana IDE columns, username linkage, sync_hash, source constraints
 │   └── 020_team_lead_role.sql  # Team Lead role: team_lead_assignments table, RLS, helper functions
 │   └── 022_featured_banner_and_likes.sql  # Phase 12: likes, featured_banner_config, featured_banner_pins, v_banner_candidates, toggle_like RPC
+│   └── 025_dept_spoc_role.sql  # adds dept_spoc role, department_id to users, get_user_department_id() function, 10 RLS policies
 │
 ├── scripts/                # Node.js admin/migration scripts + data sync
 │   ├── create-auth-users.mjs   # One-time auth user creation
@@ -215,6 +216,17 @@ All modules use the **Revealing Module Pattern** (IIFE returning a public API):
 | `db.js` | `EAS_DB` | Quarter loading/selection, full Supabase data layer (fetchAllData, per-entity fetches, CRUD writes, audit logging, data dumps, leaderboard RPCs) |
 | `utils.js` | `EAS_Utils` | Formatting, XSS sanitization (sanitize, sanitizeObj, sanitizeDataset), practice mappings, chart colors, date parsing |
 
+#### `auth.js` — Selected public methods
+
+- `EAS_Auth.isDeptSpoc()` — returns true if current user has dept_spoc role
+- `EAS_Auth.getUserDepartmentId()` — returns the department_id UUID for dept_spoc users
+
+#### `src/pages/index.html` — My Department view functions
+
+- `renderMyDepartment()` — renders the My Department view (dept_spoc): dept KPIs + practice cards
+- `openDeptDrillDown(practiceName)` — shows SPOC panel for a specific practice within the dept view
+- `closeDeptDrillDown()` — returns from drill-down to department overview
+
 ### Load Order (Critical)
 
 ```html
@@ -314,6 +326,7 @@ Returns `jsonb` with `{status, user_id, copilot_id?}`. Copilot logic:
 | Role | Scope |
 |------|-------|
 | **Admin** | Full read/write on all tables |
+| **dept_spoc** | Department SPOC. Scoped by `users.department_id`. Sees all practices in their department. |
 | **SPOC** | Read/write own practice, read aggregates |
 | **Contributor** | Insert own tasks, read own data |
 | **Viewer** | Read-only access (new: controlled by `role_view_permissions`) |
