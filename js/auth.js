@@ -41,7 +41,7 @@ const EAS_Auth = (() => {
 
     const { data, error } = await sb
       .from('users')
-      .select('id, name, email, role, practice, is_active')
+      .select('id, name, email, role, practice, is_active, department_id')
       .eq('auth_id', user.id)
       .single();
 
@@ -87,6 +87,14 @@ const EAS_Auth = (() => {
 
   function isTeamLead() {
     return _userProfile?.role === 'team_lead';
+  }
+
+  function isDeptSpoc() {
+    return _userProfile?.role === 'dept_spoc';
+  }
+
+  function getUserDepartmentId() {
+    return _userProfile?.department_id || null;
   }
 
   function getUserRole() {
@@ -180,7 +188,7 @@ const EAS_Auth = (() => {
 
     if (nameEl) nameEl.textContent = getUserName();
     if (roleEl) {
-      const roleLabels = { admin: 'Administrator', spoc: 'AI SPOC', contributor: 'Contributor', viewer: 'Viewer', executive: 'Executive', team_lead: 'Team Lead' };
+      const roleLabels = { admin: 'Administrator', spoc: 'AI SPOC', dept_spoc: 'Dept SPOC', contributor: 'Contributor', viewer: 'Viewer', executive: 'Executive', team_lead: 'Team Lead' };
       roleEl.textContent = roleLabels[getUserRole()] || getUserRole();
     }
     if (practiceEl) practiceEl.textContent = getUserPractice();
@@ -193,10 +201,12 @@ const EAS_Auth = (() => {
     signOut,
     isAdmin,
     isSPOC,
+    isDeptSpoc,
     isContributor,
     isTeamLead,
     getUserRole,
     getUserPractice,
+    getUserDepartmentId,
     getUserName,
     getUserId,
     requireAuth,
