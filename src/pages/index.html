@@ -529,6 +529,37 @@
     </div>
   </div>
 
+  <!-- ======== MY DEPARTMENT (dept_spoc) ======== -->
+  <div id="page-mydepartment" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2 id="mydept-title">My Department</h2>
+        <div class="subtitle" id="mydept-subtitle">Department dashboard</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="quarter-selector" id="mydept-filter-quarter" aria-label="Filter by quarter"></select>
+      </div>
+    </div>
+
+    <!-- Dept KPI row -->
+    <div class="kpi-grid" id="mydept-kpis"></div>
+
+    <!-- Practice cards grid -->
+    <div id="mydept-practices-section" style="margin-top:24px">
+      <h3 style="margin-bottom:16px;font-size:16px;font-weight:600">Practices</h3>
+      <div id="mydept-practice-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px"></div>
+    </div>
+
+    <!-- Practice drill-down panel (hidden until a card is clicked) -->
+    <div id="mydept-detail-panel" style="display:none;margin-top:32px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <button class="btn btn-secondary" style="font-size:13px;padding:6px 14px" onclick="closeDeptDrillDown()">&#8592; Back to Department</button>
+        <h3 id="mydept-detail-title" style="font-size:16px;font-weight:600;margin:0"></h3>
+      </div>
+      <div id="mydept-mypractice-scope"></div>
+    </div>
+  </div>
+
   <!-- SPOC: My Practice Page -->
   <div id="page-mypractice" class="page hidden">
     <div class="page-header">
@@ -3274,6 +3305,8 @@ async function renderMyPractice(overridePractice = null) {
   // When called from My Department drill-down, treat as spoc scope
   const userRole = overridePractice ? 'spoc' : EAS_Auth.getUserRole();
   const isTeamLead = userRole === 'team_lead';
+  // Safe version of overridePractice for embedding in onclick HTML attributes
+  const safeOverride = overridePractice ? overridePractice.replace(/'/g, "\\'") : null;
   const quarterId = document.getElementById('mypractice-filter-quarter')?.value || EAS_DB.getSelectedQuarter();
 
   // For team leads, get their assigned member emails
@@ -3378,7 +3411,7 @@ async function renderMyPractice(overridePractice = null) {
         <td>${lastAct}</td>
         <td style="color:var(--warning);font-weight:600">${days}</td>
         <td style="color:var(--text-muted)">${lastNudged}</td>
-        <td><button class="btn btn-secondary" style="font-size:12px;padding:4px 12px" onclick="nudgeInactive('${u.id}','${u.name}',${overridePractice ? `'${overridePractice}'` : 'null'})">Nudge</button></td>
+        <td><button class="btn btn-secondary" style="font-size:12px;padding:4px 12px" onclick="nudgeInactive('${u.id}','${u.name}',${safeOverride ? `'${safeOverride}'` : 'null'})">Nudge</button></td>
       </tr>`;
     }).join('');
 
