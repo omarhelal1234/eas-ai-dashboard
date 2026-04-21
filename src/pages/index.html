@@ -7096,10 +7096,14 @@ async function renderExecSummary() {
     document.querySelectorAll('.exec-charts-row').forEach(r => r.style.display = '');
     document.querySelector('#page-exec-summary .table-card')?.style.setProperty('display', '');
 
-    // ---- KPIs ----
+    // ---- Primary KPIs ----
     document.getElementById('exec-kpi-tasks').textContent = fmt(summary.total_tasks, 0);
     document.getElementById('exec-kpi-hours').textContent = fmt(summary.total_hours_saved, 1);
     document.getElementById('exec-kpi-users').textContent = fmt(summary.active_users, 0);
+    document.getElementById('exec-kpi-adoption').textContent = (summary.adoption_rate || 0) + '%';
+    document.getElementById('exec-kpi-adoption-sub').textContent = `${fmt(summary.active_users, 0)} / ${fmt(summary.total_licensed_users || 0, 0)} licensed`;
+    document.getElementById('exec-kpi-hrsres').textContent = fmt(summary.hours_per_resource || 0, 1);
+    document.getElementById('exec-kpi-hrsres-sub').textContent = `${fmt(summary.total_hours_saved, 0)} hrs / ${fmt(summary.total_licensed_users || 0, 0)} resources`;
     document.getElementById('exec-kpi-practices').textContent = summary.practices.length;
 
     // ---- Practice Breakdown Table ----
@@ -7137,6 +7141,17 @@ async function renderExecSummary() {
 
     // ---- Charts ----
     renderExecCharts(summary);
+
+    // ---- Department Drill-Down ----
+    renderExecDepartments(summary.department_breakdown || []);
+
+    // ---- Secondary Metrics ----
+    const dm = summary.detailed_metrics || {};
+    document.getElementById('exec-detail-quality').textContent = dm.avg_quality != null ? dm.avg_quality + '/5' : '—';
+    document.getElementById('exec-detail-approval').textContent = dm.approval_rate != null ? dm.approval_rate + '%' : '—';
+    document.getElementById('exec-detail-efficiency').textContent = dm.avg_efficiency != null ? dm.avg_efficiency + '%' : '—';
+    document.getElementById('exec-detail-toptool').textContent = dm.top_tool || '—';
+    document.getElementById('exec-detail-toptool-sub').textContent = dm.top_tool_count ? fmt(dm.top_tool_count, 0) + ' uses' : '';
 
   } catch (err) {
     console.error('renderExecSummary error:', err);
