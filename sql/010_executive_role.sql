@@ -241,6 +241,68 @@ BEGIN
             GROUP BY ai_tool ORDER BY COUNT(*) DESC LIMIT 1
           )
       )
+    ),
+    'department_breakdown', (
+      SELECT COALESCE(jsonb_agg(dept_row ORDER BY dept_name), '[]'::jsonb)
+      FROM (
+        SELECT
+          d.name AS dept_name,
+          jsonb_build_object(
+            'department', d.name,
+            'department_id', d.id,
+            'practice_count', COUNT(DISTINCT p.name),
+            'task_count', COUNT(t.id),
+            'hours_saved', COALESCE(SUM(t.time_without_ai - t.time_with_ai) FILTER (WHERE t.approval_status = 'approved'), 0),
+            'active_users', COUNT(DISTINCT t.employee_email),
+            'total_resources', (
+              SELECT COUNT(*) FROM copilot_users cu
+              WHERE cu.practice = ANY(ARRAY(SELECT p2.name FROM practices p2 WHERE p2.department_id = d.id AND p2.name = ANY(v_practices)))
+            ),
+            'adoption_rate', CASE
+              WHEN (
+                SELECT COUNT(*) FROM copilot_users cu
+                WHERE cu.practice = ANY(ARRAY(SELECT p2.name FROM practices p2 WHERE p2.department_id = d.id AND p2.name = ANY(v_practices)))
+              ) = 0 THEN 0
+              ELSE ROUND(
+                COUNT(DISTINCT t.employee_email)::numeric * 100 / (
+                  SELECT COUNT(*) FROM copilot_users cu
+                  WHERE cu.practice = ANY(ARRAY(SELECT p2.name FROM practices p2 WHERE p2.department_id = d.id AND p2.name = ANY(v_practices)))
+                ), 1
+              )
+            END,
+            'practices', COALESCE((
+              SELECT jsonb_agg(
+                jsonb_build_object(
+                  'practice', sub.practice,
+                  'task_count', sub.task_count,
+                  'hours_saved', sub.hours_saved,
+                  'active_users', sub.active_users,
+                  'avg_quality', sub.avg_quality
+                ) ORDER BY sub.practice
+              )
+              FROM (
+                SELECT
+                  t2.practice,
+                  COUNT(*) AS task_count,
+                  COALESCE(SUM(t2.time_without_ai - t2.time_with_ai), 0) AS hours_saved,
+                  COUNT(DISTINCT t2.employee_email) AS active_users,
+                  ROUND(AVG(NULLIF(t2.quality_rating, 0))::numeric, 2) AS avg_quality
+                FROM tasks t2
+                JOIN practices p2 ON p2.name = t2.practice
+                WHERE p2.department_id = d.id
+                  AND t2.practice = ANY(v_practices)
+                  AND (p_quarter_id IS NULL OR t2.quarter_id = p_quarter_id)
+                GROUP BY t2.practice
+              ) sub
+            ), '[]'::jsonb)
+          ) AS dept_row
+        FROM departments d
+        JOIN practices p ON p.department_id = d.id AND p.name = ANY(v_practices)
+        LEFT JOIN tasks t ON t.practice = p.name
+          AND (p_quarter_id IS NULL OR t.quarter_id = p_quarter_id)
+        WHERE d.is_active = true
+        GROUP BY d.id, d.name
+      ) dept_rows
     )
   ) INTO v_result;
 
