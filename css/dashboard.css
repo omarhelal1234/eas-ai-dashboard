@@ -2498,7 +2498,7 @@ tr:hover td { background: var(--bg-translucent); }
 /* Department KPI Cards — Enhanced */
 .dept-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   padding: 24px 32px;
 }
@@ -2534,6 +2534,8 @@ tr:hover td { background: var(--bg-translucent); }
 .dept-kpi-card--hours::before { background: var(--warning); }
 .dept-kpi-card--efficiency::before { background: var(--purple); }
 .dept-kpi-card--users::before { background: var(--accent); }
+.dept-kpi-card--adoption::before { background: var(--info, #3b82f6); }
+.dept-kpi-card--hrsperres::before { background: var(--teal, #14b8a6); }
 
 .dept-kpi-top {
   display: flex;
@@ -2558,6 +2560,8 @@ tr:hover td { background: var(--bg-translucent); }
 .dept-kpi-icon--hours { background: rgba(245, 158, 11, 0.12); color: var(--warning); }
 .dept-kpi-icon--efficiency { background: rgba(139, 92, 246, 0.12); color: var(--purple); }
 .dept-kpi-icon--users { background: rgba(59, 130, 246, 0.12); color: var(--accent); }
+.dept-kpi-icon--adoption { background: rgba(59, 130, 246, 0.12); color: var(--info, #3b82f6); }
+.dept-kpi-icon--hrsperres { background: rgba(20, 184, 166, 0.12); color: var(--teal, #14b8a6); }
 
 .dept-kpi-trend {
   font-size: 11px;
@@ -2584,6 +2588,24 @@ tr:hover td { background: var(--bg-translucent); }
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
+}
+.dept-kpi-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  opacity: 0.8;
+}
+.dept-kpi-target-bar {
+  height: 4px;
+  background: var(--bg-translucent);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.dept-kpi-target-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
 }
 
 /* Department Practices Section */
@@ -2662,6 +2684,16 @@ tr:hover td { background: var(--bg-translucent); }
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+.dept-practice-card-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-translucent);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: auto;
+  margin-right: 8px;
 }
 .dept-practice-card-arrow {
   width: 28px;

@@ -2331,11 +2331,18 @@ function renderDashboard() {
   const allTaskCount = fd.tasks.length;
   const totalLicensed = fd.summary.practices.reduce((s, p) => s + p.licensedUsers, 0);
   const totalActive = fd.summary.practices.reduce((s, p) => s + p.activeUsers, 0);
+  // Compute adoption rate & hrs/resource from practice summary
+  const dashTotalResources = fd.summary.practices.reduce((s, p) => s + (p.totalResources || 0), 0);
+  const dashAdoptionRate = dashTotalResources > 0 ? (totalActive / dashTotalResources * 100).toFixed(1) : '0.0';
+  const dashHrsPerRes = dashTotalResources > 0 ? (t.timeSaved / dashTotalResources).toFixed(1) : '0.0';
+
   document.getElementById('kpi-grid').innerHTML = `
     <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue">${allTaskCount}</div><div class="kpi-sub">${t.tasks} approved · ${qLabel}</div></div>
     <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value green">${fmt(t.timeSaved, 0)}</div><div class="kpi-sub">of ${fmt(t.timeWithout, 0)} total hrs</div></div>
     <div class="kpi-card"><div class="kpi-label">Avg Efficiency</div><div class="kpi-value yellow">${fmt(t.efficiency, 1)}%</div><div class="kpi-sub">time reduction</div></div>
     <div class="kpi-card"><div class="kpi-label">Avg Quality</div><div class="kpi-value purple">${fmt(t.quality, 1)}/5</div><div class="kpi-sub">rating</div></div>
+    <div class="kpi-card"><div class="kpi-label">Adoption Rate</div><div class="kpi-value blue">${dashAdoptionRate}%</div><div class="kpi-sub">${totalActive} / ${dashTotalResources} resources</div></div>
+    <div class="kpi-card"><div class="kpi-label">Hrs / Resource</div><div class="kpi-value green">${dashHrsPerRes}</div><div class="kpi-sub">${fmt(t.timeSaved, 0)} hrs / ${dashTotalResources}</div></div>
     <div class="kpi-card"><div class="kpi-label">Active Projects</div><div class="kpi-value cyan">${t.projects}</div><div class="kpi-sub">across 6 practices</div></div>
     <div class="kpi-card"><div class="kpi-label">Copilot Users</div><div class="kpi-value pink">${totalLicensed}</div><div class="kpi-sub">${totalActive} active · task + IDE</div></div>
   `;
@@ -2656,6 +2663,8 @@ function renderPractices() {
         <div><div class="practice-stat-label">Active Users</div><div class="practice-stat-value" style="color:var(--accent)">${p.activeUsers}</div></div>
         <div><div class="practice-stat-label">Efficiency</div><div class="practice-stat-value" style="color:var(--warning)">${fmt(p.efficiency, 0)}%</div></div>
         <div><div class="practice-stat-label">Quality</div><div class="practice-stat-value" style="color:var(--purple)">${fmt(p.quality, 1)}</div></div>
+        <div><div class="practice-stat-label">Adoption Rate</div><div class="practice-stat-value" style="color:var(--info,#3b82f6)">${fmt(p.adoptionRate || 0, 1)}%</div></div>
+        <div><div class="practice-stat-label">Hrs/Resource</div><div class="practice-stat-value" style="color:var(--teal,#14b8a6)">${fmt(p.hoursSavedPerResource || 0, 1)}</div></div>
       </div>
       <div class="progress-bar"><div class="progress-bar-fill" style="width:${effPct}%;background:${color}"></div></div>
     </div>`;
@@ -2680,6 +2689,8 @@ function showPracticeDetail(practice) {
       <div class="kpi-card"><div class="kpi-label">Quality</div><div class="kpi-value purple">${fmt(info.quality, 1)}/5</div></div>
       <div class="kpi-card"><div class="kpi-label">Licensed Users</div><div class="kpi-value pink">${info.licensedUsers || 0}</div><div class="kpi-sub">access granted</div></div>
       <div class="kpi-card"><div class="kpi-label">Active Users</div><div class="kpi-value cyan">${info.activeUsers || 0}</div><div class="kpi-sub">task + IDE activity</div></div>
+      <div class="kpi-card"><div class="kpi-label">Adoption Rate</div><div class="kpi-value blue">${fmt(info.adoptionRate || 0, 1)}%</div><div class="kpi-sub">${info.activeUsers || 0} / ${info.totalResources || 0} resources</div></div>
+      <div class="kpi-card"><div class="kpi-label">Hrs / Resource</div><div class="kpi-value green">${fmt(info.hoursSavedPerResource || 0, 1)}</div><div class="kpi-sub">${fmt(info.timeSaved || 0, 0)} hrs / ${info.totalResources || 0}</div></div>
     </div>
     <div class="table-card">
       <div class="table-header"><h3>Tasks (${tasks.length})</h3></div>
@@ -3508,6 +3519,27 @@ async function renderMyDepartment() {
     : 0;
   const activeUsers = new Set(allTasks.map(t => t.employeeEmail).filter(Boolean)).size;
 
+  // Get practice summary data for adoption rate & hours/resource metrics
+  const practiceSummary = (data?.summary?.practices || []).filter(p => practiceNames.includes(p.name));
+  const deptTotalResources = practiceSummary.reduce((s, p) => s + (p.totalResources || 0), 0);
+  const deptActiveUsers = practiceSummary.reduce((s, p) => s + (p.activeUsers || 0), 0);
+  const deptAdoptionRate = deptTotalResources > 0
+    ? (deptActiveUsers / deptTotalResources * 100).toFixed(1)
+    : '0.0';
+  const deptHrsPerResource = deptTotalResources > 0
+    ? (totalSaved / deptTotalResources).toFixed(1)
+    : '0.0';
+
+  // Fetch quarterly targets for progress comparison
+  let qTargets = {};
+  if (quarterId && quarterId !== 'all') {
+    const { data: qRow } = await sb.from('quarters').select('targets').eq('id', quarterId).single();
+    qTargets = qRow?.targets || {};
+  } else {
+    const { data: activeQ } = await sb.from('quarters').select('targets').eq('is_active', true).single();
+    qTargets = activeQ?.targets || {};
+  }
+
   // Enhanced KPI cards with icons and color accents
   document.getElementById('mydept-kpis').innerHTML = `
     <div class="dept-kpi-card dept-kpi-card--tasks dept-animate-in">
@@ -3546,6 +3578,28 @@ async function renderMyDepartment() {
       <div class="dept-kpi-value" style="color:var(--accent)">${EAS_Utils.fmtInt(activeUsers)}</div>
       <div class="dept-kpi-label">Active Contributors</div>
     </div>
+    <div class="dept-kpi-card dept-kpi-card--adoption dept-animate-in">
+      <div class="dept-kpi-top">
+        <div class="dept-kpi-icon dept-kpi-icon--adoption">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+      </div>
+      <div class="dept-kpi-value" style="color:var(--info,#3b82f6)">${deptAdoptionRate}%</div>
+      <div class="dept-kpi-label">Adoption Rate</div>
+      <div class="dept-kpi-sub">${deptActiveUsers} / ${deptTotalResources} resources</div>
+      ${qTargets.adoption_rate_pct ? `<div class="dept-kpi-target-bar"><div class="dept-kpi-target-fill" style="width:${Math.min(parseFloat(deptAdoptionRate) / qTargets.adoption_rate_pct * 100, 100).toFixed(0)}%;background:${parseFloat(deptAdoptionRate) >= qTargets.adoption_rate_pct ? 'var(--success)' : 'var(--info,#3b82f6)'}"></div></div><div class="dept-kpi-sub">Target: ${qTargets.adoption_rate_pct}%</div>` : ''}
+    </div>
+    <div class="dept-kpi-card dept-kpi-card--hrsperres dept-animate-in">
+      <div class="dept-kpi-top">
+        <div class="dept-kpi-icon dept-kpi-icon--hrsperres">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        </div>
+      </div>
+      <div class="dept-kpi-value" style="color:var(--teal,#14b8a6)">${deptHrsPerResource}</div>
+      <div class="dept-kpi-label">Hrs Saved / Resource</div>
+      <div class="dept-kpi-sub">${fmt(totalSaved, 0)} hrs / ${deptTotalResources} resources</div>
+      ${qTargets.hours_saved_per_resource ? `<div class="dept-kpi-target-bar"><div class="dept-kpi-target-fill" style="width:${Math.min(parseFloat(deptHrsPerResource) / qTargets.hours_saved_per_resource * 100, 100).toFixed(0)}%;background:${parseFloat(deptHrsPerResource) >= qTargets.hours_saved_per_resource ? 'var(--success)' : 'var(--teal,#14b8a6)'}"></div></div><div class="dept-kpi-sub">Target: ${qTargets.hours_saved_per_resource}</div>` : ''}
+    </div>
   `;
 
   // Practice color assignment (reuse existing practiceColors or assign)
@@ -3562,6 +3616,10 @@ async function renderMyDepartment() {
       ? pTasks.reduce((s, t) => s + (t.efficiency || 0), 0) / pTasks.length
       : 0;
     const pUsers = new Set(pTasks.map(t => t.employeeEmail).filter(Boolean)).size;
+    const pSummary = practiceSummary.find(p => p.name === pName);
+    const pAdoption = pSummary?.adoptionRate ?? 0;
+    const pHrsPerRes = pSummary?.hoursSavedPerResource ?? 0;
+    const pTotalRes = pSummary?.totalResources ?? 0;
     const safeP = EAS_Utils.sanitize(pName);
     const safePAttr = pName.replace(/'/g, "\\'");
     const dotColor = pColors[pName] || fallbackColors[idx % fallbackColors.length];
@@ -3574,6 +3632,7 @@ async function renderMyDepartment() {
             <span class="practice-dot" style="background:${dotColor}"></span>
             ${safeP}
           </span>
+          <span class="dept-practice-card-badge">${pTotalRes} resources</span>
           <span class="dept-practice-card-arrow">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
           </span>
@@ -3594,6 +3653,14 @@ async function renderMyDepartment() {
           <div class="dept-practice-stat">
             <span class="dept-practice-stat-label">Contributors</span>
             <span class="dept-practice-stat-value">${pUsers}</span>
+          </div>
+          <div class="dept-practice-stat">
+            <span class="dept-practice-stat-label">Adoption Rate</span>
+            <span class="dept-practice-stat-value" style="color:var(--info,#3b82f6)">${fmt(pAdoption, 1)}%</span>
+          </div>
+          <div class="dept-practice-stat">
+            <span class="dept-practice-stat-label">Hrs/Resource</span>
+            <span class="dept-practice-stat-value" style="color:var(--teal,#14b8a6)">${fmt(pHrsPerRes, 1)}</span>
           </div>
         </div>
         <div class="dept-practice-progress">

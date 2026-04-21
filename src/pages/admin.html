@@ -635,6 +635,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       Banner Settings
     </div>
+    <div class="nav-item" data-page="manage-quarterly-targets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Quarterly Targets
+    </div>
     </div><!-- /sidebar-nav -->
 
     <div class="sidebar-footer">
@@ -668,7 +672,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           </div>
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>Practice</th><th>Head</th><th>SPOC</th><th>Tasks</th><th>Time Saved (hrs)</th><th>Efficiency</th><th>Completed</th><th>Projects</th></tr></thead>
+              <thead><tr><th>Practice</th><th>Head</th><th>SPOC</th><th>Resources</th><th>Tasks</th><th>Time Saved (hrs)</th><th>Efficiency</th><th>Adoption Rate</th><th>Hrs/Resource</th><th>Completed</th><th>Projects</th></tr></thead>
               <tbody id="admin-practice-summary"></tbody>
             </table>
           </div>
@@ -904,12 +908,13 @@ tr:hover td { background: rgba(255,255,255,0.02); }
                   <th>Department</th>
                   <th>Head</th>
                   <th>SPOC</th>
+                  <th style="width:80px">Resources</th>
                   <th style="width:80px">Status</th>
                   <th style="width:120px">Actions</th>
                 </tr>
               </thead>
               <tbody id="admin-practices-tbody">
-                <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+                <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
               </tbody>
             </table>
           </div>
@@ -1187,6 +1192,44 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       </div>
     </div>
 
+    <!-- Quarterly Targets Page -->
+    <div id="page-manage-quarterly-targets" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Quarterly KPI Targets</h2>
+          <div class="subtitle">Set adoption rate and hours-saved-per-resource targets for each quarter</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Quarter</th>
+                  <th style="width:100px">Status</th>
+                  <th style="text-align:center;width:110px">Task Target</th>
+                  <th style="text-align:center;width:130px">Hours Saved Target</th>
+                  <th style="text-align:center;width:140px">Adoption Rate Target %</th>
+                  <th style="text-align:center;width:140px">Hrs/Resource Target</th>
+                  <th style="width:100px">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-quarterly-targets-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Actual vs Target Summary -->
+        <div class="table-card" style="margin-top:20px">
+          <div class="table-header-bar"><h3>Actual vs Target (Current Quarter)</h3></div>
+          <div id="admin-target-vs-actual" style="padding:16px;color:var(--text-muted)">Loading...</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Pin Item Modal -->
     <div class="modal-overlay hidden" id="pin-modal-overlay" onclick="closePinModal()">
       <div class="modal" onclick="event.stopPropagation()" style="max-width:500px">
@@ -1408,12 +1451,18 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div class="form-group"><label>Head</label><input type="text" id="epr-head" placeholder="Practice head name"></div>
       <div class="form-group"><label>SPOC</label><input type="text" id="epr-spoc" placeholder="SPOC name"></div>
     </div>
-    <div class="form-group">
-      <label>Status</label>
-      <select id="epr-status">
-        <option value="true">Active</option>
-        <option value="false">Inactive</option>
-      </select>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Total Resources</label>
+        <input type="number" id="epr-total-resources" min="0" placeholder="0" title="Total headcount in this practice">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="epr-status">
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modal-edit-practice')">Cancel</button>
@@ -1914,9 +1963,12 @@ function renderOverview() {
       <td style="font-weight:600;color:var(--text-primary)">${p.name}</td>
       <td>${p.head}</td>
       <td>${p.spoc}</td>
+      <td>${p.totalResources || 0}</td>
       <td>${p.tasks}</td>
       <td>${p.timeSaved.toFixed(1)}</td>
       <td>${p.efficiency.toFixed(1)}%</td>
+      <td style="color:var(--info,#3b82f6)">${(p.adoptionRate || 0).toFixed(1)}%</td>
+      <td style="color:var(--teal,#14b8a6)">${(p.hoursSavedPerResource || 0).toFixed(1)}</td>
       <td>${p.completed}</td>
       <td>${p.projects}</td>
     </tr>`;
@@ -2731,6 +2783,7 @@ async function renderAdminPractices() {
       <td>${escapeHtml(deptName)}</td>
       <td>${escapeHtml(p.head || '—')}</td>
       <td>${escapeHtml(p.spoc || '—')}</td>
+      <td style="text-align:center"><input type="number" min="0" value="${p.total_resources || 0}" style="width:60px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-primary);font-family:inherit;font-size:13px" onchange="updatePracticeHC('${p.id}', this.value)" title="Edit headcount"></td>
       <td>${statusIcon}</td>
       <td>
         <button class="btn-icon" onclick="editPractice('${p.id}')" title="Edit">
@@ -2743,7 +2796,7 @@ async function renderAdminPractices() {
     </tr>`;
   });
 
-  document.getElementById('admin-practices-tbody').innerHTML = html || '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No practices found</td></tr>';
+  document.getElementById('admin-practices-tbody').innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">No practices found</td></tr>';
 }
 
 async function openPracticeModal(id = null) {
@@ -2754,6 +2807,7 @@ async function openPracticeModal(id = null) {
   document.getElementById('epr-description').value = '';
   document.getElementById('epr-head').value = '';
   document.getElementById('epr-spoc').value = '';
+  document.getElementById('epr-total-resources').value = '0';
   document.getElementById('epr-status').value = 'true';
 
   // Populate department dropdown
@@ -2777,6 +2831,7 @@ async function openPracticeModal(id = null) {
       document.getElementById('epr-description').value = practice.description || '';
       document.getElementById('epr-head').value = practice.head || '';
       document.getElementById('epr-spoc').value = practice.spoc || '';
+      document.getElementById('epr-total-resources').value = practice.total_resources || 0;
       document.getElementById('epr-status').value = (practice.is_active !== false) ? 'true' : 'false';
       document.getElementById('epr-department').value = practice.department_id || '';
     }
@@ -2792,6 +2847,7 @@ async function savePractice() {
   const description = document.getElementById('epr-description').value.trim();
   const head = document.getElementById('epr-head').value.trim();
   const spoc = document.getElementById('epr-spoc').value.trim();
+  const total_resources = parseInt(document.getElementById('epr-total-resources').value, 10) || 0;
   const is_active = document.getElementById('epr-status').value === 'true';
   const department_id = document.getElementById('epr-department').value || null;
 
@@ -2802,10 +2858,10 @@ async function savePractice() {
 
   if (id) {
     // Update
-    ({ error } = await sb.from('practices').update({ name, description, head, spoc, is_active, department_id }).eq('id', id));
+    ({ error } = await sb.from('practices').update({ name, description, head, spoc, total_resources, is_active, department_id }).eq('id', id));
   } else {
     // Insert
-    ({ error } = await sb.from('practices').insert({ name, description, head, spoc, is_active, department_id }));
+    ({ error } = await sb.from('practices').insert({ name, description, head, spoc, total_resources, is_active, department_id }));
   }
 
   if (error) {
@@ -2817,6 +2873,20 @@ async function savePractice() {
   showToast(id ? 'Practice updated' : 'Practice created', 'success');
   _adminPractices = []; // force refresh
   renderAdminPractices();
+}
+
+async function updatePracticeHC(id, value) {
+  const total_resources = parseInt(value, 10) || 0;
+  const sb = getSupabaseClient();
+  const { error } = await sb.from('practices').update({ total_resources }).eq('id', id);
+  if (error) {
+    showToast('Failed to update resources: ' + error.message, 'error');
+    return;
+  }
+  // Update local cache
+  const p = _adminPractices.find(p => p.id === id);
+  if (p) p.total_resources = total_resources;
+  showToast(`Resources updated to ${total_resources}`, 'success');
 }
 
 function deletePractice(id, name) {
@@ -4665,7 +4735,174 @@ document.addEventListener('DOMContentLoaded', () => {
       loadBannerPins();
     });
   });
+  document.querySelectorAll('.nav-item[data-page="manage-quarterly-targets"]').forEach(el => {
+    el.addEventListener('click', () => renderQuarterlyTargets());
+  });
 });
+
+// ============ QUARTERLY TARGETS ============
+let _adminQuarters = [];
+
+async function renderQuarterlyTargets() {
+  const sb = getSupabaseClient();
+  const { data: quarters, error } = await sb.from('quarters').select('*').order('id');
+  if (error) {
+    showToast('Failed to load quarters: ' + error.message, 'error');
+    return;
+  }
+  _adminQuarters = quarters || [];
+
+  const tbody = document.getElementById('admin-quarterly-targets-tbody');
+  if (!_adminQuarters.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No quarters found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = _adminQuarters.map(q => {
+    const t = q.targets || {};
+    const isActive = q.is_active;
+    const statusBadge = isActive
+      ? '<span style="color:var(--success);font-weight:600">Active</span>'
+      : (q.is_locked ? '<span style="color:var(--text-muted)">Locked</span>' : '<span style="color:var(--text-muted)">Inactive</span>');
+    return `<tr${isActive ? ' style="background:rgba(16,185,129,0.06)"' : ''}>
+      <td style="font-weight:600">${escapeHtml(q.label)}</td>
+      <td>${statusBadge}</td>
+      <td style="text-align:center">
+        <input type="number" min="0" value="${t.tasks || 0}" data-qid="${q.id}" data-field="tasks"
+          style="width:70px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-primary);font-family:inherit;font-size:13px">
+      </td>
+      <td style="text-align:center">
+        <input type="number" min="0" value="${t.hours_saved || 0}" data-qid="${q.id}" data-field="hours_saved"
+          style="width:80px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-primary);font-family:inherit;font-size:13px">
+      </td>
+      <td style="text-align:center">
+        <input type="number" min="0" max="100" step="0.1" value="${t.adoption_rate_pct || 0}" data-qid="${q.id}" data-field="adoption_rate_pct"
+          style="width:80px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-primary);font-family:inherit;font-size:13px">
+      </td>
+      <td style="text-align:center">
+        <input type="number" min="0" step="0.1" value="${t.hours_saved_per_resource || 0}" data-qid="${q.id}" data-field="hours_saved_per_resource"
+          style="width:80px;text-align:center;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-primary);font-family:inherit;font-size:13px">
+      </td>
+      <td>
+        <button class="btn btn-primary" style="padding:6px 12px;font-size:12px" onclick="saveQuarterTargets('${q.id}')">Save</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Render actual vs target for active quarter
+  renderTargetVsActual();
+}
+
+async function saveQuarterTargets(qid) {
+  const row = document.querySelectorAll(`input[data-qid="${qid}"]`);
+  const updates = {};
+  row.forEach(input => {
+    updates[input.dataset.field] = parseFloat(input.value) || 0;
+  });
+
+  // Merge with existing targets (preserve adoption_rate and other legacy fields)
+  const q = _adminQuarters.find(q => q.id === qid);
+  const merged = { ...(q?.targets || {}), ...updates };
+
+  const sb = getSupabaseClient();
+  const { error } = await sb.from('quarters').update({ targets: merged }).eq('id', qid);
+  if (error) {
+    showToast('Failed to save targets: ' + error.message, 'error');
+    return;
+  }
+  // Update local cache
+  if (q) q.targets = merged;
+  showToast(`Targets saved for ${q?.label || qid}`, 'success');
+  renderTargetVsActual();
+}
+
+async function renderTargetVsActual() {
+  const container = document.getElementById('admin-target-vs-actual');
+  const activeQ = _adminQuarters.find(q => q.is_active);
+  if (!activeQ) {
+    container.innerHTML = '<p style="color:var(--text-muted)">No active quarter found.</p>';
+    return;
+  }
+  const t = activeQ.targets || {};
+
+  // Fetch actuals from practice summary RPC
+  const sb = getSupabaseClient();
+  const { data: practices } = await sb.rpc('get_practice_summary', { p_quarter_id: activeQ.id });
+  if (!practices) {
+    container.innerHTML = '<p style="color:var(--text-muted)">Failed to load practice data.</p>';
+    return;
+  }
+
+  const totalTasks = practices.reduce((s, p) => s + Number(p.tasks || 0), 0);
+  const totalSaved = practices.reduce((s, p) => s + Number(p.time_saved || 0), 0);
+  const totalResources = practices.reduce((s, p) => s + Number(p.total_resources || 0), 0);
+  const totalActive = practices.reduce((s, p) => s + Number(p.active_users || 0), 0);
+  const actualAdoption = totalResources > 0 ? (totalActive / totalResources * 100) : 0;
+  const actualHrsPerRes = totalResources > 0 ? (totalSaved / totalResources) : 0;
+
+  const targetAdoption = t.adoption_rate_pct || 0;
+  const targetHrsPerRes = t.hours_saved_per_resource || 0;
+  const targetTasks = t.tasks || 0;
+  const targetHours = t.hours_saved || 0;
+
+  function pctBar(actual, target, label, color) {
+    const pct = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+    const status = actual >= target && target > 0 ? 'var(--success)' : color;
+    const icon = actual >= target && target > 0 ? '&#10003;' : '';
+    return `
+      <div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+          <span style="font-weight:600;font-size:14px">${label}</span>
+          <span style="font-size:13px;color:var(--text-muted)">
+            <span style="font-weight:700;color:${status}">${actual.toFixed(1)}</span> / ${target} target
+            ${icon ? '<span style="color:var(--success);margin-left:4px">' + icon + '</span>' : ''}
+          </span>
+        </div>
+        <div style="height:8px;background:var(--bg-translucent);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct.toFixed(1)}%;background:${status};border-radius:4px;transition:width 0.5s ease"></div>
+        </div>
+      </div>`;
+  }
+
+  container.innerHTML = `
+    <div style="font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:16px">${activeQ.label}</div>
+    ${pctBar(totalTasks, targetTasks, 'Tasks', 'var(--accent)')}
+    ${pctBar(totalSaved, targetHours, 'Hours Saved', 'var(--warning)')}
+    ${pctBar(actualAdoption, targetAdoption, 'Adoption Rate %', 'var(--info,#3b82f6)')}
+    ${pctBar(actualHrsPerRes, targetHrsPerRes, 'Hrs Saved / Resource', 'var(--teal,#14b8a6)')}
+
+    <div class="table-card" style="margin-top:16px;padding:12px">
+      <h4 style="font-size:13px;font-weight:600;margin-bottom:8px">Per Practice Breakdown</h4>
+      <table style="font-size:12px">
+        <thead><tr><th>Practice</th><th style="text-align:center">Resources</th><th style="text-align:center">Active</th><th style="text-align:center">Adoption %</th><th style="text-align:center">Hrs Saved</th><th style="text-align:center">Hrs/Resource</th></tr></thead>
+        <tbody>
+          ${practices.filter(p => Number(p.total_resources) > 0).map(p => {
+            const ar = Number(p.adoption_rate_pct || 0);
+            const hr = Number(p.hours_saved_per_resource || 0);
+            const arColor = ar >= targetAdoption && targetAdoption > 0 ? 'var(--success)' : 'var(--info,#3b82f6)';
+            const hrColor = hr >= targetHrsPerRes && targetHrsPerRes > 0 ? 'var(--success)' : 'var(--teal,#14b8a6)';
+            return `<tr>
+              <td style="font-weight:600">${p.practice}</td>
+              <td style="text-align:center">${p.total_resources}</td>
+              <td style="text-align:center">${p.active_users}</td>
+              <td style="text-align:center;font-weight:600;color:${arColor}">${ar.toFixed(1)}%</td>
+              <td style="text-align:center">${Number(p.time_saved || 0).toFixed(0)}</td>
+              <td style="text-align:center;font-weight:600;color:${hrColor}">${hr.toFixed(1)}</td>
+            </tr>`;
+          }).join('')}
+          <tr style="font-weight:700;border-top:2px solid var(--border)">
+            <td>Total</td>
+            <td style="text-align:center">${totalResources}</td>
+            <td style="text-align:center">${totalActive}</td>
+            <td style="text-align:center;color:var(--info,#3b82f6)">${actualAdoption.toFixed(1)}%</td>
+            <td style="text-align:center">${totalSaved.toFixed(0)}</td>
+            <td style="text-align:center;color:var(--teal,#14b8a6)">${actualHrsPerRes.toFixed(1)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
 </script>
 
 </body>
