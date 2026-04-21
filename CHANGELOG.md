@@ -10,6 +10,9 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-21 (claude) — Enhanced Executive Summary dashboard: fixed weekly trend chart crash (null week_number + broken dual-axis), expanded to 6 primary KPIs (adoption rate, hrs/resource), added department drill-down with expand/collapse, secondary detailed metrics section, cumulative growth line on weekly trend, updated PDF/PPTX exports
+- 2026-04-21 (claude) — Sync IDE stats from Grafana dump (2026-03-24 to 2026-04-20): 415 usernames processed, 40 copilot_users rows updated via batch SQL UPDATEs (scripts/sync_grafana_json.py)
+
 - 2026-04-21 (claude) — Fix: dept_spoc RLS INSERT policies missing on tasks, accomplishments, submission_approvals — task submission failed with row-level security violation (sql/028)
 
 - 2026-04-20 (claude) — add dept_spoc role with My Department dashboard, practice drill-down, and admin assignment UI (multi-department)

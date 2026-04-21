@@ -1126,6 +1126,20 @@ Fix: Added `<div id="user-display-practice">` to the `.user-info` section of the
 
 ---
 
+## 2026-04-21 — Executive Summary Dashboard Enhancement
+
+**Weekly trend crash fix:** Two root causes — (1) `week_number IS NULL` rows produced "Wnull" chart labels, fixed by filtering in the RPC; (2) `...baseOptions.scales` spread caused shallow-copy conflicts with dual-axis config, fixed by building scales explicitly.
+
+**Department breakdown:** New `department_breakdown` key in `get_executive_summary` RPC joins tasks→practices→departments. Nested JSONB structure allows single-query department+practice aggregation. Client renders as expand/collapse drill-down.
+
+**Tiered KPIs:** Primary tier (6 cards, 28px values) for at-a-glance metrics. Secondary tier (4 cards, 22px values, collapsible) for quality/efficiency/approval detail.
+
+**Cumulative growth line:** Window functions (`SUM() OVER`) compute running totals server-side. Rendered as dashed gold line on hidden y2 axis to avoid cluttering the dual-axis layout.
+
+**Export updates:** PDF export adds department breakdown section + detailed metrics cards. PPTX export adds Department Overview slide (executive role only) with department table + metric footer cards.
+
+---
+
 ## 2026-04-20 — Multi-Department `dept_spoc` Role
 
 **What:** Added `dept_spoc` as 7th role. Dept SPOCs oversee all practices in their assigned department with aggregated KPIs and full drill-down SPOC powers on any practice.
