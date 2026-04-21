@@ -6348,6 +6348,94 @@ async function exportPDF() {
       y += 7;
     });
     y += 10;
+
+    // Department Breakdown
+    if (y > H - 80) { doc.addPage(); y = M; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Department Breakdown', M, y); y += 8;
+
+    const execSb = getSupabaseClient();
+    const execQSel = document.getElementById('exec-quarter-selector');
+    const execRawQ = execQSel?.value || EAS_DB.getSelectedQuarter() || null;
+    const execQId = (execRawQ === 'all') ? null : execRawQ;
+    let deptBreakdown = [];
+    try {
+      const { data: execData } = await execSb.rpc('get_executive_summary', { p_quarter_id: execQId });
+      deptBreakdown = execData?.department_breakdown || [];
+    } catch (e) { /* fall through with empty */ }
+
+    if (deptBreakdown.length === 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text('No department data available', M, y + 5);
+      y += 12;
+    } else {
+      deptBreakdown.forEach(dept => {
+        if (y > H - 50) { doc.addPage(); y = M; }
+        // Department header row
+        doc.setFillColor(30, 41, 59);
+        doc.roundedRect(M, y, pw, 9, 2, 2, 'F');
+        doc.setTextColor(241, 245, 249);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text(`${dept.department} (${dept.practice_count} practices)`, M + 4, y + 6.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Tasks: ${fmt(dept.task_count, 0)} | Hours: ${fmt(dept.hours_saved, 0)} | Users: ${fmt(dept.active_users, 0)} | Adoption: ${dept.adoption_rate || 0}%`, M + pw / 2, y + 6.5);
+        y += 11;
+
+        // Practice rows
+        (dept.practices || []).forEach((p, pIdx) => {
+          if (y > H - 20) { doc.addPage(); y = M; }
+          if (pIdx % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(M + 8, y, pw - 8, 7, 'F'); }
+          doc.setTextColor(15, 23, 42);
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'normal');
+          let cx = M + 12;
+          [p.practice, fmt(p.task_count, 0), fmt(p.hours_saved, 0), fmt(p.active_users, 0), p.avg_quality ? fmt(p.avg_quality, 1) + '/5' : '—'].forEach((val, i) => {
+            doc.text(String(val), cx, y + 5);
+            cx += [45, 25, 30, 25, 25][i];
+          });
+          y += 7;
+        });
+        y += 6;
+      });
+    }
+
+    // Detailed Metrics
+    if (y > H - 40) { doc.addPage(); y = M; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Detailed Metrics', M, y); y += 8;
+
+    const detailMetrics = [
+      ['Avg Quality', document.getElementById('exec-detail-quality')?.textContent || '—'],
+      ['Approval Rate', document.getElementById('exec-detail-approval')?.textContent || '—'],
+      ['Avg Efficiency', document.getElementById('exec-detail-efficiency')?.textContent || '—'],
+      ['Top AI Tool', (document.getElementById('exec-detail-toptool')?.textContent || '—') + ' (' + (document.getElementById('exec-detail-toptool-sub')?.textContent || '') + ')']
+    ];
+    const dmW = pw / 2;
+    detailMetrics.forEach((dm, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const dx = M + col * dmW;
+      const dy = y + row * 16;
+      doc.setFillColor(241, 245, 249);
+      doc.roundedRect(dx, dy, dmW - 4, 12, 3, 3, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(dm[0], dx + 4, dy + 5);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text(dm[1], dx + 4, dy + 10);
+    });
+    y += Math.ceil(detailMetrics.length / 2) * 16 + 10;
   }
 
   // === Practices Detail (admin) ===
