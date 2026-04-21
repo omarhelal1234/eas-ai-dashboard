@@ -166,7 +166,8 @@ const EAS_DB = (() => {
       activeUsers:  Number(p.active_users) || 0,
       totalResources: Number(p.total_resources) || 0,
       adoptionRate: Number(p.adoption_rate_pct) || 0,
-      hoursSavedPerResource: Number(p.hours_saved_per_resource) || 0
+      hoursSavedPerResource: Number(p.hours_saved_per_resource) || 0,
+      overallEfficiency: Number(p.overall_efficiency_pct) || 0
     }));
   }
 

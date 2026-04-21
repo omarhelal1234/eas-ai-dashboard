@@ -2335,12 +2335,13 @@ function renderDashboard() {
   const dashTotalResources = fd.summary.practices.reduce((s, p) => s + (p.totalResources || 0), 0);
   const dashAdoptionRate = dashTotalResources > 0 ? (totalActive / dashTotalResources * 100).toFixed(1) : '0.0';
   const dashHrsPerRes = dashTotalResources > 0 ? (t.timeSaved / dashTotalResources).toFixed(1) : '0.0';
+  const dashOverallEff = dashTotalResources > 0 ? (t.timeSaved / (dashTotalResources * 520) * 100).toFixed(2) : '0.00';
 
   document.getElementById('kpi-grid').innerHTML = `
     <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue">${allTaskCount}</div><div class="kpi-sub">${t.tasks} approved · ${qLabel}</div></div>
     <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value green">${fmt(t.timeSaved, 0)}</div><div class="kpi-sub">of ${fmt(t.timeWithout, 0)} total hrs</div></div>
     <div class="kpi-card"><div class="kpi-label">Avg Efficiency</div><div class="kpi-value yellow">${fmt(t.efficiency, 1)}%</div><div class="kpi-sub">time reduction</div></div>
-    <div class="kpi-card"><div class="kpi-label">Avg Quality</div><div class="kpi-value purple">${fmt(t.quality, 1)}/5</div><div class="kpi-sub">rating</div></div>
+    <div class="kpi-card"><div class="kpi-label">Overall Efficiency</div><div class="kpi-value yellow">${dashOverallEff}%</div><div class="kpi-sub">${fmt(t.timeSaved, 0)} / ${(dashTotalResources * 520).toLocaleString()} resource-hrs</div></div>
     <div class="kpi-card"><div class="kpi-label">Adoption Rate</div><div class="kpi-value blue">${dashAdoptionRate}%</div><div class="kpi-sub">${totalActive} / ${dashTotalResources} resources</div></div>
     <div class="kpi-card"><div class="kpi-label">Hrs / Resource</div><div class="kpi-value green">${dashHrsPerRes}</div><div class="kpi-sub">${fmt(t.timeSaved, 0)} hrs / ${dashTotalResources}</div></div>
     <div class="kpi-card"><div class="kpi-label">Active Projects</div><div class="kpi-value cyan">${t.projects}</div><div class="kpi-sub">across 6 practices</div></div>
@@ -2665,6 +2666,7 @@ function renderPractices() {
         <div><div class="practice-stat-label">Quality</div><div class="practice-stat-value" style="color:var(--purple)">${fmt(p.quality, 1)}</div></div>
         <div><div class="practice-stat-label">Adoption Rate</div><div class="practice-stat-value" style="color:var(--info,#3b82f6)">${fmt(p.adoptionRate || 0, 1)}%</div></div>
         <div><div class="practice-stat-label">Hrs/Resource</div><div class="practice-stat-value" style="color:var(--teal,#14b8a6)">${fmt(p.hoursSavedPerResource || 0, 1)}</div></div>
+        <div><div class="practice-stat-label">Overall Eff.</div><div class="practice-stat-value" style="color:var(--warning)">${fmt(p.overallEfficiency || 0, 2)}%</div></div>
       </div>
       <div class="progress-bar"><div class="progress-bar-fill" style="width:${effPct}%;background:${color}"></div></div>
     </div>`;
@@ -2691,6 +2693,7 @@ function showPracticeDetail(practice) {
       <div class="kpi-card"><div class="kpi-label">Active Users</div><div class="kpi-value cyan">${info.activeUsers || 0}</div><div class="kpi-sub">task + IDE activity</div></div>
       <div class="kpi-card"><div class="kpi-label">Adoption Rate</div><div class="kpi-value blue">${fmt(info.adoptionRate || 0, 1)}%</div><div class="kpi-sub">${info.activeUsers || 0} / ${info.totalResources || 0} resources</div></div>
       <div class="kpi-card"><div class="kpi-label">Hrs / Resource</div><div class="kpi-value green">${fmt(info.hoursSavedPerResource || 0, 1)}</div><div class="kpi-sub">${fmt(info.timeSaved || 0, 0)} hrs / ${info.totalResources || 0}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Overall Efficiency</div><div class="kpi-value yellow">${fmt(info.overallEfficiency || 0, 2)}%</div><div class="kpi-sub">${fmt(info.timeSaved || 0, 0)} / ${((info.totalResources || 0) * 520).toLocaleString()} resource-hrs</div></div>
     </div>
     <div class="table-card">
       <div class="table-header"><h3>Tasks (${tasks.length})</h3></div>
@@ -3529,6 +3532,10 @@ async function renderMyDepartment() {
   const deptHrsPerResource = deptTotalResources > 0
     ? (totalSaved / deptTotalResources).toFixed(1)
     : '0.0';
+  const QUARTER_WORK_HRS = 520;
+  const deptOverallEff = deptTotalResources > 0
+    ? (totalSaved / (deptTotalResources * QUARTER_WORK_HRS) * 100).toFixed(2)
+    : '0.00';
 
   // Fetch quarterly targets for progress comparison
   let qTargets = {};
@@ -3600,6 +3607,16 @@ async function renderMyDepartment() {
       <div class="dept-kpi-sub">${fmt(totalSaved, 0)} hrs / ${deptTotalResources} resources</div>
       ${qTargets.hours_saved_per_resource ? `<div class="dept-kpi-target-bar"><div class="dept-kpi-target-fill" style="width:${Math.min(parseFloat(deptHrsPerResource) / qTargets.hours_saved_per_resource * 100, 100).toFixed(0)}%;background:${parseFloat(deptHrsPerResource) >= qTargets.hours_saved_per_resource ? 'var(--success)' : 'var(--teal,#14b8a6)'}"></div></div><div class="dept-kpi-sub">Target: ${qTargets.hours_saved_per_resource}</div>` : ''}
     </div>
+    <div class="dept-kpi-card dept-kpi-card--overall-eff dept-animate-in">
+      <div class="dept-kpi-top">
+        <div class="dept-kpi-icon dept-kpi-icon--overall-eff">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+      </div>
+      <div class="dept-kpi-value" style="color:var(--orange,#f97316)">${deptOverallEff}%</div>
+      <div class="dept-kpi-label">Overall Efficiency</div>
+      <div class="dept-kpi-sub">${fmt(totalSaved, 0)} hrs / ${EAS_Utils.fmtInt(deptTotalResources * QUARTER_WORK_HRS)} resource-hrs</div>
+    </div>
   `;
 
   // Practice color assignment (reuse existing practiceColors or assign)
@@ -3619,6 +3636,7 @@ async function renderMyDepartment() {
     const pSummary = practiceSummary.find(p => p.name === pName);
     const pAdoption = pSummary?.adoptionRate ?? 0;
     const pHrsPerRes = pSummary?.hoursSavedPerResource ?? 0;
+    const pOverallEff = pSummary?.overallEfficiency ?? 0;
     const pTotalRes = pSummary?.totalResources ?? 0;
     const safeP = EAS_Utils.sanitize(pName);
     const safePAttr = pName.replace(/'/g, "\\'");
@@ -3661,6 +3679,10 @@ async function renderMyDepartment() {
           <div class="dept-practice-stat">
             <span class="dept-practice-stat-label">Hrs/Resource</span>
             <span class="dept-practice-stat-value" style="color:var(--teal,#14b8a6)">${fmt(pHrsPerRes, 1)}</span>
+          </div>
+          <div class="dept-practice-stat" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:8px;display:flex;flex-direction:row;justify-content:space-between;align-items:center">
+            <span class="dept-practice-stat-label">Overall Efficiency</span>
+            <span class="dept-practice-stat-value" style="color:var(--orange,#f97316)">${fmt(pOverallEff, 2)}%</span>
           </div>
         </div>
         <div class="dept-practice-progress">

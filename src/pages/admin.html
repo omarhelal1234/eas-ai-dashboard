@@ -672,7 +672,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           </div>
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>Practice</th><th>Head</th><th>SPOC</th><th>Resources</th><th>Tasks</th><th>Time Saved (hrs)</th><th>Efficiency</th><th>Adoption Rate</th><th>Hrs/Resource</th><th>Completed</th><th>Projects</th></tr></thead>
+              <thead><tr><th>Practice</th><th>Head</th><th>SPOC</th><th>Resources</th><th>Tasks</th><th>Time Saved (hrs)</th><th>Efficiency</th><th>Adoption Rate</th><th>Hrs/Resource</th><th>Overall Eff</th><th>Completed</th><th>Projects</th></tr></thead>
               <tbody id="admin-practice-summary"></tbody>
             </table>
           </div>
@@ -1969,6 +1969,7 @@ function renderOverview() {
       <td>${p.efficiency.toFixed(1)}%</td>
       <td style="color:var(--info,#3b82f6)">${(p.adoptionRate || 0).toFixed(1)}%</td>
       <td style="color:var(--teal,#14b8a6)">${(p.hoursSavedPerResource || 0).toFixed(1)}</td>
+      <td style="color:var(--orange,#f97316)">${(p.overallEfficiency || 0).toFixed(2)}%</td>
       <td>${p.completed}</td>
       <td>${p.projects}</td>
     </tr>`;
@@ -4874,11 +4875,12 @@ async function renderTargetVsActual() {
     <div class="table-card" style="margin-top:16px;padding:12px">
       <h4 style="font-size:13px;font-weight:600;margin-bottom:8px">Per Practice Breakdown</h4>
       <table style="font-size:12px">
-        <thead><tr><th>Practice</th><th style="text-align:center">Resources</th><th style="text-align:center">Active</th><th style="text-align:center">Adoption %</th><th style="text-align:center">Hrs Saved</th><th style="text-align:center">Hrs/Resource</th></tr></thead>
+        <thead><tr><th>Practice</th><th style="text-align:center">Resources</th><th style="text-align:center">Active</th><th style="text-align:center">Adoption %</th><th style="text-align:center">Hrs Saved</th><th style="text-align:center">Hrs/Resource</th><th style="text-align:center">Overall Eff %</th></tr></thead>
         <tbody>
           ${practices.filter(p => Number(p.total_resources) > 0).map(p => {
             const ar = Number(p.adoption_rate_pct || 0);
             const hr = Number(p.hours_saved_per_resource || 0);
+            const oe = Number(p.overall_efficiency_pct || 0);
             const arColor = ar >= targetAdoption && targetAdoption > 0 ? 'var(--success)' : 'var(--info,#3b82f6)';
             const hrColor = hr >= targetHrsPerRes && targetHrsPerRes > 0 ? 'var(--success)' : 'var(--teal,#14b8a6)';
             return `<tr>
@@ -4888,6 +4890,7 @@ async function renderTargetVsActual() {
               <td style="text-align:center;font-weight:600;color:${arColor}">${ar.toFixed(1)}%</td>
               <td style="text-align:center">${Number(p.time_saved || 0).toFixed(0)}</td>
               <td style="text-align:center;font-weight:600;color:${hrColor}">${hr.toFixed(1)}</td>
+              <td style="text-align:center;font-weight:600;color:var(--orange,#f97316)">${oe.toFixed(2)}%</td>
             </tr>`;
           }).join('')}
           <tr style="font-weight:700;border-top:2px solid var(--border)">
@@ -4897,6 +4900,7 @@ async function renderTargetVsActual() {
             <td style="text-align:center;color:var(--info,#3b82f6)">${actualAdoption.toFixed(1)}%</td>
             <td style="text-align:center">${totalSaved.toFixed(0)}</td>
             <td style="text-align:center;color:var(--teal,#14b8a6)">${actualHrsPerRes.toFixed(1)}</td>
+            <td style="text-align:center;color:var(--orange,#f97316)">${totalResources > 0 ? (totalSaved / (totalResources * 520) * 100).toFixed(2) : '0.00'}%</td>
           </tr>
         </tbody>
       </table>

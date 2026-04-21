@@ -2536,6 +2536,7 @@ tr:hover td { background: var(--bg-translucent); }
 .dept-kpi-card--users::before { background: var(--accent); }
 .dept-kpi-card--adoption::before { background: var(--info, #3b82f6); }
 .dept-kpi-card--hrsperres::before { background: var(--teal, #14b8a6); }
+.dept-kpi-card--overall-eff::before { background: var(--orange, #f97316); }
 
 .dept-kpi-top {
   display: flex;
@@ -2562,6 +2563,7 @@ tr:hover td { background: var(--bg-translucent); }
 .dept-kpi-icon--users { background: rgba(59, 130, 246, 0.12); color: var(--accent); }
 .dept-kpi-icon--adoption { background: rgba(59, 130, 246, 0.12); color: var(--info, #3b82f6); }
 .dept-kpi-icon--hrsperres { background: rgba(20, 184, 166, 0.12); color: var(--teal, #14b8a6); }
+.dept-kpi-icon--overall-eff { background: rgba(249, 115, 22, 0.12); color: var(--orange, #f97316); }
 
 .dept-kpi-trend {
   font-size: 11px;
