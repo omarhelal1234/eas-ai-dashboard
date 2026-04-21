@@ -6724,6 +6724,70 @@ async function exportPPT() {
     });
   }
 
+  // === Department Overview Slide (exec-specific) ===
+  if (document.getElementById('exp-ppt-dashboard')?.checked && EAS_Auth.getUserRole() === 'executive') {
+    const execSb2 = getSupabaseClient();
+    const execQSel2 = document.getElementById('exec-quarter-selector');
+    const execRawQ2 = execQSel2?.value || EAS_DB.getSelectedQuarter() || null;
+    const execQId2 = (execRawQ2 === 'all') ? null : execRawQ2;
+    let pptDeptBreakdown = [];
+    let pptDetailedMetrics = {};
+    try {
+      const { data: execData2 } = await execSb2.rpc('get_executive_summary', { p_quarter_id: execQId2 });
+      pptDeptBreakdown = execData2?.department_breakdown || [];
+      pptDetailedMetrics = execData2?.detailed_metrics || {};
+    } catch (e) { /* fall through */ }
+
+    if (pptDeptBreakdown.length > 0) {
+      slide = pptx.addSlide();
+      slide.addText('Department Overview', { x: 0.5, y: 0.3, w: 9, h: 0.6, fontSize: 24, fontFace: 'Arial', bold: true, color: DARK });
+
+      const deptTblRows = [
+        [{ text: 'Department', options: { bold: true, color: WHITE, fill: { color: BLUE } } },
+         { text: 'Practices', options: { bold: true, color: WHITE, fill: { color: BLUE } } },
+         { text: 'Tasks', options: { bold: true, color: WHITE, fill: { color: BLUE } } },
+         { text: 'Hours Saved', options: { bold: true, color: WHITE, fill: { color: BLUE } } },
+         { text: 'Users', options: { bold: true, color: WHITE, fill: { color: BLUE } } },
+         { text: 'Adoption', options: { bold: true, color: WHITE, fill: { color: BLUE } } }]
+      ];
+      pptDeptBreakdown.forEach(dept => {
+        deptTblRows.push([
+          dept.department,
+          (dept.practice_count || 0).toString(),
+          fmt(dept.task_count, 0),
+          fmt(dept.hours_saved, 0),
+          fmt(dept.active_users, 0),
+          (dept.adoption_rate || 0) + '%'
+        ]);
+      });
+
+      slide.addTable(deptTblRows, {
+        x: 0.5, y: 1.2, w: 9,
+        fontSize: 11, fontFace: 'Arial',
+        border: { type: 'solid', pt: 0.5, color: 'CBD5E1' },
+        colW: [2.5, 1.2, 1.2, 1.5, 1.0, 1.1],
+        rowH: 0.5,
+        autoPage: true,
+        autoPageRepeatHeader: true
+      });
+
+      // Add detailed metrics as footer on this slide
+      const dmItems = [
+        { label: 'Avg Quality', value: pptDetailedMetrics.avg_quality != null ? pptDetailedMetrics.avg_quality + '/5' : '—' },
+        { label: 'Approval Rate', value: pptDetailedMetrics.approval_rate != null ? pptDetailedMetrics.approval_rate + '%' : '—' },
+        { label: 'Avg Efficiency', value: pptDetailedMetrics.avg_efficiency != null ? pptDetailedMetrics.avg_efficiency + '%' : '—' },
+        { label: 'Top Tool', value: pptDetailedMetrics.top_tool || '—' }
+      ];
+      dmItems.forEach((dm, i) => {
+        const dx = 0.5 + i * 2.3;
+        const dy = 5.5;
+        slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, { x: dx, y: dy, w: 2.1, h: 1.2, fill: { color: LIGHT_BG }, rectRadius: 0.1 });
+        slide.addText(dm.label, { x: dx + 0.15, y: dy + 0.1, w: 1.8, h: 0.35, fontSize: 10, fontFace: 'Arial', color: SLATE });
+        slide.addText(dm.value, { x: dx + 0.15, y: dy + 0.5, w: 1.8, h: 0.5, fontSize: 20, fontFace: 'Arial', bold: true, color: DARK });
+      });
+    }
+  }
+
   // === Practice Summary Slide ===
   if (document.getElementById('exp-ppt-practices')?.checked) {
     slide = pptx.addSlide();
