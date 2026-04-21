@@ -93,6 +93,37 @@ BEGIN
       WHERE practice = ANY(v_practices)
         AND (p_quarter_id IS NULL OR quarter_id = p_quarter_id)
     ),
+    'total_licensed_users', (
+      SELECT COUNT(*) FROM copilot_users
+      WHERE practice = ANY(v_practices)
+    ),
+    'adoption_rate', (
+      SELECT CASE
+        WHEN (SELECT COUNT(*) FROM copilot_users WHERE practice = ANY(v_practices)) = 0 THEN 0
+        ELSE ROUND(
+          COUNT(DISTINCT t.employee_email)::numeric * 100 /
+          (SELECT COUNT(*) FROM copilot_users WHERE practice = ANY(v_practices)),
+          1
+        )
+      END
+      FROM tasks t
+      WHERE t.practice = ANY(v_practices)
+        AND (p_quarter_id IS NULL OR t.quarter_id = p_quarter_id)
+    ),
+    'hours_per_resource', (
+      SELECT CASE
+        WHEN (SELECT COUNT(*) FROM copilot_users WHERE practice = ANY(v_practices)) = 0 THEN 0
+        ELSE ROUND(
+          COALESCE(SUM(time_without_ai - time_with_ai), 0)::numeric /
+          (SELECT COUNT(*) FROM copilot_users WHERE practice = ANY(v_practices)),
+          1
+        )
+      END
+      FROM tasks
+      WHERE practice = ANY(v_practices)
+        AND (p_quarter_id IS NULL OR quarter_id = p_quarter_id)
+        AND approval_status = 'approved'
+    ),
     'practice_breakdown', (
       SELECT COALESCE(jsonb_agg(row_to_json(pb)), '[]'::jsonb)
       FROM (
@@ -163,6 +194,53 @@ BEGIN
         GROUP BY ai_tool
         ORDER BY usage_count DESC
       ) tu
+    ),
+    'detailed_metrics', jsonb_build_object(
+      'avg_quality', (
+        SELECT ROUND(AVG(NULLIF(quality_rating, 0))::numeric, 1)
+        FROM tasks
+        WHERE practice = ANY(v_practices)
+          AND (p_quarter_id IS NULL OR quarter_id = p_quarter_id)
+      ),
+      'approval_rate', (
+        SELECT CASE WHEN COUNT(*) = 0 THEN 0
+          ELSE ROUND(COUNT(*) FILTER (WHERE approval_status = 'approved')::numeric * 100 / COUNT(*), 1)
+        END
+        FROM tasks
+        WHERE practice = ANY(v_practices)
+          AND (p_quarter_id IS NULL OR quarter_id = p_quarter_id)
+      ),
+      'avg_efficiency', (
+        SELECT ROUND(AVG(
+          CASE WHEN time_without_ai > 0
+            THEN (time_without_ai - time_with_ai)::numeric / time_without_ai * 100
+            ELSE 0
+          END
+        )::numeric, 1)
+        FROM tasks
+        WHERE practice = ANY(v_practices)
+          AND (p_quarter_id IS NULL OR quarter_id = p_quarter_id)
+          AND approval_status = 'approved'
+      ),
+      'top_tool', (
+        SELECT ai_tool FROM tasks
+        WHERE practice = ANY(v_practices)
+          AND (p_quarter_id IS NULL OR quarter_id = p_quarter_id)
+          AND ai_tool IS NOT NULL AND ai_tool != ''
+        GROUP BY ai_tool ORDER BY COUNT(*) DESC LIMIT 1
+      ),
+      'top_tool_count', (
+        SELECT COUNT(*) FROM tasks
+        WHERE practice = ANY(v_practices)
+          AND (p_quarter_id IS NULL OR quarter_id = p_quarter_id)
+          AND ai_tool = (
+            SELECT ai_tool FROM tasks
+            WHERE practice = ANY(v_practices)
+              AND (p_quarter_id IS NULL OR quarter_id = p_quarter_id)
+              AND ai_tool IS NOT NULL AND ai_tool != ''
+            GROUP BY ai_tool ORDER BY COUNT(*) DESC LIMIT 1
+          )
+      )
     )
   ) INTO v_result;
 
