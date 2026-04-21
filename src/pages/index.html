@@ -7181,7 +7181,7 @@ function renderExecCharts(summary) {
     }
   };
 
-  // 1. Weekly Trend (combo: bars=tasks, line=hours)
+  // 1. Weekly Trend (combo: bars=tasks, line=hours, dashed line=cumulative)
   const weeklyData = summary.weekly_trend || [];
   const weeklyCanvas = document.getElementById('exec-chart-weekly');
   if (weeklyCanvas && weeklyData.length === 0) {
@@ -7193,6 +7193,13 @@ function renderExecCharts(summary) {
     ctx.fillText('No weekly data available', weeklyCanvas.width / 2, weeklyCanvas.height / 2);
   }
   if (weeklyCanvas && weeklyData.length > 0) {
+    // Compute cumulative totals client-side as fallback / validation
+    let cumTasks = 0;
+    const cumulativeData = weeklyData.map(w => {
+      cumTasks += (w.task_count || 0);
+      return w.cumulative_tasks || cumTasks;
+    });
+
     execCharts.weekly = new Chart(weeklyCanvas.getContext('2d'), {
       type: 'bar',
       data: {
@@ -7203,7 +7210,8 @@ function renderExecCharts(summary) {
             data: weeklyData.map(w => w.task_count),
             backgroundColor: 'rgba(59,130,246,0.7)',
             borderRadius: 4,
-            order: 2
+            order: 2,
+            yAxisID: 'y'
           },
           {
             label: 'Hours Saved',
@@ -7216,13 +7224,37 @@ function renderExecCharts(summary) {
             pointRadius: 4,
             order: 1,
             yAxisID: 'y1'
+          },
+          {
+            label: 'Cumulative Tasks',
+            data: cumulativeData,
+            type: 'line',
+            borderColor: '#f59e0b',
+            borderDash: [6, 3],
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.3,
+            pointRadius: 3,
+            pointBackgroundColor: '#f59e0b',
+            order: 0,
+            yAxisID: 'y2'
           }
         ]
       },
       options: {
-        ...baseOptions,
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: tickColor, padding: 12, font: { size: 12 } } }
+        },
         scales: {
-          ...baseOptions.scales,
+          x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { color: gridColor } },
+          y: {
+            ticks: { color: tickColor, font: { size: 11 } },
+            grid: { color: gridColor },
+            beginAtZero: true,
+            title: { display: true, text: 'Tasks', color: tickColor }
+          },
           y1: {
             position: 'right',
             ticks: { color: '#10b981', font: { size: 11 } },
@@ -7230,7 +7262,11 @@ function renderExecCharts(summary) {
             beginAtZero: true,
             title: { display: true, text: 'Hours', color: '#10b981' }
           },
-          y: { ...baseOptions.scales.y, title: { display: true, text: 'Tasks', color: tickColor } }
+          y2: {
+            position: 'right',
+            display: false,
+            beginAtZero: true
+          }
         }
       }
     });
