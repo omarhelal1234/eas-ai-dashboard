@@ -127,10 +127,13 @@ BEGIN
         SELECT
           week_number,
           COUNT(*) AS task_count,
-          COALESCE(SUM(time_without_ai - time_with_ai), 0) AS hours_saved
+          COALESCE(SUM(time_without_ai - time_with_ai), 0) AS hours_saved,
+          SUM(COUNT(*)) OVER (ORDER BY week_number) AS cumulative_tasks,
+          SUM(COALESCE(SUM(time_without_ai - time_with_ai), 0)) OVER (ORDER BY week_number) AS cumulative_hours
         FROM tasks
         WHERE practice = ANY(v_practices)
           AND (p_quarter_id IS NULL OR quarter_id = p_quarter_id)
+          AND week_number IS NOT NULL
         GROUP BY week_number
         ORDER BY week_number
       ) wt
