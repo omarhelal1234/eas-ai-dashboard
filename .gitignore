@@ -44,3 +44,7 @@ scripts/sync_output/
 # Claude local config (contains symlinks)
 .claude/
 supabase/functions/prompt-improver/import_map.json
+docs/superpowers/plans/2026-04-20-spoc-teamlead-practice-scoped-views.md
+docs/superpowers/specs/2026-04-20-spoc-teamlead-practice-scoped-views-design.md
+docs/testing/BUG_REPORT_2026-04-19.md
+RefreshedData/RE_ EAS AI Adoption _ Grafana stats/IDE_Dump_19_Apr_26.json
