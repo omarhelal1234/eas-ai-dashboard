@@ -7378,6 +7378,71 @@ function renderExecCharts(summary) {
   }
 }
 
+// ======== EXEC DEPARTMENT DRILL-DOWN ========
+function renderExecDepartments(departments) {
+  const container = document.getElementById('exec-dept-drilldown');
+  if (!container) return;
+
+  if (!departments || departments.length === 0) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px">No department data available</div>';
+    return;
+  }
+
+  container.innerHTML = departments.map((dept, idx) => {
+    const practiceRows = (dept.practices || []).map(p => `
+      <div class="exec-practice-row">
+        <span>${escapeHtml(p.practice)}</span>
+        <div class="exec-practice-stats">
+          <span>Tasks: <strong style="color:#3b82f6">${fmt(p.task_count, 0)}</strong></span>
+          <span>Hours: <strong style="color:#10b981">${fmt(p.hours_saved, 0)}</strong></span>
+          <span>Users: <strong style="color:#f59e0b">${fmt(p.active_users, 0)}</strong></span>
+          <span>Quality: <strong>${p.avg_quality ? fmt(p.avg_quality, 1) + '/5' : '—'}</strong></span>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="exec-dept-row">
+        <div class="exec-dept-header" onclick="toggleExecDept(${idx})">
+          <div class="exec-dept-name">
+            <span class="exec-dept-chevron" id="exec-dept-chev-${idx}">▸</span>
+            <strong>${escapeHtml(dept.department)}</strong>
+            <span class="exec-dept-badge">${dept.practice_count} practice${dept.practice_count !== 1 ? 's' : ''}</span>
+          </div>
+          <div class="exec-dept-stats">
+            <span>Tasks: <strong style="color:#3b82f6">${fmt(dept.task_count, 0)}</strong></span>
+            <span>Hours: <strong style="color:#10b981">${fmt(dept.hours_saved, 0)}</strong></span>
+            <span>Users: <strong style="color:#f59e0b">${fmt(dept.active_users, 0)}</strong></span>
+            <span>Adoption: <strong style="color:#8b5cf6">${dept.adoption_rate || 0}%</strong></span>
+          </div>
+        </div>
+        <div class="exec-dept-practices" id="exec-dept-practices-${idx}">
+          ${practiceRows}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleExecDept(idx) {
+  const practices = document.getElementById(`exec-dept-practices-${idx}`);
+  const chevron = document.getElementById(`exec-dept-chev-${idx}`);
+  if (!practices) return;
+  const isOpen = practices.classList.toggle('open');
+  if (chevron) {
+    chevron.classList.toggle('open', isOpen);
+    chevron.textContent = isOpen ? '▾' : '▸';
+  }
+}
+
+function toggleExecDetailed() {
+  const grid = document.getElementById('exec-detailed-grid');
+  const chevron = document.getElementById('exec-detailed-chevron');
+  if (!grid) return;
+  const isCollapsed = grid.classList.toggle('collapsed');
+  if (chevron) chevron.textContent = isCollapsed ? '▸' : '▾';
+}
+
 // Boot
 async function boot() {
   try {
