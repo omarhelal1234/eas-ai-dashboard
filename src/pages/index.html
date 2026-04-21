@@ -1452,22 +1452,22 @@ npm run compile</code></pre>
       <div class="exec-charts-row" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px">
         <div class="chart-card">
           <h4>Weekly Trend</h4>
-          <canvas id="exec-chart-weekly" height="260"></canvas>
+          <div class="chart-container"><canvas id="exec-chart-weekly"></canvas></div>
         </div>
         <div class="chart-card">
           <h4>Copilot Adoption by Practice</h4>
-          <canvas id="exec-chart-copilot" height="260"></canvas>
+          <div class="chart-container"><canvas id="exec-chart-copilot"></canvas></div>
         </div>
       </div>
 
       <div class="exec-charts-row" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px">
         <div class="chart-card">
           <h4>Approval Pipeline</h4>
-          <canvas id="exec-chart-approvals" height="260"></canvas>
+          <div class="chart-container"><canvas id="exec-chart-approvals"></canvas></div>
         </div>
         <div class="chart-card">
           <h4>AI Tools Usage</h4>
-          <canvas id="exec-chart-tools" height="260"></canvas>
+          <div class="chart-container"><canvas id="exec-chart-tools"></canvas></div>
         </div>
       </div>
 
@@ -7280,12 +7280,8 @@ function renderExecCharts(summary) {
   const weeklyData = summary.weekly_trend || [];
   const weeklyCanvas = document.getElementById('exec-chart-weekly');
   if (weeklyCanvas && weeklyData.length === 0) {
-    const ctx = weeklyCanvas.getContext('2d');
-    ctx.clearRect(0, 0, weeklyCanvas.width, weeklyCanvas.height);
-    ctx.fillStyle = tickColor;
-    ctx.font = '14px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('No weekly data available', weeklyCanvas.width / 2, weeklyCanvas.height / 2);
+    weeklyCanvas.style.display = 'none';
+    weeklyCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:14px">No weekly data available</div>';
   }
   if (weeklyCanvas && weeklyData.length > 0) {
     // Compute cumulative totals client-side as fallback / validation
@@ -7371,12 +7367,8 @@ function renderExecCharts(summary) {
   const copilotData = summary.copilot_adoption || [];
   const copilotCanvas = document.getElementById('exec-chart-copilot');
   if (copilotCanvas && copilotData.length === 0) {
-    const ctx = copilotCanvas.getContext('2d');
-    ctx.clearRect(0, 0, copilotCanvas.width, copilotCanvas.height);
-    ctx.fillStyle = tickColor;
-    ctx.font = '14px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('No copilot adoption data', copilotCanvas.width / 2, copilotCanvas.height / 2);
+    copilotCanvas.style.display = 'none';
+    copilotCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:14px">No copilot adoption data</div>';
   }
   if (copilotCanvas && copilotData.length > 0) {
     execCharts.copilot = new Chart(copilotCanvas.getContext('2d'), {
@@ -7409,12 +7401,8 @@ function renderExecCharts(summary) {
   const approvalData = summary.approval_stats || [];
   const approvalCanvas = document.getElementById('exec-chart-approvals');
   if (approvalCanvas && approvalData.length === 0) {
-    const ctx = approvalCanvas.getContext('2d');
-    ctx.clearRect(0, 0, approvalCanvas.width, approvalCanvas.height);
-    ctx.fillStyle = tickColor;
-    ctx.font = '14px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('No approval data', approvalCanvas.width / 2, approvalCanvas.height / 2);
+    approvalCanvas.style.display = 'none';
+    approvalCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:14px">No approval data</div>';
   }
   if (approvalCanvas && approvalData.length > 0) {
     const statusColors = {
@@ -7449,12 +7437,8 @@ function renderExecCharts(summary) {
   const toolData = summary.tool_usage || [];
   const toolsCanvas = document.getElementById('exec-chart-tools');
   if (toolsCanvas && toolData.length === 0) {
-    const ctx = toolsCanvas.getContext('2d');
-    ctx.clearRect(0, 0, toolsCanvas.width, toolsCanvas.height);
-    ctx.fillStyle = tickColor;
-    ctx.font = '14px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('No tool usage data', toolsCanvas.width / 2, toolsCanvas.height / 2);
+    toolsCanvas.style.display = 'none';
+    toolsCanvas.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:14px">No tool usage data</div>';
   }
   if (toolsCanvas && toolData.length > 0) {
     execCharts.tools = new Chart(toolsCanvas.getContext('2d'), {
