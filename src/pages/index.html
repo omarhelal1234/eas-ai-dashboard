@@ -1438,12 +1438,14 @@ npm run compile</code></pre>
       </div>
     </div>
     <div class="page-content">
-      <!-- KPI Cards -->
-      <div class="kpi-grid" id="exec-kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue" id="exec-kpi-tasks">—</div><div class="kpi-sub">across assigned practices</div></div>
+      <!-- Primary KPIs (6 cards) -->
+      <div class="exec-kpi-grid" id="exec-kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue" id="exec-kpi-tasks">—</div><div class="kpi-sub">across all practices</div></div>
         <div class="kpi-card"><div class="kpi-label">Hours Saved</div><div class="kpi-value green" id="exec-kpi-hours">—</div><div class="kpi-sub">approved tasks only</div></div>
         <div class="kpi-card"><div class="kpi-label">Active Users</div><div class="kpi-value yellow" id="exec-kpi-users">—</div><div class="kpi-sub">unique contributors</div></div>
-        <div class="kpi-card"><div class="kpi-label">Practices</div><div class="kpi-value purple" id="exec-kpi-practices">—</div><div class="kpi-sub">under your oversight</div></div>
+        <div class="kpi-card"><div class="kpi-label">Adoption Rate</div><div class="kpi-value purple" id="exec-kpi-adoption">—</div><div class="kpi-sub" id="exec-kpi-adoption-sub">— / — licensed</div></div>
+        <div class="kpi-card"><div class="kpi-label">Hrs / Resource</div><div class="kpi-value cyan" id="exec-kpi-hrsres">—</div><div class="kpi-sub" id="exec-kpi-hrsres-sub">— hrs / — resources</div></div>
+        <div class="kpi-card"><div class="kpi-label">Practices</div><div class="kpi-value pink" id="exec-kpi-practices">—</div><div class="kpi-sub">under your oversight</div></div>
       </div>
 
       <!-- Practice Breakdown Table -->
@@ -1488,6 +1490,24 @@ npm run compile</code></pre>
           <h4>AI Tools Usage</h4>
           <canvas id="exec-chart-tools" height="260"></canvas>
         </div>
+      </div>
+
+      <!-- Department Drill-Down -->
+      <div class="exec-section-header" style="margin-top:28px">
+        <span class="exec-section-label">Department Breakdown</span>
+      </div>
+      <div class="exec-dept-drilldown" id="exec-dept-drilldown"></div>
+
+      <!-- Secondary Metrics (collapsible) -->
+      <div class="exec-section-header exec-section-toggle" id="exec-detailed-toggle" style="margin-top:28px;cursor:pointer" onclick="toggleExecDetailed()">
+        <span class="exec-section-chevron" id="exec-detailed-chevron">▾</span>
+        <span class="exec-section-label">Detailed Metrics</span>
+      </div>
+      <div class="exec-detailed-grid" id="exec-detailed-grid">
+        <div class="exec-detail-card"><div class="exec-detail-label">Avg Quality Rating</div><div class="exec-detail-value" id="exec-detail-quality">—</div></div>
+        <div class="exec-detail-card"><div class="exec-detail-label">Approval Rate</div><div class="exec-detail-value green" id="exec-detail-approval">—</div></div>
+        <div class="exec-detail-card"><div class="exec-detail-label">Avg Efficiency Gain</div><div class="exec-detail-value purple" id="exec-detail-efficiency">—</div></div>
+        <div class="exec-detail-card"><div class="exec-detail-label">Top AI Tool</div><div class="exec-detail-value blue" id="exec-detail-toptool">—</div><div class="exec-detail-sub" id="exec-detail-toptool-sub"></div></div>
       </div>
 
       <!-- Empty State -->
