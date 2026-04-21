@@ -1,5 +1,17 @@
 ---
 
+## April 21, 2026 — Fix: dept_spoc Missing INSERT RLS Policies
+
+**Symptom:** `dept_spoc` users got `new row violates row-level security policy for table "tasks"` when submitting a task via the Log Task form.
+
+**Root cause:** Migration `025_dept_spoc_role.sql` added SELECT and UPDATE policies for `dept_spoc` on `tasks`, `accomplishments`, and `submission_approvals`, but omitted INSERT policies for all three tables. The submission flow calls `insertTask` → `createSubmissionApproval`, both of which require INSERT permission.
+
+**Fix:** Migration `028_dept_spoc_insert_policies.sql` adds INSERT policies on all three tables, scoped to practices within the dept_spoc's assigned department (matching the existing UPDATE policy pattern using `get_user_department_id()`).
+
+**Affected tables:** `tasks`, `accomplishments`, `submission_approvals`.
+
+---
+
 ## April 20, 2026 — Fix: Orphaned Approval Records in SPOC Queue
 
 **Symptom:** Tasks with low saved hours (e.g., 1h) appeared in the SPOC review queue even though they had been auto-approved.
