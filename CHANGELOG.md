@@ -10,6 +10,10 @@ This changelog is **append-only**. Every task, regardless of origin, must add an
 
 ## [Unreleased]
 
+- 2026-04-22 (claude) — **IDE Usage redesign**: new `ide_usage_daily` table (UPSERT on user_login+day) stores raw per-user per-day Copilot activity incl. JSONB breakdowns (IDE/feature/language/model); new rollup view + `refresh_copilot_users_ide_aggregates()` function keeps legacy `copilot_users.ide_*` columns in sync; RLS scopes visibility per role (admin/executive all · dept_spoc department · spoc practice · team_lead members · contributor own row · viewer denied); added `copilot_users.grafana_login` / `emp_id` / `unit`; redesigned `#page-ide-usage` with 3 tabs (Summary-by-Practice pivot · Excel-style All-Users roster with Practice/Unit/EmpID/Name/Email/Role/Login/Active/Days/Gen/Accept/LOC · per-user Drill-down with daily sparkline + IDE/feature/language/model breakdowns); new **Admin → IDE Usage Sync** page replaces the legacy Python Grafana script with a client-side NDJSON upload (chunked UPSERT + auto aggregate-refresh + unmatched-logins report) (sql/029, js/db.js, src/pages/index.html, src/pages/admin.html, css/dashboard.css)
+
+- 2026-04-21 (claude) — Full offline database backup: 6 SQL files (schema, indexes, constraints, functions, triggers, RLS) + 24 JSON data exports (~1,847 rows) saved to backup/ directory with restore README (backup)
+
 - 2026-04-21 (claude) — Enhanced Executive Summary dashboard: fixed weekly trend chart crash (null week_number + broken dual-axis), expanded to 6 primary KPIs (adoption rate, hrs/resource), added department drill-down with expand/collapse, secondary detailed metrics section, cumulative growth line on weekly trend, updated PDF/PPTX exports
 - 2026-04-21 (claude) — Sync IDE stats from Grafana dump (2026-03-24 to 2026-04-20): 415 usernames processed, 40 copilot_users rows updated via batch SQL UPDATEs (scripts/sync_grafana_json.py)
 

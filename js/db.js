@@ -2193,6 +2193,192 @@ const EAS_DB = (() => {
   }
 
   // ===========================================================
+  // IDE Usage Daily — per-user per-day Copilot activity
+  // (backed by ide_usage_daily + ide_usage_user_rollup view)
+  // ===========================================================
+
+  /**
+   * Fetch the per-practice summary pivot (Total / Active / Inactive / Active%).
+   * Admin/Executive see every practice. SPOC sees only their own practice.
+   * Dept SPOC sees practices in their department.
+   * Team Lead / Contributor: returns a single synthetic row for their scope.
+   */
+  async function fetchIDEPracticeSummary() {
+    // Read the scoped user list from copilot_users (RLS narrows this by role).
+    const { data, error } = await sb
+      .from('copilot_users')
+      .select('practice, ide_days_active')
+      .limit(5000);
+    if (error) { console.error('fetchIDEPracticeSummary error:', error.message); return []; }
+    const byPractice = new Map();
+    (data || []).forEach(row => {
+      const key = row.practice || 'Unassigned';
+      const b = byPractice.get(key) || { practice: key, total: 0, active: 0, inactive: 0 };
+      b.total += 1;
+      if ((row.ide_days_active || 0) > 0) b.active += 1; else b.inactive += 1;
+      byPractice.set(key, b);
+    });
+    const rows = [...byPractice.values()]
+      .map(r => ({ ...r, activePct: r.total > 0 ? (r.active * 100 / r.total) : 0 }))
+      .sort((a, b) => a.practice.localeCompare(b.practice));
+    const totals = rows.reduce(
+      (acc, r) => ({
+        practice: 'TOTAL',
+        total: acc.total + r.total,
+        active: acc.active + r.active,
+        inactive: acc.inactive + r.inactive,
+      }),
+      { practice: 'TOTAL', total: 0, active: 0, inactive: 0 }
+    );
+    totals.activePct = totals.total > 0 ? (totals.active * 100 / totals.total) : 0;
+    if (rows.length > 1) rows.push(totals);
+    return rows;
+  }
+
+  /**
+   * Fetch all users with their current-window aggregate IDE metrics.
+   * Returns the Excel-style roster: practice / unit / empId / name / email /
+   * roleSkill / login / active / daysActive / generations / etc.
+   * Practice filter is optional client-side; RLS also scopes server-side.
+   */
+  async function fetchIDEUsers(practiceFilter) {
+    let q = sb
+      .from('copilot_users')
+      .select('id, name, email, practice, unit, emp_id, role_skill, grafana_login, status, ' +
+              'ide_days_active, ide_total_interactions, ide_code_generations, ide_code_acceptances, ' +
+              'ide_agent_days, ide_chat_days, ide_loc_suggested, ide_loc_added, ide_last_active_date, ' +
+              'ide_data_period, ide_data_updated_at')
+      .order('practice', { ascending: true })
+      .order('name', { ascending: true })
+      .limit(5000);
+    if (practiceFilter) q = q.eq('practice', practiceFilter);
+    const { data, error } = await q;
+    if (error) { console.error('fetchIDEUsers error:', error.message); return []; }
+    return (data || []).map(u => ({
+      id:                   u.id,
+      name:                 u.name,
+      email:                u.email,
+      practice:             u.practice,
+      unit:                 u.unit,
+      empId:                u.emp_id,
+      roleSkill:            u.role_skill,
+      login:                u.grafana_login,
+      status:               u.status,
+      active:               (u.ide_days_active || 0) > 0,
+      ideDaysActive:        u.ide_days_active || 0,
+      ideTotalInteractions: u.ide_total_interactions || 0,
+      ideCodeGenerations:   u.ide_code_generations || 0,
+      ideCodeAcceptances:   u.ide_code_acceptances || 0,
+      ideAgentDays:         u.ide_agent_days || 0,
+      ideChatDays:          u.ide_chat_days || 0,
+      ideLocSuggested:      u.ide_loc_suggested || 0,
+      ideLocAdded:          u.ide_loc_added || 0,
+      ideLastActiveDate:    u.ide_last_active_date,
+      ideDataPeriod:        u.ide_data_period,
+      ideDataUpdatedAt:     u.ide_data_updated_at,
+    }));
+  }
+
+  /**
+   * Fetch raw daily IDE records for a single user (for drill-down charts +
+   * breakdowns by IDE / feature / language / model).
+   */
+  async function fetchIDEUserDaily(userLogin, sinceDays) {
+    if (!userLogin) return [];
+    let q = sb
+      .from('ide_usage_daily')
+      .select('day, report_start_day, report_end_day, interactions, code_generations, code_acceptances, ' +
+              'used_agent, used_chat, loc_suggested_add, loc_added, loc_deleted, ' +
+              'by_ide, by_feature, by_language, by_model, synced_at')
+      .eq('user_login', userLogin)
+      .order('day', { ascending: true })
+      .limit(400);
+    if (sinceDays) {
+      const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+      q = q.gte('day', since.toISOString().slice(0, 10));
+    }
+    const { data, error } = await q;
+    if (error) { console.error('fetchIDEUserDaily error:', error.message); return []; }
+    return data || [];
+  }
+
+  /**
+   * Bulk-upsert IDE usage daily rows from a parsed NDJSON array.
+   * Chunks the inserts and reports progress via an optional callback.
+   * Returns { inserted, failed, errors }.
+   */
+  async function uploadIDEUsageDaily(records, sourceFile, onProgress) {
+    if (!Array.isArray(records) || !records.length) {
+      return { inserted: 0, failed: 0, errors: [] };
+    }
+    const CHUNK = 400;
+    let inserted = 0, failed = 0;
+    const errors = [];
+    const now = new Date().toISOString();
+
+    const rows = records.map(r => ({
+      user_login:        r.user_login,
+      github_user_id:    r.user_id || null,
+      enterprise_id:     r.enterprise_id || null,
+      day:               r.day,
+      report_start_day:  r.report_start_day || null,
+      report_end_day:    r.report_end_day || null,
+      interactions:      r.user_initiated_interaction_count || 0,
+      code_generations:  r.code_generation_activity_count || 0,
+      code_acceptances:  r.code_acceptance_activity_count || 0,
+      used_agent:        !!r.used_agent,
+      used_chat:         !!r.used_chat,
+      loc_suggested_add: r.loc_suggested_to_add_sum || 0,
+      loc_suggested_del: r.loc_suggested_to_delete_sum || 0,
+      loc_added:         r.loc_added_sum || 0,
+      loc_deleted:       r.loc_deleted_sum || 0,
+      by_ide:            r.totals_by_ide || null,
+      by_feature:        r.totals_by_feature || null,
+      by_language:       r.totals_by_language_feature || null,
+      by_model:          r.totals_by_language_model || r.totals_by_model_feature || null,
+      source_file:       sourceFile || null,
+      synced_at:         now,
+    })).filter(r => r.user_login && r.day);
+
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      const { error } = await sb
+        .from('ide_usage_daily')
+        .upsert(chunk, { onConflict: 'user_login,day' });
+      if (error) {
+        failed += chunk.length;
+        errors.push(error.message);
+      } else {
+        inserted += chunk.length;
+      }
+      if (onProgress) onProgress({ processed: Math.min(i + CHUNK, rows.length), total: rows.length, inserted, failed });
+    }
+
+    // Refresh aggregates on copilot_users so legacy readers stay accurate.
+    const { error: rpcErr } = await sb.rpc('refresh_copilot_users_ide_aggregates');
+    if (rpcErr) errors.push('refresh_copilot_users_ide_aggregates: ' + rpcErr.message);
+
+    return { inserted, failed, errors, total: rows.length };
+  }
+
+  /**
+   * Parse an NDJSON (newline-delimited JSON) blob into an array of records.
+   * Skips blank lines and reports malformed lines.
+   */
+  function parseNDJSON(text) {
+    const out = [];
+    const errs = [];
+    const lines = String(text || '').split(/\r?\n/);
+    lines.forEach((line, idx) => {
+      const t = line.trim();
+      if (!t) return;
+      try { out.push(JSON.parse(t)); }
+      catch (e) { errs.push({ line: idx + 1, error: e.message }); }
+    });
+    return { records: out, errors: errs };
+  }
+
+  // ===========================================================
   // Team Lead Assignments
   // ===========================================================
 
@@ -2509,6 +2695,11 @@ const EAS_DB = (() => {
     fetchCopilotUsers,
     fetchCopilotUsersByPractice,
     fetchGrafanaStats,
+    fetchIDEPracticeSummary,
+    fetchIDEUsers,
+    fetchIDEUserDaily,
+    uploadIDEUsageDaily,
+    parseNDJSON,
     fetchProjects,
     fetchLovs,
     fetchApprovedUseCases,

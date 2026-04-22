@@ -274,6 +274,7 @@ All modules use the **Revealing Module Pattern** (IIFE returning a public API):
 | `likes` | Global like system — user+item_type+item_id unique constraint | Dynamic |
 | `featured_banner_config` | Admin-configurable slot allocation per content type | 5 (seeded) |
 | `featured_banner_pins` | Admin/SPOC-pinned items for spotlight banner | Dynamic |
+| `ide_usage_daily` | Raw per-user per-day Copilot IDE activity (UPSERT on user_login+day) with JSONB breakdowns by IDE/feature/language/model. Source for `ide_usage_user_rollup` view and `refresh_copilot_users_ide_aggregates()`. RLS scoped per role. | Dynamic |
 
 ### Computed Columns
 

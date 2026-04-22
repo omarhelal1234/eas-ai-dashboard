@@ -617,6 +617,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
       Data Management
     </div>
+    <div class="nav-item" data-page="manage-ide-sync">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="14" y1="4" x2="10" y2="20"/></svg>
+      IDE Usage Sync
+    </div>
     <div class="nav-item" data-page="manage-prompts">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/></svg>
       Prompt Library
@@ -980,6 +984,48 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             <p>Save current data to browser localStorage so edits persist across page reloads.</p>
             <button class="btn btn-primary" onclick="saveToLocalStorage(); showToast('Data saved to localStorage')">Save Now</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IDE Usage Sync Page -->
+    <div id="page-manage-ide-sync" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>IDE Usage Sync</h2>
+          <div class="subtitle">Upload the GitHub Copilot Grafana JSON dump to refresh IDE usage stats</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div class="kpi-grid" style="margin-bottom:24px">
+          <div class="kpi-card"><div class="kpi-label">Daily Records</div><div class="kpi-value blue" id="ide-sync-total-rows">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Distinct Users</div><div class="kpi-value purple" id="ide-sync-total-users">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Latest Day</div><div class="kpi-value cyan" id="ide-sync-latest-day">—</div></div>
+          <div class="kpi-card"><div class="kpi-label">Last Synced</div><div class="kpi-value green" id="ide-sync-last-synced">—</div></div>
+        </div>
+
+        <div class="data-action-card" style="margin-bottom:16px">
+          <h4>📤 Upload JSON / NDJSON Dump</h4>
+          <p>Drop the <code>IDE_Dump_*.json</code> (NDJSON — one JSON object per line) file exported from GitHub Copilot Grafana. Records are UPSERTed on <code>(user_login, day)</code>, so re-uploading the same file is idempotent. After upload, the <code>copilot_users</code> aggregates are refreshed automatically.</p>
+          <input type="file" id="ide-sync-file" accept=".json,.ndjson,.jsonl" style="display:none">
+          <button class="btn btn-primary" onclick="document.getElementById('ide-sync-file').click()">Choose File</button>
+          <span id="ide-sync-selected-name" style="margin-left:12px;font-size:12px;color:var(--text-muted)"></span>
+          <div id="ide-sync-progress" style="margin-top:12px;display:none">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+              <span id="ide-sync-status-text">Starting…</span>
+              <span id="ide-sync-percent">0%</span>
+            </div>
+            <div style="background:var(--bg-secondary);height:10px;border-radius:5px;overflow:hidden">
+              <div id="ide-sync-bar" style="background:var(--accent);height:100%;width:0%;transition:width 0.2s"></div>
+            </div>
+          </div>
+          <div id="ide-sync-result" style="margin-top:12px;font-size:12px"></div>
+        </div>
+
+        <div class="data-action-card">
+          <h4>🔗 Login-to-User Mapping</h4>
+          <p>Each Grafana record is matched to a Copilot user via <code>copilot_users.grafana_login</code>. The initial seed is <code>&lt;username&gt;_ejadasa</code> (e.g. <code>oibrahim_ejadasa</code>). Unmatched logins from the last upload:</p>
+          <div id="ide-sync-unmatched" style="max-height:180px;overflow-y:auto;font-family:ui-monospace,monospace;font-size:12px;background:var(--bg-secondary);padding:10px;border-radius:4px">—</div>
         </div>
       </div>
     </div>
@@ -1832,6 +1878,7 @@ function renderCurrentPage(page) {
     case 'manage-practices': renderAdminPractices(); break;
     case 'manage-lovs': renderLOVs(); break;
     case 'manage-data': renderDataMgmt(); break;
+    case 'manage-ide-sync': renderIDESync(); break;
     case 'manage-prompts': renderAdminPrompts(); break;
     case 'manage-users': renderAdminUsers(); break;
     case 'manage-executives': renderAdminExecutives(); break;
@@ -2984,6 +3031,115 @@ function renderDataMgmt() {
   document.getElementById('dm-acc').textContent = (data.accomplishments || []).length;
   document.getElementById('dm-copilot').textContent = (data.copilotUsers || []).length;
   document.getElementById('dm-proj').textContent = (data.projects || []).length;
+}
+
+// ============ IDE USAGE SYNC ============
+let _ideSyncWired = false;
+
+async function renderIDESync() {
+  const sb = getSupabaseClient();
+  // Load summary stats
+  try {
+    const { count: total } = await sb.from('ide_usage_daily').select('*', { count: 'exact', head: true });
+    document.getElementById('ide-sync-total-rows').textContent = (total || 0).toLocaleString();
+
+    const { data: latest } = await sb.from('ide_usage_daily')
+      .select('day, synced_at').order('day', { ascending: false }).limit(1);
+    if (latest && latest.length) {
+      document.getElementById('ide-sync-latest-day').textContent = latest[0].day || '—';
+      const ts = latest[0].synced_at ? new Date(latest[0].synced_at) : null;
+      document.getElementById('ide-sync-last-synced').textContent = ts ? ts.toLocaleDateString() : '—';
+    } else {
+      document.getElementById('ide-sync-latest-day').textContent = '—';
+      document.getElementById('ide-sync-last-synced').textContent = '—';
+    }
+
+    // Distinct users — rough estimate via RPC-less count
+    const { data: distinctUsers } = await sb.from('ide_usage_daily').select('user_login').limit(10000);
+    const distinct = new Set((distinctUsers || []).map(r => r.user_login)).size;
+    document.getElementById('ide-sync-total-users').textContent = distinct.toLocaleString();
+  } catch (e) { console.error('renderIDESync stats error', e); }
+
+  if (_ideSyncWired) return;
+  _ideSyncWired = true;
+  document.getElementById('ide-sync-file').addEventListener('change', handleIDESyncUpload);
+}
+
+async function handleIDESyncUpload(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  document.getElementById('ide-sync-selected-name').textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+  const progressEl = document.getElementById('ide-sync-progress');
+  const bar = document.getElementById('ide-sync-bar');
+  const statusText = document.getElementById('ide-sync-status-text');
+  const percentText = document.getElementById('ide-sync-percent');
+  const resultEl = document.getElementById('ide-sync-result');
+  progressEl.style.display = '';
+  resultEl.innerHTML = '';
+  statusText.textContent = 'Reading file…';
+  bar.style.width = '0%';
+  percentText.textContent = '0%';
+
+  try {
+    const text = await file.text();
+    statusText.textContent = 'Parsing NDJSON…';
+    const { records, errors: parseErrs } = EAS_DB.parseNDJSON(text);
+    if (!records.length) {
+      resultEl.innerHTML = `<span style="color:var(--danger)">No valid records parsed. Check file format.</span>`;
+      return;
+    }
+    statusText.textContent = `Uploading ${records.length.toLocaleString()} records…`;
+
+    const { inserted, failed, errors, total } = await EAS_DB.uploadIDEUsageDaily(
+      records, file.name,
+      ({ processed, total }) => {
+        const pct = total ? Math.round(processed * 100 / total) : 0;
+        bar.style.width = pct + '%';
+        percentText.textContent = pct + '%';
+        statusText.textContent = `Uploading ${processed.toLocaleString()} / ${total.toLocaleString()}…`;
+      }
+    );
+
+    statusText.textContent = 'Done';
+    bar.style.width = '100%';
+    percentText.textContent = '100%';
+
+    const parts = [
+      `<strong style="color:var(--success)">✓ Upserted ${inserted.toLocaleString()} / ${total.toLocaleString()} rows.</strong>`,
+    ];
+    if (failed)       parts.push(`<div style="color:var(--danger)">${failed} failed</div>`);
+    if (parseErrs.length) parts.push(`<div style="color:var(--warning)">${parseErrs.length} malformed line(s) skipped</div>`);
+    if (errors.length)    parts.push(`<details style="margin-top:6px"><summary>Errors (${errors.length})</summary><pre style="font-size:11px">${errors.slice(0,10).join('\n')}</pre></details>`);
+    resultEl.innerHTML = parts.join('');
+
+    await renderIDESync();
+    await refreshUnmatchedLogins(records);
+    showToast(`Synced ${inserted.toLocaleString()} IDE usage records`);
+  } catch (e) {
+    console.error('IDE sync upload error:', e);
+    resultEl.innerHTML = `<span style="color:var(--danger)">Upload failed: ${e.message}</span>`;
+  }
+}
+
+async function refreshUnmatchedLogins(records) {
+  const logins = [...new Set(records.map(r => r.user_login).filter(Boolean))];
+  if (!logins.length) return;
+  const sb = getSupabaseClient();
+  // Chunk the IN-filter to avoid URL limits
+  const matched = new Set();
+  for (let i = 0; i < logins.length; i += 200) {
+    const chunk = logins.slice(i, i + 200);
+    const { data } = await sb.from('copilot_users').select('grafana_login').in('grafana_login', chunk);
+    (data || []).forEach(r => { if (r.grafana_login) matched.add(r.grafana_login); });
+  }
+  const unmatched = logins.filter(l => !matched.has(l));
+  const el = document.getElementById('ide-sync-unmatched');
+  if (!unmatched.length) {
+    el.innerHTML = `<span style="color:var(--success)">All ${logins.length} logins matched to Copilot users.</span>`;
+  } else {
+    el.innerHTML = `<div style="margin-bottom:6px;color:var(--warning)">${unmatched.length} unmatched — add <code>grafana_login</code> on Manage Copilot Users:</div>` +
+                   unmatched.map(l => `<div>${l}</div>`).join('');
+  }
 }
 
 // ============ PROMPT LIBRARY ADMIN ============

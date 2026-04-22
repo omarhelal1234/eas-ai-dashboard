@@ -108,7 +108,7 @@
     Licensed AI Users
     <span class="badge" id="nav-copilot-count">152</span>
   </div>
-  <div class="nav-item" data-page="ide-usage" data-role="admin,spoc,dept_spoc,team_lead" data-view-key="web.ide_usage">
+  <div class="nav-item" data-page="ide-usage" data-role="admin,executive,spoc,dept_spoc,team_lead,contributor" data-view-key="web.ide_usage">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/><circle cx="7" cy="16" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="19" cy="6" r="1.5"/></svg>
     IDE Usage Stats
   </div>
@@ -1546,18 +1546,18 @@ npm run compile</code></pre>
     </div>
   </div>
 
-  <!-- IDE Usage Stats Page -->
+  <!-- IDE Usage Stats Page (redesigned 2026-04-22) -->
   <div id="page-ide-usage" class="page hidden">
     <div class="page-header">
       <div>
         <h2>📊 IDE Usage Stats</h2>
-        <div class="subtitle" id="ide-header-subtitle">Grafana Copilot IDE usage data</div>
+        <div class="subtitle" id="ide-header-subtitle">GitHub Copilot IDE usage — per-user, per-day activity</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <select class="filter-select" id="ide-practice-filter" style="display:none" aria-label="Filter by practice" onchange="loadIDEData()">
           <option value="">All Practices</option>
         </select>
-        <button class="btn btn-secondary" onclick="exportIDEtoCSV()" aria-label="Export IDE stats to CSV">
+        <button class="btn btn-secondary" onclick="exportIDEtoCSV()" aria-label="Export IDE roster to CSV">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export CSV
         </button>
@@ -1572,48 +1572,96 @@ npm run compile</code></pre>
         </div>
         <div style="font-size:12px;color:var(--text-muted)" id="ide-updated-at"></div>
       </div>
-      <!-- KPI Cards -->
-      <div class="kpi-grid" id="ide-kpis">
-        <div class="kpi-card"><div class="kpi-label">👥 Total Users</div><div class="kpi-value blue" id="ide-stat-total-users">0</div><div class="kpi-sub" id="ide-stat-active-users">0 active</div></div>
-        <div class="kpi-card"><div class="kpi-label">📅 Avg Days Active</div><div class="kpi-value cyan" id="ide-stat-avg-days">0</div></div>
-        <div class="kpi-card"><div class="kpi-label">💬 Total Interactions</div><div class="kpi-value purple" id="ide-stat-total-interactions">0</div></div>
-        <div class="kpi-card"><div class="kpi-label">⚡ Code Generations</div><div class="kpi-value green" id="ide-stat-code-generations">0</div></div>
-        <div class="kpi-card"><div class="kpi-label">✅ Code Acceptances</div><div class="kpi-value yellow" id="ide-stat-code-acceptances">0</div></div>
-        <div class="kpi-card"><div class="kpi-label">📝 LOC Added</div><div class="kpi-value pink" id="ide-stat-loc-added">0</div><div class="kpi-sub" id="ide-stat-loc-suggested">0 suggested</div></div>
+
+      <!-- Tabs -->
+      <div class="ide-tabs" role="tablist" style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px">
+        <button class="ide-tab active" data-ide-tab="summary" role="tab" aria-selected="true">Summary by Practice</button>
+        <button class="ide-tab" data-ide-tab="users" role="tab" aria-selected="false">All Users</button>
+        <button class="ide-tab" data-ide-tab="detail" role="tab" aria-selected="false" style="display:none">User Drill-down</button>
       </div>
-      <!-- User Table -->
-      <div class="table-card">
-        <div class="table-header">
-          <h3>User IDE Activity</h3>
-          <span id="ide-table-count" style="font-size:13px;color:var(--text-muted)">0 users</span>
+
+      <!-- TAB 1: Summary by Practice -->
+      <section id="ide-tab-summary" class="ide-tab-panel" role="tabpanel">
+        <div class="kpi-grid" id="ide-kpis" style="margin-bottom:16px">
+          <div class="kpi-card"><div class="kpi-label">👥 Total Users</div><div class="kpi-value blue" id="ide-stat-total-users">0</div><div class="kpi-sub" id="ide-stat-active-users">0 active</div></div>
+          <div class="kpi-card"><div class="kpi-label">📅 Avg Days Active</div><div class="kpi-value cyan" id="ide-stat-avg-days">0</div></div>
+          <div class="kpi-card"><div class="kpi-label">💬 Total Interactions</div><div class="kpi-value purple" id="ide-stat-total-interactions">0</div></div>
+          <div class="kpi-card"><div class="kpi-label">⚡ Code Generations</div><div class="kpi-value green" id="ide-stat-code-generations">0</div></div>
+          <div class="kpi-card"><div class="kpi-label">✅ Code Acceptances</div><div class="kpi-value yellow" id="ide-stat-code-acceptances">0</div></div>
+          <div class="kpi-card"><div class="kpi-label">📝 LOC Added</div><div class="kpi-value pink" id="ide-stat-loc-added">0</div><div class="kpi-sub" id="ide-stat-loc-suggested">0 suggested</div></div>
         </div>
-        <div class="filters-bar">
-          <select class="filter-select" id="ide-activity-filter" onchange="applyIDEFilters()" aria-label="Filter by activity">
-            <option value="">All Users</option>
-            <option value="active">Active Users Only</option>
-            <option value="inactive">Inactive Users</option>
-          </select>
-          <input type="text" class="search-input" id="ide-user-search" placeholder="Search by name or email..." oninput="applyIDEFilters()" aria-label="Search users">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Summary by Practice</h3>
+            <span style="font-size:12px;color:var(--text-muted)">Active users with ≥1 day of IDE activity</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table aria-label="IDE usage summary by practice">
+              <thead>
+                <tr>
+                  <th style="text-align:left">Practice</th>
+                  <th style="text-align:right">Total</th>
+                  <th style="text-align:right">Active</th>
+                  <th style="text-align:right">Inactive</th>
+                  <th style="text-align:right">Active %</th>
+                  <th style="min-width:160px">Adoption</th>
+                </tr>
+              </thead>
+              <tbody id="ide-summary-tbody"></tbody>
+            </table>
+          </div>
         </div>
-        <div style="overflow-x:auto">
-          <table aria-label="IDE usage stats">
-            <thead>
-              <tr>
-                <th class="ide-sortable" data-ide-sort="name">User <span class="ide-sort-arrow">▲</span></th>
-                <th class="ide-sortable" data-ide-sort="practice" id="ide-th-practice">Practice <span class="ide-sort-arrow">▲</span></th>
-                <th class="ide-sortable ide-metric-th" data-ide-sort="ideDaysActive">Days Active <span class="ide-sort-arrow">▲</span></th>
-                <th class="ide-sortable ide-metric-th" data-ide-sort="ideTotalInteractions">Interactions <span class="ide-sort-arrow">▲</span></th>
-                <th class="ide-sortable ide-metric-th" data-ide-sort="ideCodeGenerations">Generations <span class="ide-sort-arrow">▲</span></th>
-                <th class="ide-sortable ide-metric-th" data-ide-sort="ideCodeAcceptances">Acceptances <span class="ide-sort-arrow">▲</span></th>
-                <th class="ide-sortable ide-metric-th" data-ide-sort="ideAgentDays">Agent Days <span class="ide-sort-arrow">▲</span></th>
-                <th class="ide-sortable ide-metric-th" data-ide-sort="ideChatDays">Chat Days <span class="ide-sort-arrow">▲</span></th>
-                <th class="ide-sortable ide-metric-th" data-ide-sort="ideLocAdded">LOC Added <span class="ide-sort-arrow">▲</span></th>
-              </tr>
-            </thead>
-            <tbody id="ide-users-tbody"></tbody>
-          </table>
+      </section>
+
+      <!-- TAB 2: All Users -->
+      <section id="ide-tab-users" class="ide-tab-panel hidden" role="tabpanel">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>User IDE Activity</h3>
+            <span id="ide-table-count" style="font-size:13px;color:var(--text-muted)">0 users</span>
+          </div>
+          <div class="filters-bar">
+            <select class="filter-select" id="ide-activity-filter" onchange="applyIDEFilters()" aria-label="Filter by activity">
+              <option value="">All Users</option>
+              <option value="active">Active Users Only</option>
+              <option value="inactive">Inactive Users</option>
+            </select>
+            <input type="text" class="search-input" id="ide-user-search" placeholder="Search by name, email, emp ID, or login..." oninput="applyIDEFilters()" aria-label="Search users">
+          </div>
+          <div style="overflow-x:auto">
+            <table aria-label="IDE usage stats">
+              <thead>
+                <tr>
+                  <th class="ide-sortable" data-ide-sort="practice" id="ide-th-practice">Practice <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable" data-ide-sort="unit">Unit <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable" data-ide-sort="empId">Emp ID <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable" data-ide-sort="name">Name <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable" data-ide-sort="email">Email <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable" data-ide-sort="roleSkill">Role <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable" data-ide-sort="login">Login <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable ide-metric-th" data-ide-sort="active">Active <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable ide-metric-th" data-ide-sort="ideDaysActive">Days Active <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable ide-metric-th" data-ide-sort="ideCodeGenerations">Code Gen <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable ide-metric-th" data-ide-sort="ideCodeAcceptances">Accept <span class="ide-sort-arrow">▲</span></th>
+                  <th class="ide-sortable ide-metric-th" data-ide-sort="ideLocAdded">LOC Added <span class="ide-sort-arrow">▲</span></th>
+                </tr>
+              </thead>
+              <tbody id="ide-users-tbody"></tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <!-- TAB 3: User Drill-down -->
+      <section id="ide-tab-detail" class="ide-tab-panel hidden" role="tabpanel">
+        <div class="table-card">
+          <div class="table-header">
+            <h3 id="ide-detail-title">User Drill-down</h3>
+            <button class="btn btn-secondary" onclick="closeIDEDetail()" style="font-size:12px;padding:4px 10px">← Back to users</button>
+          </div>
+          <div id="ide-detail-body" style="padding:16px"></div>
+        </div>
+      </section>
     </div>
   </div>
 
@@ -7700,12 +7748,13 @@ async function boot() {
 
 boot();
 
-// ======== IDE USAGE STATS (inline section) ========
+// ======== IDE USAGE STATS (redesigned 2026-04-22) ========
 (function() {
-  let ideAllStats = [];
-  let ideFilteredStats = [];
-  let ideSort = { key: 'ideTotalInteractions', asc: false };
+  let ideAllUsers = [];
+  let ideFilteredUsers = [];
+  let ideSort = { key: 'ideCodeGenerations', asc: false };
   let ideLoaded = false;
+  let ideActiveTab = 'summary';
 
   function periodToMonths(period) {
     if (!period) return '';
@@ -7717,20 +7766,26 @@ boot();
     return s === e ? s : `${s} to ${e}`;
   }
 
+  const esc = s => { if (s === null || s === undefined) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; };
+
   window.renderIDEUsage = async function() {
-    if (ideLoaded) return; // only load once
+    if (ideLoaded) return;
     const role = EAS_Auth.getUserRole();
     const practice = EAS_Auth.getUserPractice();
-
-    // Subtitle
     const sub = document.getElementById('ide-header-subtitle');
-    if (role === 'admin') {
-      sub.textContent = 'Grafana Copilot IDE usage data — All Practices';
+    if (role === 'admin' || role === 'executive') {
+      sub.textContent = 'GitHub Copilot IDE usage — All Practices';
+      await populateIDEPracticeFilter();
+    } else if (role === 'dept_spoc') {
+      sub.textContent = 'GitHub Copilot IDE usage — Department view';
       await populateIDEPracticeFilter();
     } else if (role === 'spoc') {
-      sub.textContent = `Grafana Copilot IDE usage data — ${practice}`;
+      sub.textContent = `GitHub Copilot IDE usage — ${practice}`;
+    } else if (role === 'team_lead') {
+      sub.textContent = 'GitHub Copilot IDE usage — My team';
+    } else if (role === 'contributor') {
+      sub.textContent = 'GitHub Copilot IDE usage — Your activity';
     }
-
     await loadIDEData();
     ideLoaded = true;
   };
@@ -7738,33 +7793,29 @@ boot();
   async function populateIDEPracticeFilter() {
     const el = document.getElementById('ide-practice-filter');
     el.style.display = '';
-    const stats = await EAS_DB.fetchGrafanaStats(null);
-    const practices = [...new Set(stats.map(u => u.practice))].sort();
-    practices.forEach(p => {
-      const o = document.createElement('option'); o.value = p; o.textContent = p;
-      el.appendChild(o);
-    });
+    const users = await EAS_DB.fetchIDEUsers(null);
+    const practices = [...new Set(users.map(u => u.practice).filter(Boolean))].sort();
+    el.innerHTML = '<option value="">All Practices</option>' +
+      practices.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
   }
 
   window.loadIDEData = async function() {
     const role = EAS_Auth.getUserRole();
     const practice = EAS_Auth.getUserPractice();
     let pFilter = null;
-    if (role === 'spoc') {
-      pFilter = practice;
-    } else if (role === 'admin') {
+    if (role === 'spoc') pFilter = practice;
+    else if (role === 'admin' || role === 'executive' || role === 'dept_spoc') {
       pFilter = document.getElementById('ide-practice-filter').value || null;
-    } else {
-      pFilter = practice || null;
     }
-    ideAllStats = await EAS_DB.fetchGrafanaStats(pFilter);
+    ideAllUsers = await EAS_DB.fetchIDEUsers(pFilter);
     updateIDEKPIs();
     updateIDEPeriod();
+    renderPracticeSummary();
     applyIDEFilters();
   };
 
   function updateIDEKPIs() {
-    const u = ideAllStats, t = u.length;
+    const u = ideAllUsers, t = u.length;
     const active = u.filter(x => x.ideDaysActive > 0).length;
     const avg = t > 0 ? (u.reduce((s,x) => s + x.ideDaysActive, 0) / t) : 0;
     document.getElementById('ide-stat-total-users').textContent = t.toLocaleString();
@@ -7778,34 +7829,67 @@ boot();
   }
 
   function updateIDEPeriod() {
-    const wp = ideAllStats.filter(u => u.ideDataPeriod && u.ideDataUpdatedAt);
+    const wp = ideAllUsers.filter(u => u.ideDataPeriod && u.ideDataUpdatedAt);
     if (!wp.length) { document.getElementById('ide-period-banner').style.display = 'none'; return; }
-    // Find the most recent sync date (day precision) and show only that batch's period
     const allDates = wp.map(u => new Date(u.ideDataUpdatedAt));
-    const latestMs = Math.max(...allDates);
-    const latest = new Date(latestMs);
-    const latestDay = latest.toISOString().slice(0, 10); // YYYY-MM-DD
-    const latestBatch = wp.filter(u => u.ideDataUpdatedAt.slice(0, 10) === latestDay);
-    const periods = [...new Set(latestBatch.map(u => periodToMonths(u.ideDataPeriod)))];
-    // Collapse to a single "start to end" range across individual user periods in this batch
-    const allStarts = latestBatch.map(u => u.ideDataPeriod.split(' to ')[0]).filter(Boolean).sort();
-    const allEnds   = latestBatch.map(u => u.ideDataPeriod.split(' to ').at(-1)).filter(Boolean).sort();
-    const rangeStart = allStarts[0], rangeEnd = allEnds[allEnds.length - 1];
-    const label = rangeStart && rangeEnd
-      ? periodToMonths(`${rangeStart} to ${rangeEnd}`)
-      : periods.join(', ');
+    const latest = new Date(Math.max(...allDates));
+    const latestDay = latest.toISOString().slice(0, 10);
+    const batch = wp.filter(u => u.ideDataUpdatedAt.slice(0, 10) === latestDay);
+    const starts = batch.map(u => u.ideDataPeriod.split(' to ')[0]).filter(Boolean).sort();
+    const ends   = batch.map(u => u.ideDataPeriod.split(' to ').at(-1)).filter(Boolean).sort();
+    const label = (starts[0] && ends.at(-1)) ? periodToMonths(`${starts[0]} to ${ends.at(-1)}`) : '';
     document.getElementById('ide-period-text').textContent = label;
     document.getElementById('ide-updated-at').textContent = `Last synced: ${latest.toLocaleDateString()} ${latest.toLocaleTimeString()}`;
     document.getElementById('ide-period-banner').style.display = '';
   }
 
+  function renderPracticeSummary() {
+    const tbody = document.getElementById('ide-summary-tbody');
+    const byP = new Map();
+    ideAllUsers.forEach(u => {
+      const k = u.practice || 'Unassigned';
+      const b = byP.get(k) || { practice: k, total: 0, active: 0, inactive: 0 };
+      b.total += 1;
+      if (u.ideDaysActive > 0) b.active += 1; else b.inactive += 1;
+      byP.set(k, b);
+    });
+    const rows = [...byP.values()].map(r => ({ ...r, activePct: r.total ? (r.active * 100 / r.total) : 0 }))
+      .sort((a, b) => a.practice.localeCompare(b.practice));
+    const totalsRow = rows.reduce((a, r) => ({
+      practice: 'TOTAL', total: a.total + r.total, active: a.active + r.active, inactive: a.inactive + r.inactive
+    }), { practice: 'TOTAL', total: 0, active: 0, inactive: 0 });
+    totalsRow.activePct = totalsRow.total ? (totalsRow.active * 100 / totalsRow.total) : 0;
+    const all = rows.length > 1 ? [...rows, totalsRow] : rows;
+
+    if (!all.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px">No IDE usage data available</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = all.map(r => {
+      const isTotal = r.practice === 'TOTAL';
+      const barW = Math.min(100, r.activePct);
+      const hue = r.activePct >= 25 ? 'var(--success)' : r.activePct >= 10 ? 'var(--warning)' : 'var(--danger)';
+      return `<tr style="${isTotal ? 'font-weight:700;background:var(--bg-secondary)' : ''}">
+        <td>${isTotal ? 'TOTAL' : `<span class="badge" style="font-size:11px">${esc(r.practice)}</span>`}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${r.total}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--success)">${r.active}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--text-muted)">${r.inactive}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${r.activePct.toFixed(1)}%</td>
+        <td><div style="background:var(--bg-secondary);height:10px;border-radius:5px;overflow:hidden"><div style="background:${hue};height:100%;width:${barW}%"></div></div></td>
+      </tr>`;
+    }).join('');
+  }
+
   window.applyIDEFilters = function() {
-    const af = document.getElementById('ide-activity-filter').value;
-    const s = (document.getElementById('ide-user-search').value || '').toLowerCase();
-    ideFilteredStats = ideAllStats.filter(u => {
+    const af = (document.getElementById('ide-activity-filter') || {}).value || '';
+    const s = ((document.getElementById('ide-user-search') || {}).value || '').toLowerCase();
+    ideFilteredUsers = ideAllUsers.filter(u => {
       if (af === 'active' && u.ideDaysActive === 0) return false;
       if (af === 'inactive' && u.ideDaysActive > 0) return false;
-      if (s) return u.name.toLowerCase().includes(s) || u.email.toLowerCase().includes(s);
+      if (s) {
+        const hay = `${u.name || ''} ${u.email || ''} ${u.empId || ''} ${u.login || ''}`.toLowerCase();
+        if (!hay.includes(s)) return false;
+      }
       return true;
     });
     sortIDEData();
@@ -7814,8 +7898,10 @@ boot();
 
   function sortIDEData() {
     const { key, asc } = ideSort;
-    ideFilteredStats.sort((a, b) => {
+    ideFilteredUsers.sort((a, b) => {
       let av = a[key], bv = b[key];
+      if (av === null || av === undefined) av = (typeof bv === 'number') ? -Infinity : '';
+      if (bv === null || bv === undefined) bv = (typeof av === 'number') ? -Infinity : '';
       if (typeof av === 'string') av = av.toLowerCase();
       if (typeof bv === 'string') bv = bv.toLowerCase();
       if (av < bv) return asc ? -1 : 1;
@@ -7827,46 +7913,168 @@ boot();
   function renderIDETable() {
     const tbody = document.getElementById('ide-users-tbody');
     const role = EAS_Auth.getUserRole();
-    const showPractice = role === 'admin';
+    const showPractice = role !== 'spoc';
     document.getElementById('ide-th-practice').style.display = showPractice ? '' : 'none';
-    document.getElementById('ide-table-count').textContent = `${ideFilteredStats.length} user${ideFilteredStats.length !== 1 ? 's' : ''}`;
+    document.getElementById('ide-table-count').textContent = `${ideFilteredUsers.length} user${ideFilteredUsers.length !== 1 ? 's' : ''}`;
 
-    if (!ideFilteredStats.length) {
-      tbody.innerHTML = `<tr><td colspan="${showPractice ? 9 : 8}" style="text-align:center;padding:60px 20px">
+    if (!ideFilteredUsers.length) {
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;padding:60px 20px">
         <div style="font-size:48px;margin-bottom:12px">📊</div>
         <div style="font-size:16px;font-weight:600;color:var(--text-secondary)">No IDE usage data found</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Grafana data has not been synced for this practice yet</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Upload a new JSON dump from Admin → IDE Usage Sync</div>
       </td></tr>`;
       return;
     }
 
-    const maxI = Math.max(...ideFilteredStats.map(u => u.ideTotalInteractions), 1);
-    let html = '';
-    ideFilteredStats.forEach(u => {
-      const sw = Math.round((u.ideTotalInteractions / maxI) * 60);
-      const esc = s => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
-      html += `<tr>
-        <td><div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">${esc(u.name)}</span><span style="font-size:11px;color:var(--text-muted)">${esc(u.email)}</span></div></td>
-        ${showPractice ? `<td><span class="badge" style="font-size:11px">${esc(u.practice)}</span></td>` : ''}
-        <td style="text-align:right;font-variant-numeric:tabular-nums;${u.ideDaysActive === 0 ? 'color:var(--text-muted);opacity:0.5' : ''}">${u.ideDaysActive}</td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums;${u.ideTotalInteractions === 0 ? 'color:var(--text-muted);opacity:0.5' : 'color:var(--success);font-weight:600'}">${u.ideTotalInteractions.toLocaleString()}<span style="display:inline-block;height:6px;border-radius:3px;background:var(--accent);opacity:0.7;vertical-align:middle;margin-left:6px;width:${sw}px"></span></td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums;${u.ideCodeGenerations === 0 ? 'color:var(--text-muted);opacity:0.5' : ''}">${u.ideCodeGenerations.toLocaleString()}</td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums;${u.ideCodeAcceptances === 0 ? 'color:var(--text-muted);opacity:0.5' : ''}">${u.ideCodeAcceptances.toLocaleString()}</td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums;${u.ideAgentDays === 0 ? 'color:var(--text-muted);opacity:0.5' : ''}">${u.ideAgentDays}</td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums;${u.ideChatDays === 0 ? 'color:var(--text-muted);opacity:0.5' : ''}">${u.ideChatDays}</td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums;${u.ideLocAdded === 0 ? 'color:var(--text-muted);opacity:0.5' : ''}">${u.ideLocAdded.toLocaleString()}</td>
+    const maxG = Math.max(...ideFilteredUsers.map(u => u.ideCodeGenerations), 1);
+    tbody.innerHTML = ideFilteredUsers.map(u => {
+      const sw = Math.round((u.ideCodeGenerations / maxG) * 60);
+      const dim = v => v === 0 ? 'color:var(--text-muted);opacity:0.55' : '';
+      const activeBadge = u.active
+        ? '<span style="color:var(--success);font-weight:600">✓ Yes</span>'
+        : '<span style="color:var(--text-muted)">— No</span>';
+      return `<tr class="ide-user-row" data-login="${esc(u.login || '')}" style="${u.login ? 'cursor:pointer' : ''}">
+        ${showPractice ? `<td><span class="badge" style="font-size:11px">${esc(u.practice)}</span></td>` : '<td style="display:none"></td>'}
+        <td style="font-size:12px;color:var(--text-muted)">${esc(u.unit || '—')}</td>
+        <td style="font-size:12px;font-family:ui-monospace,monospace">${esc(u.empId || '—')}</td>
+        <td style="font-weight:500">${esc(u.name)}</td>
+        <td style="font-size:12px;color:var(--text-muted)">${esc(u.email)}</td>
+        <td style="font-size:12px">${esc(u.roleSkill || '—')}</td>
+        <td style="font-size:12px;font-family:ui-monospace,monospace;color:var(--text-muted)">${esc(u.login || '—')}</td>
+        <td style="text-align:center">${activeBadge}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;${dim(u.ideDaysActive)}">${u.ideDaysActive}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;${u.ideCodeGenerations === 0 ? dim(0) : 'color:var(--success);font-weight:600'}">${u.ideCodeGenerations.toLocaleString()}<span style="display:inline-block;height:6px;border-radius:3px;background:var(--accent);opacity:0.7;vertical-align:middle;margin-left:6px;width:${sw}px"></span></td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;${dim(u.ideCodeAcceptances)}">${u.ideCodeAcceptances.toLocaleString()}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;${dim(u.ideLocAdded)}">${u.ideLocAdded.toLocaleString()}</td>
       </tr>`;
-    });
-    tbody.innerHTML = html;
+    }).join('');
   }
 
-  // Column sorting
+  // ---- Tabs ----
+  document.addEventListener('click', e => {
+    const tabBtn = e.target.closest('.ide-tab');
+    if (tabBtn) {
+      const tab = tabBtn.dataset.ideTab;
+      if (tab === 'detail' && !tabBtn.dataset.login) { /* only opened via row click */ }
+      switchIDETab(tab);
+      return;
+    }
+    const row = e.target.closest('.ide-user-row');
+    if (row && row.dataset.login) {
+      openIDEDetail(row.dataset.login);
+      return;
+    }
+  });
+
+  function switchIDETab(name) {
+    ideActiveTab = name;
+    document.querySelectorAll('.ide-tab').forEach(b => {
+      const active = b.dataset.ideTab === name;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.getElementById('ide-tab-summary').classList.toggle('hidden', name !== 'summary');
+    document.getElementById('ide-tab-users').classList.toggle('hidden', name !== 'users');
+    document.getElementById('ide-tab-detail').classList.toggle('hidden', name !== 'detail');
+  }
+
+  window.closeIDEDetail = function() {
+    document.querySelector('.ide-tab[data-ide-tab="detail"]').style.display = 'none';
+    switchIDETab('users');
+  };
+
+  async function openIDEDetail(login) {
+    const user = ideAllUsers.find(u => u.login === login);
+    if (!user) { showToast('User not found', 'warning'); return; }
+    document.querySelector('.ide-tab[data-ide-tab="detail"]').style.display = '';
+    switchIDETab('detail');
+    document.getElementById('ide-detail-title').textContent = `${user.name} — IDE Activity`;
+    const body = document.getElementById('ide-detail-body');
+    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted)">Loading daily activity…</div>`;
+    const daily = await EAS_DB.fetchIDEUserDaily(login, 60);
+    renderIDEDetail(user, daily);
+  }
+
+  function renderIDEDetail(user, daily) {
+    const body = document.getElementById('ide-detail-body');
+    if (!daily.length) {
+      body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted)">No daily records in the last 60 days.</div>`;
+      return;
+    }
+    const maxG = Math.max(...daily.map(d => d.code_generations || 0), 1);
+    const sparkW = 680, sparkH = 60;
+    const step = daily.length > 1 ? sparkW / (daily.length - 1) : 0;
+    const points = daily.map((d, i) => {
+      const x = i * step;
+      const y = sparkH - ((d.code_generations || 0) / maxG) * (sparkH - 4) - 2;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+
+    const sumBy = (arr, key, valKey) => {
+      const m = new Map();
+      (arr || []).forEach(row => {
+        (row[key] || []).forEach(x => {
+          const k = x[valKey] || x.ide || x.feature || x.language || x.model || 'unknown';
+          m.set(k, (m.get(k) || 0) + (x.code_generation_activity_count || 0));
+        });
+      });
+      return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    };
+    const byIDE      = sumBy(daily, 'by_ide', 'ide');
+    const byFeature  = sumBy(daily, 'by_feature', 'feature');
+    const byLanguage = sumBy(daily, 'by_language', 'language');
+    const byModel    = sumBy(daily, 'by_model', 'model');
+
+    const breakdownTable = (title, rows) => {
+      if (!rows.length) return '';
+      const total = rows.reduce((s, [, v]) => s + v, 0) || 1;
+      return `<div class="table-card" style="margin-bottom:12px">
+        <div class="table-header"><h3 style="font-size:14px">${title}</h3></div>
+        <table><tbody>${rows.slice(0, 10).map(([k, v]) => {
+          const pct = (v * 100 / total).toFixed(1);
+          return `<tr>
+            <td style="font-size:12px">${esc(k)}</td>
+            <td style="text-align:right;font-variant-numeric:tabular-nums;width:80px">${v.toLocaleString()}</td>
+            <td style="width:120px"><div style="background:var(--bg-secondary);height:8px;border-radius:4px;overflow:hidden"><div style="background:var(--accent);height:100%;width:${pct}%"></div></div></td>
+          </tr>`;
+        }).join('')}</tbody></table>
+      </div>`;
+    };
+
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px">
+        <div class="kpi-card"><div class="kpi-label">Days Active</div><div class="kpi-value cyan">${user.ideDaysActive}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Interactions</div><div class="kpi-value purple">${user.ideTotalInteractions.toLocaleString()}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Code Gens</div><div class="kpi-value green">${user.ideCodeGenerations.toLocaleString()}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Acceptances</div><div class="kpi-value yellow">${user.ideCodeAcceptances.toLocaleString()}</div></div>
+        <div class="kpi-card"><div class="kpi-label">LOC Added</div><div class="kpi-value pink">${user.ideLocAdded.toLocaleString()}</div></div>
+      </div>
+      <div style="margin-bottom:20px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">Daily code generations (last ${daily.length} records)</div>
+        <svg viewBox="0 0 ${sparkW} ${sparkH}" style="width:100%;height:${sparkH}px;background:var(--bg-secondary);border-radius:4px">
+          <polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${points}"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px">
+          <span>${daily[0].day}</span><span>${daily[daily.length - 1].day}</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        ${breakdownTable('By IDE', byIDE)}
+        ${breakdownTable('By Feature', byFeature)}
+        ${breakdownTable('By Language', byLanguage)}
+        ${breakdownTable('By Model', byModel)}
+      </div>
+    `;
+  }
+
+  // ---- Column sort ----
   document.addEventListener('click', e => {
     const th = e.target.closest('.ide-sortable');
     if (!th) return;
-    const key = th.dataset.idSort;
+    const key = th.dataset.ideSort;
     if (!key) return;
-    if (ideSort.key === key) { ideSort.asc = !ideSort.asc; } else { ideSort = { key, asc: key === 'name' || key === 'practice' }; }
+    if (ideSort.key === key) ideSort.asc = !ideSort.asc;
+    else ideSort = { key, asc: ['name', 'practice', 'email', 'unit', 'empId', 'roleSkill', 'login'].includes(key) };
     document.querySelectorAll('.ide-sortable').forEach(el => {
       el.classList.remove('sorted');
       const arrow = el.querySelector('.ide-sort-arrow');
@@ -7879,16 +8087,17 @@ boot();
   });
 
   window.exportIDEtoCSV = function() {
-    if (!ideFilteredStats.length) { showToast('No data to export', 'warning'); return; }
-    const headers = ['Name','Email','Practice','Days Active','Total Interactions','Code Generations','Code Acceptances','Agent Days','Chat Days','LOC Suggested','LOC Added','Last Active','Data Period'];
-    const rows = ideFilteredStats.map(u => [
-      u.name, u.email, u.practice, u.ideDaysActive, u.ideTotalInteractions,
-      u.ideCodeGenerations, u.ideCodeAcceptances, u.ideAgentDays, u.ideChatDays,
-      u.ideLocSuggested, u.ideLocAdded, u.ideLastActiveDate || '', periodToMonths(u.ideDataPeriod)
+    const data = ideFilteredUsers.length ? ideFilteredUsers : ideAllUsers;
+    if (!data.length) { showToast('No data to export', 'warning'); return; }
+    const headers = ['Practice','Unit','Emp ID','Name','Email','Role','Login','Active','Days Active','Total Interactions','Code Generations','Code Acceptances','Agent Days','Chat Days','LOC Suggested','LOC Added','Last Active','Data Period'];
+    const rows = data.map(u => [
+      u.practice, u.unit || '', u.empId || '', u.name, u.email, u.roleSkill || '', u.login || '',
+      u.active ? 'Yes' : 'No', u.ideDaysActive, u.ideTotalInteractions, u.ideCodeGenerations, u.ideCodeAcceptances,
+      u.ideAgentDays, u.ideChatDays, u.ideLocSuggested, u.ideLocAdded, u.ideLastActiveDate || '', periodToMonths(u.ideDataPeriod)
     ]);
     let csv = headers.join(',') + '\n';
     rows.forEach(r => { csv += r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',') + '\n'; });
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url;
     a.download = `ide_usage_stats_${new Date().toISOString().slice(0,10)}.csv`;

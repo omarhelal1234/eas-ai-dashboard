@@ -1,5 +1,34 @@
 ---
 
+## April 22, 2026 — IDE Usage Stats Redesign
+
+**Trigger:** Existing IDE view was a single flat table with aggregate-only metrics pre-computed by a Python Grafana sync script (`scripts/sync_grafana_json.py`). Visibility was limited to admin/spoc/dept_spoc/team_lead, there was no practice-level pivot, no drill-down, and the sync required shell access. User asked for a UX modeled on `RefreshedData/EAS_Users_Activity_v3.xlsx` (Summary_by_Practice + All_EAS + per-practice sheets) and a manual JSON upload flow (NDJSON Grafana dumps delivered every couple of days).
+
+**Design decisions:**
+
+1. **Two-table model.** `ide_usage_daily` is the source of truth — one row per `(user_login, day)` with raw counts + JSONB `by_ide` / `by_feature` / `by_language` / `by_model` breakdowns. `copilot_users.ide_*` aggregate columns are kept for backward compatibility (executive dashboard, exec-summary exports) and refreshed from a `ide_usage_user_rollup` view after every upload via `refresh_copilot_users_ide_aggregates()`.
+2. **`grafana_login` column** — JSON `user_login` (e.g. `oibrahim_ejadasa`) does not match the derived `username` column (e.g. `oibrahim`). Added a dedicated `grafana_login` column on `copilot_users` with unique index, seeded as `LOWER(username || '_ejadasa')`. Post-upload, `refresh_copilot_users_ide_aggregates()` attempts to auto-link any `NULL` `grafana_login` rows by the same heuristic so manual mapping is only needed for edge cases (custom logins, hyphenated names).
+3. **RLS, not client-side filtering.** Per-role visibility (admin/executive/dept_spoc/spoc/team_lead/contributor/viewer) is enforced at the `ide_usage_daily` table via five SELECT policies leveraging existing helpers (`get_user_role`, `get_user_practice`, `get_user_department_id`, `get_team_lead_members`). Contributors are matched by looking up their `users.email` → `copilot_users.email` → `grafana_login` chain. Viewer has no policy, so they see nothing.
+4. **Client-side NDJSON parse + chunked UPSERT.** Previously the sync was a Python script with a Postgres URL. New flow: admin uploads the `IDE_Dump_*.json` (NDJSON) via a file input; `parseNDJSON` splits by line, then `uploadIDEUsageDaily` chunks 400 rows per UPSERT (onConflict `user_login,day` → idempotent re-uploads) and calls the refresh RPC at the end. No Edge Function, no Python, no server secret. Fully portable to any Postgres-backed stack (CLAUDE.md §8).
+5. **Three-tab UI.** Tab 1 = Practice Summary pivot (Total / Active / Inactive / Active% + progress bars) mirroring the Excel `Summary_by_Practice` sheet. Tab 2 = Excel-style roster (Practice / Unit / Emp ID / Name / Email / Role / Login / Active / Days / Gen / Accept / LOC) mirroring the `All_EAS` sheet. Tab 3 = per-user drill-down with a daily code-generation sparkline (SVG polyline, last 60 days) and 4 breakdown tables (IDE, feature, language, model) aggregated from the JSONB columns. Users open tab 3 by clicking a row in tab 2.
+
+**Schema changes (migration 029):**
+- `copilot_users` +`emp_id TEXT`, +`unit TEXT`, +`grafana_login TEXT UNIQUE NULLS NOT DISTINCT` (partial unique index where non-null)
+- new table `ide_usage_daily` with 22 columns + 3 indexes + unique constraint
+- new view `ide_usage_user_rollup` (latest-window aggregates per user)
+- new function `refresh_copilot_users_ide_aggregates()` (plpgsql, SECURITY DEFINER)
+- 5 RLS policies on `ide_usage_daily`
+- 7 rows inserted into `role_view_permissions` for `web.ide_usage`
+
+**Deprecations:** `scripts/sync_grafana_json.py` is no longer the primary sync path but retained for reference/backfill. The legacy KPI/table structure under `#page-ide-usage` was fully replaced — any `data-ide-sort` / column IDs from pre-2026-04-22 code are gone.
+
+**Open items / gotchas:**
+- The JSON `user_login` for some users (e.g. `mohamed-sherif_ejadasa` for `m.habashy@ejada.com`) won't auto-link because the email prefix doesn't match. These surface in the "Unmatched logins" panel on Admin → IDE Usage Sync so admins can set `grafana_login` manually on those `copilot_users` rows.
+- Rollup uses MAX(`report_end_day`) per user. If a user has records from two non-overlapping report windows, only the latest window contributes to the aggregates. Raw daily records remain in `ide_usage_daily` for historical analysis.
+- `distinctUsers` count on the admin sync page pulls up to 10k `user_login` values client-side (sufficient for current enterprise scale of ~560 users × ~30 days per window = ~17k records).
+
+---
+
 ## April 21, 2026 — Fix: dept_spoc Missing INSERT RLS Policies
 
 **Symptom:** `dept_spoc` users got `new row violates row-level security policy for table "tasks"` when submitting a task via the Log Task form.

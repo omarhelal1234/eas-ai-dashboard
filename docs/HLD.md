@@ -57,6 +57,7 @@
 | **AI Services** | OpenAI GPT-4 (suggestions & validation) | Suggestions: 3 options, Validation: 4 criteria |
 | **Approval Workflow** | Multi-layer routing engine | AI → SPOC → Admin based on impact |
 | **IDE Integration** | VS Code Extension + Edge Function | Direct task logging from developer IDE |
+| **IDE Usage Telemetry** | Grafana NDJSON dump → `ide_usage_daily` + rollup view | Per-user per-day Copilot activity with IDE/feature/language/model breakdowns, role-scoped via RLS |
 | **CSS** | Custom properties + dark/light theme | `[data-theme]` toggle, localStorage |
 | **Accessibility** | WCAG 2.1 AA | Skip link, ARIA, focus-visible, reduced motion |
 

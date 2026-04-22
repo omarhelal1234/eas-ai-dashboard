@@ -1965,6 +1965,23 @@ tr:hover td { background: var(--bg-translucent); }
 .ide-sortable.sorted .ide-sort-arrow { opacity: 1; color: var(--accent); }
 .ide-metric-th { text-align: right; }
 
+.ide-tabs { padding-left: 4px; }
+.ide-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.ide-tab:hover { color: var(--text-primary); }
+.ide-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.ide-tab-panel.hidden { display: none; }
+.ide-user-row:hover { background: var(--hover-bg); }
+
 /* ============================================================
    Featured Banner Spotlight Carousel
    ============================================================ */
