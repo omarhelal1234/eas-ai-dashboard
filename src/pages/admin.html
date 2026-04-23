@@ -816,6 +816,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
           <div class="table-header-bar">
             <h3>⏳ Pending Approvals</h3>
             <span class="badge" id="pending-approval-count">0</span>
+            <button class="btn btn-secondary btn-sm" id="btn-export-pending-approvals" onclick="exportPendingApprovalsCsv()" style="margin-left:auto;padding:6px 12px;font-size:12px" title="Export all pending approvals (with full details) to CSV">⬇ Export CSV</button>
           </div>
           <div style="overflow-x:auto">
             <table>
@@ -2438,6 +2439,9 @@ function deleteProject(idx) {
 }
 
 // ============ APPROVALS ============
+let _pendingApprovalsCache = [];
+let _pendingApprovalsSpocMap = {};
+
 async function renderApprovals() {
   const profile = await EAS_Auth.getUserProfile();
   const userRole = profile?.role || 'contributor';
@@ -2469,6 +2473,10 @@ async function renderApprovals() {
         practiceSelect.appendChild(opt);
       });
     }
+
+    // Cache for CSV export
+    _pendingApprovalsCache = pendingApprovals || [];
+    _pendingApprovalsSpocMap = spocNameMap;
 
     // Render pending approvals
     renderPendingApprovals(pendingApprovals, spocNameMap);
@@ -2568,6 +2576,92 @@ function renderPendingApprovals(approvals = [], spocNameMap = {}) {
     html = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted)">No pending approvals</td></tr>';
   }
   document.getElementById('pending-approvals-tbody').innerHTML = html;
+}
+
+async function exportPendingApprovalsCsv() {
+  const approvals = (_pendingApprovalsCache || []).filter(a => a.approval_status === 'spoc_review');
+  if (!approvals.length) { showToast('No pending approvals to export', 'warning'); return; }
+
+  const btn = document.getElementById('btn-export-pending-approvals');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Exporting…'; }
+
+  try {
+    const sb = getSupabaseClient();
+    const taskIds = approvals.filter(a => a.submission_type === 'task').map(a => a.submission_id);
+    const accIds = approvals.filter(a => a.submission_type === 'accomplishment').map(a => a.submission_id);
+
+    const [tasksRes, accRes] = await Promise.all([
+      taskIds.length
+        ? sb.from('tasks').select('id, quarter_id, practice, week_number, week_start, week_end, project, project_code, employee_name, employee_email, task_description, category, ai_tool, prompt_used, time_without_ai, time_with_ai, time_saved, quality_rating, status, notes, created_at').in('id', taskIds)
+        : Promise.resolve({ data: [] }),
+      accIds.length
+        ? sb.from('accomplishments').select('id, quarter_id, practice, date, project, project_code, spoc, employees, title, details, ai_tool, category, before_baseline, after_result, quantified_impact, business_gains, cost, effort_saved, status, evidence, notes, created_at').in('id', accIds)
+        : Promise.resolve({ data: [] })
+    ]);
+
+    const tasksById = {}; (tasksRes.data || []).forEach(t => { tasksById[t.id] = t; });
+    const accById = {}; (accRes.data || []).forEach(a => { accById[a.id] = a; });
+
+    const headers = [
+      'Approval ID','Submission Type','Submission ID','Approval Status','Pending With',
+      'Practice','Quarter','Submitted By (Name)','Submitted By (Email)','Submitted At','Days Pending',
+      'Saved Hours',
+      'Project','Project Code','Week Number','Week Start','Week End',
+      'Task Description','Category','AI Tool','Prompt Used',
+      'Time Without AI (h)','Time With AI (h)','Time Saved (h)','Quality Rating','Status',
+      'Accomplishment Date','Accomplishment Title','Accomplishment Details','Employees',
+      'Before Baseline','After Result','Quantified Impact','Business Gains','Cost','Effort Saved (h)',
+      'Evidence','Notes',
+      'AI Validation Failed','AI Failure Reason','AI Reviewed At'
+    ];
+
+    const now = Date.now();
+    const rows = approvals.map(a => {
+      const t = a.submission_type === 'task' ? (tasksById[a.submission_id] || {}) : {};
+      const ac = a.submission_type === 'accomplishment' ? (accById[a.submission_id] || {}) : {};
+      const submittedMs = a.submitted_at ? new Date(a.submitted_at).getTime() : null;
+      const daysPending = submittedMs ? Math.floor((now - submittedMs) / 86400000) : '';
+      const pendingWith = a.approval_status === 'spoc_review'
+        ? (_pendingApprovalsSpocMap[a.practice] || 'SPOC')
+        : (a.approval_status === 'admin_review' ? 'Admin' : '');
+      const submittedName = t.employee_name || '';
+      return [
+        a.id, a.submission_type, a.submission_id, a.approval_status, pendingWith,
+        a.practice || '', t.quarter_id || ac.quarter_id || '',
+        submittedName, a.submitted_by_email || t.employee_email || '',
+        a.submitted_at || '', daysPending,
+        a.saved_hours ?? '',
+        t.project || ac.project || '', t.project_code || ac.project_code || '',
+        t.week_number ?? '', t.week_start || '', t.week_end || '',
+        t.task_description || '', t.category || ac.category || '', t.ai_tool || ac.ai_tool || '',
+        t.prompt_used || '',
+        t.time_without_ai ?? '', t.time_with_ai ?? '', t.time_saved ?? '',
+        t.quality_rating ?? '', t.status || ac.status || '',
+        ac.date || '', ac.title || '', ac.details || '', ac.employees || '',
+        ac.before_baseline || '', ac.after_result || '', ac.quantified_impact || '',
+        ac.business_gains || '', ac.cost || '', ac.effort_saved ?? '',
+        ac.evidence || '', t.notes || ac.notes || '',
+        a.ai_validation_failed ? 'Yes' : 'No', a.ai_failure_reason || '', a.ai_reviewed_at || ''
+      ];
+    });
+
+    const escape = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const csv = '﻿' + [headers, ...rows].map(r => r.map(escape).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'pending_approvals_' + new Date().toISOString().slice(0, 10) + '.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${rows.length} pending approval${rows.length === 1 ? '' : 's'}`, 'success');
+  } catch (err) {
+    console.error('exportPendingApprovalsCsv error:', err);
+    showToast('Export failed: ' + (err.message || 'unknown error'), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  }
 }
 
 function renderApprovalHistory(approvals = []) {

@@ -1,5 +1,24 @@
 ---
 
+## April 23, 2026 — Pending Approvals CSV Export
+
+**Trigger:** SPOCs requested a way to extract their pending approval queue with full context (not just what's visible in the table row) for offline review, reporting to practice leadership, and chasing contributors for clarifications.
+
+**Design decisions:**
+
+1. **RLS does the scoping — the client just serializes.** The export reuses `EAS_DB.fetchPendingApprovals` + the already-cached `_pendingApprovalsCache`, so a SPOC sees only their practice's `spoc_review` rows, a team lead only their assigned members, and a dept SPOC only their department. No new API surface, no server-side role check to maintain.
+2. **Filter to `spoc_review` only.** Admin users see pending rows across all layers (pending/admin_review/spoc_review) in the same table, but the export button is scoped to `spoc_review` so the output answers the literal ask — "my pending approvals" — and avoids leaking admin-layer items to SPOCs who happen to be admins.
+3. **Two-query join on the client.** `submission_approvals` does not carry task/accomplishment detail fields. Rather than a view, we `IN (...)` the task IDs and accomplishment IDs in parallel, build two lookup maps, and merge into a single wide CSV. Keeps the change in one file, no migration, and uses existing RLS on `tasks` / `accomplishments` (contributor-own + SPOC practice already allow the read for these roles).
+4. **Excel-friendly CSV format.** UTF-8 BOM (`﻿`) so Excel auto-detects encoding, CRLF line endings, `""`-quoted every cell, dated filename `pending_approvals_YYYY-MM-DD.csv`. Matches the existing `exportIdeUsageCsv` pattern in the same file.
+5. **40 columns covering both submission types.** Task-only columns (week, time without/with AI, prompt, quality) and accomplishment-only columns (before/after, quantified impact, business gains, effort saved, evidence) coexist — blank cells where not applicable. Better one sheet than two files, since a SPOC typically has a mix.
+6. **`Days Pending` computed client-side.** Saves a round trip and avoids another server-side date function.
+
+**Files touched:** `src/pages/admin.html` only (button in the table-header-bar + `exportPendingApprovalsCsv()` function + two module-level caches populated from `renderApprovals()`).
+
+**Unchanged:** BRD/HLD (no new architecture — purely an additive UI feature on top of existing RLS-scoped reads), `js/db.js` (no new DB function needed), schema (no migration).
+
+---
+
 ## April 22, 2026 — IDE Usage Stats Redesign
 
 **Trigger:** Existing IDE view was a single flat table with aggregate-only metrics pre-computed by a Python Grafana sync script (`scripts/sync_grafana_json.py`). Visibility was limited to admin/spoc/dept_spoc/team_lead, there was no practice-level pivot, no drill-down, and the sync required shell access. User asked for a UX modeled on `RefreshedData/EAS_Users_Activity_v3.xlsx` (Summary_by_Practice + All_EAS + per-practice sheets) and a manual JSON upload flow (NDJSON Grafana dumps delivered every couple of days).
