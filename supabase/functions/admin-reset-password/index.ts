@@ -48,21 +48,21 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
 
-    const callerClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
+    // Use service-role client for token verification (works regardless of anon key format)
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
     const {
       data: { user: callerAuth },
       error: authError,
-    } = await callerClient.auth.getUser(token);
+    } = await adminClient.auth.getUser(token);
 
     if (authError || !callerAuth) {
+      console.error("getUser error:", authError);
       return jsonResponse({ error: "Invalid or expired token." }, 401);
     }
 
     // ---- 2. Verify caller is an active admin ----
-    const { data: callerProfile, error: profileError } = await callerClient
+    const { data: callerProfile, error: profileError } = await adminClient
       .from("users")
       .select("id, role, is_active")
       .eq("auth_id", callerAuth.id)
@@ -94,8 +94,6 @@ serve(async (req) => {
     }
 
     // ---- 4. Find the target user by email ----
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
-
     const { data: { users }, error: listError } = await adminClient.auth.admin.listUsers({
       perPage: 1000,
     });
