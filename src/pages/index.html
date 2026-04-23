@@ -490,6 +490,10 @@
         <div class="subtitle" id="approvals-subtitle">Pending submissions for review</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-secondary" id="btn-export-pending-approvals-csv" onclick="exportPendingApprovalsCsv()" aria-label="Export pending approvals to CSV with full details" title="Export my pending approvals to CSV (with full task/accomplishment details)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Pending CSV
+        </button>
         <button class="btn btn-secondary" onclick="openExportModal('approvals')" aria-label="Export approvals">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Export
@@ -3113,6 +3117,10 @@ async function renderApprovals() {
       spocNameMap[practice] = spocs.map(s => s.spoc_name).filter(Boolean).join(', ');
     }));
 
+    // Cache for CSV export (full pending list, unfiltered by on-screen filters)
+    window._pendingApprovalsCache = pending || [];
+    window._pendingApprovalsSpocMap = spocNameMap;
+
     // Combine and filter based on selected filters
     let allApprovals = [...(pending || [])];
     const statusFilter = document.getElementById('approvals-filter-status').value;
@@ -3201,6 +3209,92 @@ async function renderApprovals() {
     console.error('renderApprovals error:', err);
     showToast('Error loading approvals: ' + err.message, 'error');
     document.getElementById('approvals-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--danger)">Error loading data</td></tr>';
+  }
+}
+
+async function exportPendingApprovalsCsv() {
+  const approvals = (window._pendingApprovalsCache || []).filter(a => a.approval_status === 'spoc_review');
+  if (!approvals.length) { showToast('No pending approvals to export', 'warning'); return; }
+
+  const btn = document.getElementById('btn-export-pending-approvals-csv');
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Exporting…'; }
+
+  try {
+    const sb = getSupabaseClient();
+    const taskIds = approvals.filter(a => a.submission_type === 'task').map(a => a.submission_id);
+    const accIds = approvals.filter(a => a.submission_type === 'accomplishment').map(a => a.submission_id);
+
+    const [tasksRes, accRes] = await Promise.all([
+      taskIds.length
+        ? sb.from('tasks').select('id, quarter_id, practice, week_number, week_start, week_end, project, project_code, employee_name, employee_email, task_description, category, ai_tool, prompt_used, time_without_ai, time_with_ai, time_saved, quality_rating, status, notes, created_at').in('id', taskIds)
+        : Promise.resolve({ data: [] }),
+      accIds.length
+        ? sb.from('accomplishments').select('id, quarter_id, practice, date, project, project_code, spoc, employees, title, details, ai_tool, category, before_baseline, after_result, quantified_impact, business_gains, cost, effort_saved, status, evidence, notes, created_at').in('id', accIds)
+        : Promise.resolve({ data: [] })
+    ]);
+
+    const tasksById = {}; (tasksRes.data || []).forEach(t => { tasksById[t.id] = t; });
+    const accById = {}; (accRes.data || []).forEach(a => { accById[a.id] = a; });
+    const spocNameMap = window._pendingApprovalsSpocMap || {};
+
+    const headers = [
+      'Approval ID','Submission Type','Submission ID','Approval Status','Pending With',
+      'Practice','Quarter','Submitted By (Name)','Submitted By (Email)','Submitted At','Days Pending',
+      'Saved Hours',
+      'Project','Project Code','Week Number','Week Start','Week End',
+      'Task Description','Category','AI Tool','Prompt Used',
+      'Time Without AI (h)','Time With AI (h)','Time Saved (h)','Quality Rating','Status',
+      'Accomplishment Date','Accomplishment Title','Accomplishment Details','Employees',
+      'Before Baseline','After Result','Quantified Impact','Business Gains','Cost','Effort Saved (h)',
+      'Evidence','Notes',
+      'AI Validation Failed','AI Failure Reason','AI Reviewed At'
+    ];
+
+    const now = Date.now();
+    const rows = approvals.map(a => {
+      const t = a.submission_type === 'task' ? (tasksById[a.submission_id] || {}) : {};
+      const ac = a.submission_type === 'accomplishment' ? (accById[a.submission_id] || {}) : {};
+      const submittedMs = a.submitted_at ? new Date(a.submitted_at).getTime() : null;
+      const daysPending = submittedMs ? Math.floor((now - submittedMs) / 86400000) : '';
+      const pendingWith = a.approval_status === 'spoc_review'
+        ? (spocNameMap[a.practice] || 'SPOC')
+        : (a.approval_status === 'admin_review' ? 'Admin' : '');
+      return [
+        a.id, a.submission_type, a.submission_id, a.approval_status, pendingWith,
+        a.practice || '', t.quarter_id || ac.quarter_id || '',
+        t.employee_name || '', a.submitted_by_email || t.employee_email || '',
+        a.submitted_at || '', daysPending,
+        a.saved_hours ?? '',
+        t.project || ac.project || '', t.project_code || ac.project_code || '',
+        t.week_number ?? '', t.week_start || '', t.week_end || '',
+        t.task_description || '', t.category || ac.category || '', t.ai_tool || ac.ai_tool || '',
+        t.prompt_used || '',
+        t.time_without_ai ?? '', t.time_with_ai ?? '', t.time_saved ?? '',
+        t.quality_rating ?? '', t.status || ac.status || '',
+        ac.date || '', ac.title || '', ac.details || '', ac.employees || '',
+        ac.before_baseline || '', ac.after_result || '', ac.quantified_impact || '',
+        ac.business_gains || '', ac.cost || '', ac.effort_saved ?? '',
+        ac.evidence || '', t.notes || ac.notes || '',
+        a.ai_validation_failed ? 'Yes' : 'No', a.ai_failure_reason || '', a.ai_reviewed_at || ''
+      ];
+    });
+
+    const escape = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const csv = '﻿' + [headers, ...rows].map(r => r.map(escape).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'pending_approvals_' + new Date().toISOString().slice(0, 10) + '.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${rows.length} pending approval${rows.length === 1 ? '' : 's'}`, 'success');
+  } catch (err) {
+    console.error('exportPendingApprovalsCsv error:', err);
+    showToast('Export failed: ' + (err.message || 'unknown error'), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
   }
 }
 
