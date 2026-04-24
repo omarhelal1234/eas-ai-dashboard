@@ -670,12 +670,13 @@
       <h3>Manage Team Lead</h3>
       <div class="form-group">
         <label>Select Contributor to promote as Team Lead</label>
-        <select id="tla-team-lead-select" onchange="loadAvailableMembers()">
-          <option value="">— Select a contributor —</option>
-        </select>
+        <input id="tla-team-lead-search" list="tla-team-lead-list" placeholder="Search by name or email…" autocomplete="off" oninput="tlaOnLeadPicked()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:14px">
+        <datalist id="tla-team-lead-list"></datalist>
+        <select id="tla-team-lead-select" style="display:none"><option value=""></option></select>
       </div>
       <div class="form-group">
         <label style="display:flex;align-items:center;justify-content:space-between">Assign Members to this Team Lead <span id="tla-counter" style="font-size:12px;font-weight:400;color:var(--text-muted)"></span></label>
+        <input id="tla-member-search" placeholder="Search members by name or email…" autocomplete="off" oninput="tlaFilterMembers()" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:14px;margin-bottom:8px">
         <div id="tla-members-checkboxes" style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px">
           <span style="color:var(--text-muted);font-size:13px;grid-column:1/-1;text-align:center;padding:20px 0">Select a team lead first</span>
         </div>
@@ -3946,16 +3947,60 @@ async function openTeamLeadAssignModal(preselectedLeadId) {
   
   const users = practiceUsers || [];
   
-  // Populate team lead dropdown
+  // Hidden select = source-of-truth for selected lead id. Datalist drives search UX.
   const select = document.getElementById('tla-team-lead-select');
-  select.innerHTML = '<option value="">— Select a contributor —</option>' + 
+  select.innerHTML = '<option value=""></option>' +
     users.map(u => `<option value="${u.id}" ${u.id === preselectedLeadId ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.email)})${u.role === 'team_lead' ? ' \u2605' : ''}</option>`).join('');
   
+  const datalist = document.getElementById('tla-team-lead-list');
+  datalist.innerHTML = users.map(u => {
+    const star = u.role === 'team_lead' ? ' ★' : '';
+    const label = `${u.name} (${u.email})${star}`;
+    return `<option value="${escapeHtml(label)}" data-id="${u.id}"></option>`;
+  }).join('');
+  const searchInput = document.getElementById('tla-team-lead-search');
+  const memberSearch = document.getElementById('tla-member-search');
+  if (memberSearch) memberSearch.value = '';
+  if (preselectedLeadId) {
+    const picked = users.find(u => u.id === preselectedLeadId);
+    if (picked) {
+      const star = picked.role === 'team_lead' ? ' ★' : '';
+      searchInput.value = `${picked.name} (${picked.email})${star}`;
+    }
+  } else {
+    searchInput.value = '';
+  }
+
   openModal('team-lead-assign');
-  
+
   if (preselectedLeadId) {
     await loadAvailableMembers();
   }
+}
+
+/** Resolve the typed/selected label back to a user id, then reload members */
+function tlaOnLeadPicked() {
+  const input = document.getElementById('tla-team-lead-search');
+  const datalist = document.getElementById('tla-team-lead-list');
+  const select = document.getElementById('tla-team-lead-select');
+  const typed = (input.value || '').trim();
+  let matchedId = '';
+  for (const opt of datalist.options) {
+    if (opt.value === typed) { matchedId = opt.dataset.id; break; }
+  }
+  select.value = matchedId;
+  if (matchedId) loadAvailableMembers();
+  else document.getElementById('tla-members-checkboxes').innerHTML = '<span style="color:var(--text-muted);font-size:13px;grid-column:1/-1;text-align:center;padding:20px 0">Select a team lead first</span>';
+}
+
+/** Live-filter the member cards by name/email substring */
+function tlaFilterMembers() {
+  const q = (document.getElementById('tla-member-search').value || '').toLowerCase().trim();
+  const cards = document.querySelectorAll('#tla-members-checkboxes .tla-card');
+  cards.forEach(card => {
+    const hay = (card.dataset.search || '').toLowerCase();
+    card.style.display = (!q || hay.includes(q)) ? '' : 'none';
+  });
 }
 
 /** Edit existing team lead's member assignments */
@@ -4007,7 +4052,7 @@ async function loadAvailableMembers() {
     const initials = (u.name || u.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
     const selectedBorder = isAssignedHere ? 'border-color:var(--primary);background:rgba(59,130,246,0.08)' : '';
     const disabledStyle = isAssignedElsewhere ? 'opacity:0.4;cursor:not-allowed' : 'cursor:pointer';
-    return `<label class="tla-card" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border:2px solid var(--border);border-radius:10px;text-align:center;transition:all .15s;${selectedBorder};${disabledStyle}" title="${isAssignedElsewhere ? 'Already assigned to another team lead' : u.email}">
+    return `<label class="tla-card" data-search="${escapeHtml((u.name || '') + ' ' + (u.email || ''))}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;border:2px solid var(--border);border-radius:10px;text-align:center;transition:all .15s;${selectedBorder};${disabledStyle}" title="${isAssignedElsewhere ? 'Already assigned to another team lead' : u.email}">
       <input type="checkbox" class="tla-member-cb" value="${escapeHtml(u.email)}" ${isAssignedHere ? 'checked' : ''} ${disabled} style="display:none" onchange="tlaToggleCard(this)">
       <div style="width:36px;height:36px;border-radius:50%;background:${isAssignedHere ? 'var(--primary)' : 'var(--bg-secondary)'};color:${isAssignedHere ? '#fff' : 'var(--text-muted)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;transition:all .15s">${initials}</div>
       <span style="font-size:12px;line-height:1.3;word-break:break-word;max-width:100%">${escapeHtml(u.name || u.email)}</span>
@@ -7931,6 +7976,15 @@ boot();
       pFilter = document.getElementById('ide-practice-filter').value || null;
     }
     ideAllUsers = await EAS_DB.fetchIDEUsers(pFilter);
+    if (role === 'contributor') {
+      const profile = await EAS_Auth.getUserProfile();
+      const myEmail = (profile?.email || '').toLowerCase();
+      ideAllUsers = ideAllUsers.filter(u => (u.email || '').toLowerCase() === myEmail);
+      // Hide Summary-by-Practice tab for contributors (single-row rollup is noise)
+      const summaryTabBtn = document.querySelector('.ide-tab[data-ide-tab="summary"]');
+      if (summaryTabBtn) summaryTabBtn.style.display = 'none';
+      if (ideActiveTab === 'summary') switchIDETab('users');
+    }
     updateIDEKPIs();
     updateIDEPeriod();
     renderPracticeSummary();
