@@ -278,3 +278,40 @@
   .events-form-panel { grid-template-columns: 1fr; }
   .events-modal { max-height: 94vh; }
 }
+
+/* ---------- Pending Approvals pop-up ---------- */
+.approvals-modal { max-width: 560px; }
+.approvals-intro {
+  font-size: 0.92rem; color: var(--text-secondary);
+  padding: 4px 2px 8px; line-height: 1.5;
+}
+.approvals-intro strong { color: var(--text-primary); }
+
+.approval-row {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.approval-row-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.approval-type {
+  font-size: 0.9rem; font-weight: 600; color: var(--text-primary);
+}
+.approval-stage-pill {
+  font-size: 0.7rem; font-weight: 600;
+  padding: 2px 8px; border-radius: 999px;
+  background: rgba(245,158,11,0.18); color: var(--warning);
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.approval-row-meta {
+  display: flex; flex-wrap: wrap; gap: 10px 14px;
+  font-size: 0.8rem; color: var(--text-secondary);
+}
+.approval-row-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.approvals-more {
+  text-align: center; font-size: 0.82rem;
+  color: var(--text-secondary); padding: 6px 0 2px;
+}

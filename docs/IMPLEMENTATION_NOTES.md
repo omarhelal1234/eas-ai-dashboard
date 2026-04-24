@@ -1,5 +1,20 @@
 ---
 
+## April 24, 2026 — Pending-Approvals Pop-up on Login
+
+**Trigger:** Approvers (admin / SPOC / dept_spoc / team_lead) were missing submissions sitting in their queue because nothing surfaced the backlog at login. Requested mirror of the upcoming-events pattern.
+
+**Design decisions:**
+
+1. **Reuse, don't fork.** `js/approvals-modal.js` reuses the upcoming-events modal shell (`.events-modal-backdrop`, `.events-modal`, `.ev-btn*`) — no new dialog styling or focus-trap logic. Only the row layout (`.approval-row`, `.approval-stage-pill`) is new in `css/events.css`.
+2. **No new SQL.** Pulls from the existing `EAS_DB.fetchPendingApprovals(role, practice, userId)` which already applies RLS + role-specific filtering (spoc → own practice; dept_spoc → department via RLS; team_lead → assigned members; admin → pending/spoc_review/admin_review). Adding a separate view would duplicate that logic.
+3. **Once per user per day, not per page load.** Unlike events (which rely on the server-side dismissal table), the approval queue churns continuously — a per-event dismissal table would either grow unbounded or require nightly pruning. A `localStorage` key `eas_approvals_popup_dismissed_<userId>_<YYYY-MM-DD>` is simpler and naturally expires at midnight UTC. The dismissal is also set when the user clicks "Review approvals →" so returning to the tab doesn't re-open it.
+4. **Top 5 summary, not the full queue.** The modal is a nudge, not the review surface. Shows the 5 newest rows (submitter, practice, saved hours, submitted-at, stage pill) plus "+ N more" and hands off to `index.html#approvals` for the real review UI.
+5. **Approver-only, server-trusted.** Gating is done by role check + the existing RLS on `submission_approvals`; a non-approver who manually ran the module would see an empty queue anyway.
+6. **Trigger after events modal.** `auth.js` opens the approvals modal ~800ms after the events modal so both don't stack. Each has its own `_opened` guard plus the per-day localStorage gate.
+
+---
+
 ## April 24, 2026 — Upcoming Events Feature
 
 **Trigger:** Admin wanted a way to broadcast upcoming events (AI sessions, external summits, Microsoft AI Learning Summit licensed sessions, vendor webinars, certification deadlines) to all users as a post-login pop-up, with real RSVP counts surfaced per-practice. Seed was the forwarded Microsoft AI Learning Summit invite in `ReferencesAndGuidance/`.

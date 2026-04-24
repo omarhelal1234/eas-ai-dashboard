@@ -139,6 +139,15 @@ const EAS_Auth = (() => {
       }, 400);
     }
 
+    // Pending approvals pop-up for approver roles (admin/spoc/dept_spoc/team_lead).
+    // Fires after the events modal; each modal gates itself to once per page load
+    // and approvals additionally gates once per user per day via localStorage.
+    if (typeof ApprovalsModal !== 'undefined' && ApprovalsModal.openForCurrentUser) {
+      setTimeout(() => {
+        ApprovalsModal.openForCurrentUser({ auto: true }).catch(() => {});
+      }, 1200);
+    }
+
     return true;
   }
 
