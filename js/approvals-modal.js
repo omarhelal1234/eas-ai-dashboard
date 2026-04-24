@@ -136,8 +136,23 @@ const ApprovalsModal = (() => {
         return;
       }
       if (action === 'go-review') {
-        // Let the link navigate; still record dismissal so it doesn't re-open on return
+        // Record dismissal so it doesn't re-open on return
         if (profile?.id) markDismissedToday(profile.id);
+        // If we're already on index.html, click the nav-item directly (hash alone
+        // doesn't trigger a page switch). Otherwise let the link navigate.
+        const onIndex = /\/index\.html(?:$|[?#])/.test(window.location.pathname + window.location.search + window.location.hash)
+          || window.location.pathname.endsWith('/index.html')
+          || window.location.pathname.endsWith('\\index.html');
+        const navItem = document.querySelector('.nav-item[data-page="approvals"]');
+        if (onIndex && navItem) {
+          e.preventDefault();
+          close();
+          navItem.click();
+          try { history.replaceState(null, '', '#approvals'); } catch {}
+          return;
+        }
+        // Navigating away — close the modal so it doesn't linger if navigation is aborted.
+        close();
       }
     });
   }

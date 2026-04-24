@@ -2344,6 +2344,16 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
   });
 });
 
+// Support deep-link hashes like #approvals (used by the pending-approvals pop-up).
+function _easApplyNavHash() {
+  const hash = (window.location.hash || '').replace(/^#/, '');
+  if (!hash) return;
+  const target = document.querySelector(`.nav-item[data-page="${hash}"]`);
+  if (target && target.style.display !== 'none') target.click();
+}
+window.addEventListener('hashchange', _easApplyNavHash);
+window.addEventListener('load', _easApplyNavHash);
+
 // ======== HELPERS ========
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
