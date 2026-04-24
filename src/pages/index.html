@@ -525,7 +525,7 @@
         </div>
         <div style="overflow-x:auto">
           <table aria-label="Approvals">
-            <thead><tr><th>Date</th><th>Employee</th><th>Practice</th><th>Type</th><th>Description</th><th>Status</th><th>Pending With</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Date</th><th>Employee</th><th>Practice</th><th>Type</th><th>Description</th><th>Saved Hours</th><th>Status</th><th>Pending With</th><th>Actions</th></tr></thead>
             <tbody id="approvals-tbody"></tbody>
           </table>
         </div>
@@ -3097,7 +3097,7 @@ async function renderApprovals() {
     const userId = typeof EAS_Auth.getUserId === 'function' ? EAS_Auth.getUserId() : profile?.id;
     
     if (!userRole || !['admin', 'spoc', 'dept_spoc', 'team_lead'].includes(userRole)) {
-      document.getElementById('approvals-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px">Access denied</td></tr>';
+      document.getElementById('approvals-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px">Access denied</td></tr>';
       return;
     }
 
@@ -3157,9 +3157,25 @@ async function renderApprovals() {
       <div class="kpi-card"><div class="kpi-label">Rejected</div><div class="kpi-value" style="color:var(--danger)">${rejected_count}</div><div class="kpi-sub">needs revision</div></div>
     `;
 
+    // Batch-fetch task descriptions and accomplishment titles for the visible rows
+    const descById = { task: {}, accomplishment: {} };
+    try {
+      const sb = getSupabaseClient();
+      const visibleTaskIds = allApprovals.filter(a => a.submission_type === 'task').map(a => a.submission_id);
+      const visibleAccIds = allApprovals.filter(a => a.submission_type === 'accomplishment').map(a => a.submission_id);
+      const [tRes, aRes] = await Promise.all([
+        visibleTaskIds.length ? sb.from('tasks').select('id, task_description').in('id', visibleTaskIds) : Promise.resolve({ data: [] }),
+        visibleAccIds.length ? sb.from('accomplishments').select('id, title, details').in('id', visibleAccIds) : Promise.resolve({ data: [] })
+      ]);
+      (tRes.data || []).forEach(t => { descById.task[t.id] = t.task_description || ''; });
+      (aRes.data || []).forEach(ac => { descById.accomplishment[ac.id] = ac.title || ac.details || ''; });
+    } catch (e) { console.warn('approvals description fetch failed:', e); }
+
     // Render table
     document.getElementById('approvals-count-label').textContent = `${allApprovals.length} record${allApprovals.length !== 1 ? 's' : ''}`;
     document.getElementById('approvals-tbody').innerHTML = allApprovals.map(a => {
+      const description = (descById[a.submission_type] && descById[a.submission_type][a.submission_id]) || a.submission_description || '';
+      const savedHours = (a.saved_hours != null && !isNaN(a.saved_hours)) ? Number(a.saved_hours).toFixed(1) : '-';
       const statusBadgeClass = 
         a.approval_status === 'approved' ? 'status-completed' :
         a.approval_status === 'rejected' ? 'status-pending' :
@@ -3188,7 +3204,8 @@ async function renderApprovals() {
           <td>${a.submitted_by_email || '-'}</td>
           <td><span style="color:${practiceColors[a.practice] || '#94a3b8'};font-weight:600">${a.practice || '-'}</span></td>
           <td style="text-transform:capitalize">${a.submission_type === 'task' ? 'Task' : a.submission_type === 'accomplishment' ? 'Accomplishment' : '-'}</td>
-          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)" title="${a.submission_description || ''}">${a.submission_description || '-'}</td>
+          <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)" title="${(description || '').replace(/"/g, '&quot;')}">${description || '-'}</td>
+          <td style="white-space:nowrap;font-weight:600;color:var(--success)">${savedHours}</td>
           <td><span class="status-badge ${statusBadgeClass}">${statusLabel}</span></td>
           <td>${pendingWithLabel}</td>
           <td style="white-space:nowrap">
