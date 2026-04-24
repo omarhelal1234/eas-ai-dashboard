@@ -255,6 +255,7 @@ Employee selection in the task form is mandatory — users must pick from the `c
 | `quarter_summary` | Per-quarter totals across all practices |
 | `adoption_rates` | Licensed vs. active user calculations |
 | `v_banner_candidates` | UNION ALL view: approved tasks, accomplishments, active prompts, approved use cases — with like counts, pin status, metrics for banner selection |
+| `v_active_events_for_user` | Returns published + non-ended events for the current user, filtering out already-registered / already-dismissed rows unless `events.force_on_every_login = true`. Powers the login pop-up. |
 
 ### Featured Banner Tables (Phase 12)
 
@@ -263,6 +264,14 @@ Employee selection in the task form is mandatory — users must pick from the `c
 | `likes` | Global like system for tasks, accomplishments, use_cases (unique per user+item) |
 | `featured_banner_config` | Admin-configurable slot allocation per content type (default: global=10, task=3, accomplishment=3, prompt=2, use_case=2) |
 | `featured_banner_pins` | Admin/SPOC-pinned items with custom badge label and optional expiry |
+
+### Upcoming Events Tables (2026-04)
+
+| Table | Purpose |
+|-------|---------|
+| `events` | Admin-managed event records (title, type, location, start/end, registration URL, cover image, `force_on_every_login`, `is_published`). Admin-only writes via RLS; published + active rows readable by any authenticated user. |
+| `event_registrations` | Per-user RSVP (hybrid model: internal row + optional redirect to external URL with `external_link_clicked` tracking). `UNIQUE(event_id, user_id)`. |
+| `event_dismissals` | Per-user "don't show again" markers for the login pop-up. Bypassed when `events.force_on_every_login = true`. |
 
 ### use_cases Table
 

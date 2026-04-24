@@ -253,7 +253,7 @@ All modules use the **Revealing Module Pattern** (IIFE returning a public API):
 
 ## 4. Database Schema
 
-### Tables (16)
+### Tables (19)
 
 | Table | Purpose | Row Count (Phase 1) |
 |-------|---------|---------------------|
@@ -275,6 +275,9 @@ All modules use the **Revealing Module Pattern** (IIFE returning a public API):
 | `featured_banner_config` | Admin-configurable slot allocation per content type | 5 (seeded) |
 | `featured_banner_pins` | Admin/SPOC-pinned items for spotlight banner | Dynamic |
 | `ide_usage_daily` | Raw per-user per-day Copilot IDE activity (UPSERT on user_login+day) with JSONB breakdowns by IDE/feature/language/model. Source for `ide_usage_user_rollup` view and `refresh_copilot_users_ide_aggregates()`. RLS scoped per role. | Dynamic |
+| `events` | Admin-managed upcoming events (AI sessions, summits, certifications, workshops, webinars). Surfaced as a post-login pop-up. Fields include type, location_type, start/end, registration_url, cover_image_url, force_on_every_login, is_published. | Dynamic |
+| `event_registrations` | User RSVPs per event (hybrid: internal row + optional redirect to external registration URL). `external_link_clicked` tracks redirect completion. | Dynamic |
+| `event_dismissals` | Per-user "don't show again" markers for the events pop-up; bypassed when `events.force_on_every_login = true`. | Dynamic |
 
 ### Computed Columns
 
@@ -321,6 +324,7 @@ Returns `jsonb` with `{status, user_id, copilot_id?}`. Copilot logic:
 - `practice_summary` — Aggregated stats per practice (approved-only tasks)
 - `quarter_summary` — Aggregated stats per quarter (approved-only tasks)
 - `v_banner_candidates` — UNION ALL of approved tasks, accomplishments, active prompts, approved use cases with like counts and pin status
+- `v_active_events_for_user` — Published, non-ended events for the current user, filtering out already-registered/dismissed (unless `force_on_every_login = true`). Powers the login pop-up.
 
 ### Row-Level Security
 

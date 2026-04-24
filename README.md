@@ -21,6 +21,7 @@ Enterprise AI adoption tracking platform for Enterprise Application Solutions (E
 - **Design:** Dark/Light theme toggle, Inter font, responsive sidebar navigation
 - **Approval Workflow:** Multi-layer routing engine with smart triage
 - **Spotlight Banner:** Auto-rotating carousel showcasing top-liked/pinned content with global like system
+- **Upcoming Events:** Admin-managed event broadcasts surfaced as a post-login pop-up with hybrid RSVP tracking (internal + external URL) and per-event registration CSV export
 - **Accessibility:** WCAG 2.1 AA compliant
 
 ## Project Structure

@@ -205,6 +205,19 @@ The EAS AI Adoption Dashboard is a web-based platform to track, measure, and dri
 | FR-12b.9 | Client-side daily cache with calendar-day reset | P3 ✅ |
 | FR-12b.10 | ARIA carousel roles, keyboard navigation, prefers-reduced-motion | P2 ✅ |
 
+### FR-12c: Upcoming Events (Admin-managed event broadcasts)
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| FR-12c.1 | Admin can create, edit, publish, unpublish, duplicate, and delete events (AI sessions, summits, certifications, workshops, webinars, other) | P2 ✅ |
+| FR-12c.2 | Each event carries title, short + long (markdown) descriptions, type, location (online/in-person/hybrid + optional venue), start/end datetime (Asia/Riyadh), external registration URL, cover image, deadline, and a `force_on_every_login` flag | P2 ✅ |
+| FR-12c.3 | Published events appear as a pop-up to every authenticated user after login, surfaced once per user per event by default | P2 ✅ |
+| FR-12c.4 | Hybrid RSVP: internal registration row + redirect to the external registration URL in a new tab; both recorded | P2 ✅ |
+| FR-12c.5 | User can dismiss a card (persisted), re-open all active events via a header bell with unread-count badge | P2 ✅ |
+| FR-12c.6 | `force_on_every_login` events reappear every login regardless of prior dismissal/registration; Register button is disabled once RSVP'd | P3 ✅ |
+| FR-12c.7 | Admin can view per-event registration list with user name/email/practice/role/registered-at/external-clicked, filter by practice, and export CSV | P2 ✅ |
+| FR-12c.8 | RLS: non-admins cannot write `events`; users can only read their own `event_registrations` / `event_dismissals` | P1 ✅ |
+
 ### FR-13: Accessibility & UX
 
 | ID | Requirement | Priority |

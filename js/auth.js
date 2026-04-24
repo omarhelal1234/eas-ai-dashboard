@@ -128,6 +128,17 @@ const EAS_Auth = (() => {
       return false;
     }
 
+    // Fire-and-forget: mount the header bell and open the upcoming-events
+    // pop-up once per page load. Guard ensures no-op when EventsModal module
+    // isn't loaded on a page.
+    if (typeof EventsModal !== 'undefined' && EventsModal.openForCurrentUser) {
+      setTimeout(() => {
+        const slot = document.getElementById('events-bell-slot');
+        if (slot) EventsModal.mountBell(slot);
+        EventsModal.openForCurrentUser({ auto: true }).catch(() => {});
+      }, 400);
+    }
+
     return true;
   }
 

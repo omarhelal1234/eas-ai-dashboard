@@ -1,5 +1,28 @@
 ---
 
+## April 24, 2026 — Upcoming Events Feature
+
+**Trigger:** Admin wanted a way to broadcast upcoming events (AI sessions, external summits, Microsoft AI Learning Summit licensed sessions, vendor webinars, certification deadlines) to all users as a post-login pop-up, with real RSVP counts surfaced per-practice. Seed was the forwarded Microsoft AI Learning Summit invite in `ReferencesAndGuidance/`.
+
+**Design decisions:**
+
+1. **Hybrid RSVP (not click-only, not internal-only).** Users register inside the app (`event_registrations` row) *and* are redirected to the external vendor registration URL in a new tab. The internal row gives us practice/role breakdowns; the external click (tracked via `external_link_clicked` on the row) tells us who actually completed Microsoft's / the vendor's flow. One click → two registrations. Simpler than maintaining our own seats, richer analytics than a click counter.
+2. **Admin-controlled pop-up frequency, not per-user.** Each event has `force_on_every_login`. Default behavior is *once per user per event*: the `v_active_events_for_user` view hides rows the user has already registered for or dismissed. Setting the flag bypasses both filters so a critical event (e.g. mandatory compliance briefing) reappears on every login. Users can still reopen a dismissed event via the header bell.
+3. **Audience = all authenticated users (v1).** No practice/role/department filters — the broadcasts are org-wide, and the added complexity of an audience editor wasn't justified by any current use case. If per-practice targeting is needed later, it's an `event_audiences` junction table + one JOIN in the view.
+4. **Self-contained modules, not a `db.js` namespace.** `js/events-modal.js` and `js/admin-events.js` talk directly to Supabase via the shared client. Rationale: (a) keeps each file's public interface minimal and focused (isolation principle from CLAUDE.md §2 / Superpowers), (b) avoids adding ~300 lines to the already-2808-line `js/db.js`, (c) makes the events feature one-PR-removable if ever deprecated. RLS still does the real access control.
+5. **One view, not a function.** `v_active_events_for_user` is a plain view that resolves `auth.uid()` → `users.id` per-row via `LEFT JOIN` subqueries. Simpler than a `SECURITY DEFINER` function and keeps RLS on the underlying tables intact for any ad-hoc queries.
+6. **Markdown for long descriptions — minimal.** Events are posted by the admin for internal users, so the tiny inline renderer (`**bold**`, `- bullets`, `### headings`, `<p>` paragraphs) in `events-modal.js` is enough. Escaping is done up-front on the raw input before the markdown replacements, so the HTML we inject can't carry user script content.
+7. **Timezone = Asia/Riyadh displayed, `timestamptz` stored.** The admin form uses `datetime-local` inputs in the browser's local zone; on save we `new Date(...).toISOString()` them and store UTC. Display uses `Intl.DateTimeFormat` with `timeZone: 'Asia/Riyadh'` everywhere. Avoids any client-timezone drift (important since some Ejada users are in Egypt/GST).
+8. **Admin tab placed last in the sidebar.** Upcoming Events is admin-only and operationally low-traffic, so it sits at the bottom of the nav rather than competing with Overview / Manage Tasks / Approvals.
+
+**Out of scope (v1, noted for future):** audience targeting, capacity limits / waitlists, `.ics` calendar invites, email/push notifications, speakers/tags, analytics dashboards beyond the per-event registrations list + counters, SPOC/Team-Lead authoring.
+
+**Files touched:** `sql/031_events.sql` (tables, view, RLS, indexes — 12 policies), `js/events-modal.js` (new), `js/admin-events.js` (new), `css/events.css` (new), `js/auth.js` (post-auth hook + bell mount), `src/pages/index.html` · `src/pages/admin.html` · `src/pages/employee-status.html` (asset links + bell slot + admin nav+page+dispatch).
+
+**Unchanged:** `js/db.js` (modules self-contained), no Edge Functions added, no other pages touched.
+
+---
+
 ## April 23, 2026 — Pending Approvals CSV Export
 
 **Trigger:** SPOCs requested a way to extract their pending approval queue with full context (not just what's visible in the table row) for offline review, reporting to practice leadership, and chasing contributors for clarifications.

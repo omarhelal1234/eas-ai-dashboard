@@ -10,6 +10,9 @@
 <script src="../../js/utils.js?v=20260417b"></script>
 <script src="../../js/auth.js?v=20260417b"></script>
 <script src="../../js/db.js?v=20260417b"></script>
+<link rel="stylesheet" href="../../css/events.css">
+<script src="../../js/events-modal.js?v=20260424a"></script>
+<script src="../../js/admin-events.js?v=20260424a"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -643,9 +646,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       Quarterly Targets
     </div>
+    <div class="nav-item" data-page="manage-events">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Upcoming Events
+    </div>
     </div><!-- /sidebar-nav -->
 
     <div class="sidebar-footer">
+      <div id="events-bell-slot" style="margin-bottom:10px;display:flex;justify-content:center"></div>
       <button class="btn btn-secondary" style="width:100%;justify-content:center" onclick="goToDashboard()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
         Back to Dashboard
@@ -1277,6 +1285,19 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       </div>
     </div>
 
+    <!-- Upcoming Events Management -->
+    <div id="page-manage-events" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Upcoming Events</h2>
+          <div class="subtitle">Publish events shown as a pop-up to users on login · Track RSVPs</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div id="events-tab-content">Loading…</div>
+      </div>
+    </div>
+
     <!-- Pin Item Modal -->
     <div class="modal-overlay hidden" id="pin-modal-overlay" onclick="closePinModal()">
       <div class="modal" onclick="event.stopPropagation()" style="max-width:500px">
@@ -1885,6 +1906,9 @@ function renderCurrentPage(page) {
     case 'manage-executives': renderAdminExecutives(); break;
     case 'manage-permissions': renderAdminPermissions(); break;
     case 'ide-usage': renderIdeUsage(); break;
+    case 'manage-events':
+      AdminEvents.init(document.getElementById('events-tab-content'));
+      break;
   }
 }
 

@@ -9,6 +9,8 @@
 <script defer src="../../js/config.js"></script>
 <script defer src="../../js/auth.js"></script>
 <script defer src="../../js/db.js"></script>
+<link rel="stylesheet" href="../../css/events.css">
+<script defer src="../../js/events-modal.js?v=20260424a"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -408,7 +410,10 @@ tbody tr:hover {
       <h1>📊 My Task Status</h1>
       <div class="header-subtitle">Track your submitted tasks and their approval status</div>
     </div>
-    <button class="btn btn-secondary" onclick="goBackToDashboard()">← Back to Dashboard</button>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div id="events-bell-slot"></div>
+      <button class="btn btn-secondary" onclick="goBackToDashboard()">← Back to Dashboard</button>
+    </div>
   </div>
 
   <!-- Stats -->
