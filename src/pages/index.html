@@ -504,7 +504,10 @@
       <div class="filters-bar">
         <select class="filter-select" id="approvals-filter-status" onchange="renderApprovals()" aria-label="Filter by status">
           <option value="">All Statuses</option>
-          <option value="pending">Pending</option>
+          <option value="pending">Pending (all layers)</option>
+          <option value="ai_review">AI Review</option>
+          <option value="spoc_review">SPOC Review</option>
+          <option value="admin_review">Admin Review</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
@@ -3130,10 +3133,15 @@ async function renderApprovals() {
     // Filter by status
     if (statusFilter === 'pending') {
       allApprovals = allApprovals.filter(a => ['pending', 'admin_review', 'ai_review', 'spoc_review'].includes(a.approval_status));
+    } else if (statusFilter === 'ai_review' || statusFilter === 'spoc_review' || statusFilter === 'admin_review') {
+      allApprovals = allApprovals.filter(a => a.approval_status === statusFilter);
     } else if (statusFilter === 'approved') {
       allApprovals = [...history.filter(a => a.approval_status === 'approved')];
     } else if (statusFilter === 'rejected') {
       allApprovals = [...history.filter(a => a.approval_status === 'rejected')];
+    } else {
+      // 'All Statuses' — include pending + history
+      allApprovals = [...(pending || []), ...(history || [])];
     }
 
     // Filter by type
