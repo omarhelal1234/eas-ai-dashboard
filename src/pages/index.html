@@ -2697,9 +2697,9 @@ function renderPractices() {
   detail.classList.add('hidden');
   grid.classList.remove('hidden');
 
-  grid.innerHTML = fd.summary.practices.map((p, i) => {
-    const shortName = ['ERP','CES','BFSI','EPS','GRC','EPCS'][i];
-    const color = Object.values(practiceColors)[i];
+  grid.innerHTML = fd.summary.practices.map((p) => {
+    const shortName = Object.keys(practiceColors).find(k => p.name === k || (p.name || '').includes(k)) || p.name;
+    const color = practiceColors[shortName] || '#64748b';
     const effPct = Math.min(p.efficiency, 100);
     return `
     <div class="practice-card" onclick="showPracticeDetail('${shortName}')">
