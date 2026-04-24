@@ -1074,6 +1074,34 @@ const EAS_DB = (() => {
     return dump;
   }
 
+  /**
+   * Fetch paginated activity log entries for the admin audit view.
+   * @param {object} opts
+   * @param {string} [opts.dateFrom]   — ISO date string lower bound (inclusive)
+   * @param {string} [opts.dateTo]     — ISO date string upper bound (inclusive, extended to end of day)
+   * @param {string} [opts.actionType] — exact action filter (e.g. 'INSERT', 'DELETE')
+   * @param {number} [opts.page=1]
+   * @param {number} [opts.pageSize=50]
+   * @returns {{ rows: object[], total: number }}
+   */
+  async function fetchActivityLog({ dateFrom, dateTo, actionType, page = 1, pageSize = 50 } = {}) {
+    let q = sb
+      .from('activity_log')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (dateFrom)    q = q.gte('created_at', dateFrom);
+    if (dateTo)      q = q.lte('created_at', dateTo + 'T23:59:59.999Z');
+    if (actionType)  q = q.eq('action', actionType);
+
+    const from = (page - 1) * pageSize;
+    q = q.range(from, from + pageSize - 1);
+
+    const { data, error, count } = await q;
+    if (error) { console.error('fetchActivityLog error:', error.message); return { rows: [], total: 0 }; }
+    return { rows: data || [], total: count || 0 };
+  }
+
   // ===========================================================
   // Phase 5: Leaderboard, Badges, Nudge Queries
   // ===========================================================
@@ -2746,6 +2774,7 @@ const EAS_DB = (() => {
     // Audit & dumps
     logActivity,
     createDump,
+    fetchActivityLog,
 
     // Prompt Library (Guide Me)
     fetchPromptLibrary,

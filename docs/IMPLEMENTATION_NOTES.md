@@ -1,5 +1,20 @@
 ---
 
+## April 25, 2026 — Activity Log Admin Tab
+
+**Trigger:** Admins had no UI surface to read the `activity_log` table — it was write-only from the browser's perspective. Requested a filterable, paginated audit view in admin.html.
+
+**Design decisions:**
+
+1. **No new helper layer.** `fetchActivityLog()` was added directly to `js/db.js` alongside `logActivity` and `createDump` (the existing "Audit & dumps" section), using the same `sb.from('activity_log')` pattern. No separate module needed.
+2. **Server-side pagination via `.range()`.** The table can be large; client-side slice would require fetching all rows. Supabase's `select('*', {count:'exact'})` + `.range(from, to)` gives exact total count in a single round-trip.
+3. **Action-type filter populated lazily from first page.** Rather than a separate distinct-values query, the dropdown is seeded from whatever action types appear in the first page load. Re-populating on every filter apply is skipped (guard: `if (sel.options.length > 1) return`). Trade-off: types that don't appear on page 1 won't show until the user sees them. Acceptable for an audit view; can be replaced with a dedicated RPC later.
+4. **Details modal reuses existing modal shell CSS.** The `actlog-details-modal` uses `display:flex` toggle (matching the events-modal pattern) rather than the `.modal-overlay.active` class pattern, to avoid conflicts with the confirm dialog overlay stacking.
+5. **CSV export is page-scoped.** Only exports the currently loaded page, not all rows. Exporting all rows would require a separate unbounded query; for full exports the admin can narrow the date range and export multiple pages. This is noted in the UX via the count label.
+6. **Auth is dual-layered.** admin.html already requires `admin` role via `EAS_Auth` UIGuard. The Supabase RLS policy `activity_admin_read` (`FOR ALL USING (get_user_role() = 'admin')`) means even a direct API call from a non-admin session returns 0 rows.
+
+---
+
 ## April 24, 2026 — Pending-Approvals Pop-up on Login
 
 **Trigger:** Approvers (admin / SPOC / dept_spoc / team_lead) were missing submissions sitting in their queue because nothing surfaced the backlog at login. Requested mirror of the upcoming-events pattern.

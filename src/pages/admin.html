@@ -651,6 +651,10 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Upcoming Events
     </div>
+    <div class="nav-item" data-page="activity-log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Activity Log
+    </div>
     </div><!-- /sidebar-nav -->
 
     <div class="sidebar-footer">
@@ -1299,6 +1303,88 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       </div>
     </div>
 
+    <!-- Activity Log Page -->
+    <div id="page-activity-log" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Activity Log</h2>
+          <div class="subtitle">Audit trail of all admin and user actions</div>
+        </div>
+        <button class="btn btn-secondary" onclick="exportActivityLogCsv()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+      <div class="page-content">
+        <!-- Filters -->
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:500">From</label>
+            <input type="date" id="actlog-date-from" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary)">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:500">To</label>
+            <input type="date" id="actlog-date-to" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary)">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:500">Action Type</label>
+            <select id="actlog-action-type" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary)">
+              <option value="">All Actions</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="applyActivityLogFilters()" style="height:38px;align-self:flex-end">Apply</button>
+          <button class="btn btn-secondary" onclick="clearActivityLogFilters()" style="height:38px;align-self:flex-end">Clear</button>
+          <span id="actlog-count-label" style="align-self:flex-end;font-size:13px;color:var(--text-muted);margin-left:auto"></span>
+        </div>
+
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:40px">#</th>
+                  <th style="width:160px">Timestamp</th>
+                  <th style="width:200px">User</th>
+                  <th style="width:140px">Action</th>
+                  <th style="width:160px">Entity Type</th>
+                  <th style="width:140px">Entity ID</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="actlog-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="actlog-pagination" style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;flex-wrap:wrap;gap:8px">
+          <span id="actlog-page-label" style="font-size:13px;color:var(--text-muted)"></span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" id="actlog-prev-btn" onclick="changeActivityLogPage(-1)" disabled>← Prev</button>
+            <button class="btn btn-secondary" id="actlog-next-btn" onclick="changeActivityLogPage(1)" disabled>Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity Log Details Modal -->
+    <div class="modal-overlay" id="actlog-details-modal" style="display:none" onclick="if(event.target===this)closeActivityLogModal()">
+      <div class="modal" onclick="event.stopPropagation()" style="max-width:600px">
+        <div class="modal-header">
+          <h3>Entry Details</h3>
+          <button class="modal-close" onclick="closeActivityLogModal()" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <pre id="actlog-details-pre" style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:16px;overflow:auto;max-height:400px;font-size:13px;color:var(--text-primary);white-space:pre-wrap;word-break:break-all"></pre>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeActivityLogModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Pin Item Modal -->
     <div class="modal-overlay hidden" id="pin-modal-overlay" onclick="closePinModal()">
       <div class="modal" onclick="event.stopPropagation()" style="max-width:500px">
@@ -1910,6 +1996,7 @@ function renderCurrentPage(page) {
     case 'manage-events':
       AdminEvents.init(document.getElementById('events-tab-content'));
       break;
+    case 'activity-log': renderActivityLog(); break;
   }
 }
 
@@ -5182,6 +5269,160 @@ async function renderTargetVsActual() {
       </table>
     </div>
   `;
+}
+
+// ============ ACTIVITY LOG ============
+const _actLog = {
+  page: 1,
+  pageSize: 50,
+  total: 0,
+  actionTypes: []
+};
+
+async function renderActivityLog() {
+  const tbody = document.getElementById('actlog-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>';
+
+  const dateFrom   = document.getElementById('actlog-date-from').value || undefined;
+  const dateTo     = document.getElementById('actlog-date-to').value || undefined;
+  const actionType = document.getElementById('actlog-action-type').value || undefined;
+
+  try {
+    const { rows, total } = await EAS_DB.fetchActivityLog({
+      dateFrom, dateTo, actionType,
+      page: _actLog.page,
+      pageSize: _actLog.pageSize
+    });
+    _actLog.total = total;
+
+    _populateActLogActionTypes(rows);
+    _renderActLogRows(rows);
+    _renderActLogPagination();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--danger)">Error loading activity log: ${err.message}</td></tr>`;
+  }
+}
+
+function _populateActLogActionTypes(rows) {
+  const sel = document.getElementById('actlog-action-type');
+  if (sel.options.length > 1) return; // already populated
+  const seen = new Set(rows.map(r => r.action).filter(Boolean));
+  seen.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a;
+    opt.textContent = a;
+    sel.appendChild(opt);
+  });
+}
+
+function _renderActLogRows(rows) {
+  const tbody = document.getElementById('actlog-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No entries found.</td></tr>';
+    return;
+  }
+  const offset = (_actLog.page - 1) * _actLog.pageSize;
+  tbody.innerHTML = rows.map((r, i) => {
+    const ts = r.created_at ? new Date(r.created_at).toLocaleString() : '—';
+    const user = r.user_email || r.user_id || '—';
+    const action = r.action || '—';
+    const entity = r.entity_type || '—';
+    const entityId = r.entity_id ? r.entity_id.substring(0, 8) + '…' : '—';
+    const hasDetails = r.details && Object.keys(r.details).length > 0;
+    const detailsCell = hasDetails
+      ? `<button class="btn btn-secondary" style="padding:3px 10px;font-size:12px" onclick="openActivityLogModal(${i + offset})">View</button>`
+      : '<span style="color:var(--text-muted)">—</span>';
+    return `<tr data-actlog-idx="${i + offset}">
+      <td style="color:var(--text-muted)">${i + offset + 1}</td>
+      <td style="font-size:12px">${ts}</td>
+      <td style="font-size:12px;word-break:break-all">${user}</td>
+      <td><span style="font-family:monospace;font-size:12px;background:var(--bg-primary);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">${action}</span></td>
+      <td style="font-size:12px">${entity}</td>
+      <td style="font-family:monospace;font-size:12px">${entityId}</td>
+      <td>${detailsCell}</td>
+    </tr>`;
+  }).join('');
+
+  // store rows for modal access
+  _actLog._rows = rows;
+
+  const start = offset + 1;
+  const end   = offset + rows.length;
+  document.getElementById('actlog-count-label').textContent =
+    `Showing ${start}–${end} of ${_actLog.total.toLocaleString()} entries`;
+}
+
+function _renderActLogPagination() {
+  const totalPages = Math.max(1, Math.ceil(_actLog.total / _actLog.pageSize));
+  document.getElementById('actlog-page-label').textContent = `Page ${_actLog.page} of ${totalPages}`;
+  document.getElementById('actlog-prev-btn').disabled = _actLog.page <= 1;
+  document.getElementById('actlog-next-btn').disabled = _actLog.page >= totalPages;
+}
+
+function applyActivityLogFilters() {
+  _actLog.page = 1;
+  renderActivityLog();
+}
+
+function clearActivityLogFilters() {
+  document.getElementById('actlog-date-from').value = '';
+  document.getElementById('actlog-date-to').value   = '';
+  document.getElementById('actlog-action-type').value = '';
+  _actLog.page = 1;
+  renderActivityLog();
+}
+
+function changeActivityLogPage(delta) {
+  const totalPages = Math.ceil(_actLog.total / _actLog.pageSize);
+  _actLog.page = Math.max(1, Math.min(totalPages, _actLog.page + delta));
+  renderActivityLog();
+}
+
+function openActivityLogModal(idx) {
+  const rows = _actLog._rows || [];
+  const offset = (_actLog.page - 1) * _actLog.pageSize;
+  const row = rows[idx - offset];
+  if (!row) return;
+  const payload = {
+    timestamp:   row.created_at,
+    user_email:  row.user_email,
+    user_id:     row.user_id,
+    action:      row.action,
+    entity_type: row.entity_type,
+    entity_id:   row.entity_id,
+    details:     row.details
+  };
+  document.getElementById('actlog-details-pre').textContent = JSON.stringify(payload, null, 2);
+  document.getElementById('actlog-details-modal').style.display = 'flex';
+}
+
+function closeActivityLogModal() {
+  document.getElementById('actlog-details-modal').style.display = 'none';
+}
+
+function exportActivityLogCsv() {
+  const rows = _actLog._rows || [];
+  if (!rows.length) { showToast('No data to export', 'error'); return; }
+  const headers = ['#','Timestamp','User Email','Action','Entity Type','Entity ID','Details'];
+  const escape  = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [
+    headers.join(','),
+    ...rows.map((r, i) => [
+      (_actLog.page - 1) * _actLog.pageSize + i + 1,
+      escape(r.created_at),
+      escape(r.user_email || r.user_id || ''),
+      escape(r.action),
+      escape(r.entity_type),
+      escape(r.entity_id),
+      escape(JSON.stringify(r.details))
+    ].join(','))
+  ];
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `activity-log-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 </script>
 
