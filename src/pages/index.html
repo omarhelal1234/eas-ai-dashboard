@@ -14,7 +14,7 @@
 <script src="../../js/config.js?v=20260418a"></script>
 <script src="../../js/utils.js?v=20260418a"></script>
 <script src="../../js/auth.js?v=20260418a"></script>
-<script src="../../js/db.js?v=20260418a"></script>
+<script src="../../js/db.js?v=20260426a"></script>
 <script src="../../js/phase8-submission.js?v=20260418a"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
@@ -5633,6 +5633,24 @@ function updateApprovalTierDisplay() {
   }
 }
 
+async function validateTaskCaps(taskData) {
+  const settings = await EAS_DB.getAppSettings();
+  const maxWeeklyHours = parseFloat(settings.max_weekly_task_hours_before_ai) || 60;
+  const maxPct = parseFloat(settings.max_task_pct_after_ai) || 30;
+
+  const maxAfterAllowed = taskData.timeWithout * (maxPct / 100);
+  if (taskData.timeWith > maxAfterAllowed) {
+    return `Time after AI (${taskData.timeWith}h) cannot exceed ${maxPct}% of time before AI (${taskData.timeWithout}h).`;
+  }
+
+  const weeklyUsed = await EAS_DB.fetchWeeklyHoursByEmployee(taskData.employeeEmail, taskData.weekStart);
+  const newTotal = weeklyUsed + taskData.timeWithout;
+  if (newTotal > maxWeeklyHours) {
+    return `Weekly cap exceeded: you've logged ${weeklyUsed.toFixed(1)} of ${maxWeeklyHours}h before AI this week, this task would push to ${newTotal.toFixed(1)}h.`;
+  }
+  return null;
+}
+
 async function saveTask() {
   const practice = document.getElementById('f-practice').value;
   if (!practice) { showToast('Please select a practice', 'error'); return; }
@@ -5702,6 +5720,12 @@ async function saveTask() {
 
   const editId = _editingId;
   const editType = _editingType;
+
+  // Validate caps on new tasks only (existing tasks are exempt)
+  if (!editId) {
+    const capError = await validateTaskCaps(taskData);
+    if (capError) { showToast(capError, 'error'); return; }
+  }
 
   let result;
   let isEdit = false;
