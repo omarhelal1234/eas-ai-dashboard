@@ -19,13 +19,13 @@ CREATE POLICY "app_settings_write_admin"
   USING (
     EXISTS (
       SELECT 1 FROM users
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE auth_id = auth.uid() AND role = 'admin'
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM users
-      WHERE id = auth.uid() AND role = 'admin'
+      WHERE auth_id = auth.uid() AND role = 'admin'
     )
   );
 
