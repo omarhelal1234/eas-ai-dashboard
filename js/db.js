@@ -2698,6 +2698,40 @@ const EAS_DB = (() => {
   }
 
   // ===========================================================
+  // App Settings (task hour caps, global k/v config)
+  // ===========================================================
+
+  let _appSettingsCache = null;
+
+  async function getAppSettings() {
+    if (_appSettingsCache) return _appSettingsCache;
+    const { data, error } = await sb.from('app_settings').select('key, value');
+    if (error) { console.error('getAppSettings:', error.message); return {}; }
+    _appSettingsCache = Object.fromEntries((data || []).map(r => [r.key, r.value]));
+    return _appSettingsCache;
+  }
+
+  async function saveAppSettings(updates) {
+    const rows = Object.entries(updates).map(([key, value]) => ({
+      key, value: String(value), updated_at: new Date().toISOString()
+    }));
+    const { error } = await sb.from('app_settings').upsert(rows, { onConflict: 'key' });
+    if (error) { console.error('saveAppSettings:', error.message); return false; }
+    _appSettingsCache = null;
+    return true;
+  }
+
+  async function fetchWeeklyHoursByEmployee(employeeEmail, weekStart) {
+    const { data, error } = await sb
+      .from('tasks')
+      .select('time_without_ai')
+      .eq('employee_email', employeeEmail)
+      .eq('week_start', weekStart);
+    if (error) { console.error('fetchWeeklyHours:', error.message); return 0; }
+    return (data || []).reduce((sum, t) => sum + (Number(t.time_without_ai) || 0), 0);
+  }
+
+  // ===========================================================
   // Public API
   // ===========================================================
 
@@ -2832,6 +2866,11 @@ const EAS_DB = (() => {
     // AI News Feed
     fetchAiNews,
     getAiNewsLastUpdated,
-    triggerAiNewsRefresh
+    triggerAiNewsRefresh,
+
+    // App Settings (task hour caps, etc.)
+    getAppSettings,
+    saveAppSettings,
+    fetchWeeklyHoursByEmployee
   };
 })();

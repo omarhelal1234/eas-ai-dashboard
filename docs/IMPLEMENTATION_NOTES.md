@@ -1,5 +1,19 @@
 ---
 
+## April 26, 2026 — Weekly Task Hour Caps
+
+**Trigger:** Admin-configurable guardrails to prevent inflated AI time-savings claims.
+
+**Design decisions:**
+
+1. **Generic `app_settings` k/v table** rather than feature-specific columns. Keeps future settings additions to an INSERT, not a migration. RLS: all roles can SELECT (needed for the validator on task submit), only `admin` role can write.
+2. **Validation in `saveTask()` (index.html), not in `Phase8` or `db.js`.** The validator needs DOM values (weekStart, employeeEmail) that are assembled inside `saveTask()`. Putting it there keeps the call site obvious and avoids threading extra params through Phase8.
+3. **Session cache on `getAppSettings()`** via `_appSettingsCache`. Settings rarely change; caching avoids a round-trip on every task form open. Cache is invalidated when `saveAppSettings()` is called.
+4. **New tasks only.** Existing tasks are never re-validated — the check is guarded by `if (!editId)`. This matches the stated requirement and avoids breaking any historical data.
+5. **Weekly scope uses `week_start` date equality**, not ISO week arithmetic. The form already computes `weekStart` from `EAS_Utils.getCurrentWeekRange()`, so querying `WHERE week_start = :weekStart` is exact and index-friendly.
+
+---
+
 ## April 25, 2026 — Activity Log Admin Tab
 
 **Trigger:** Admins had no UI surface to read the `activity_log` table — it was write-only from the browser's perspective. Requested a filterable, paginated audit view in admin.html.
