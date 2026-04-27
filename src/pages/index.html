@@ -5651,7 +5651,9 @@ async function validateTaskCaps(taskData) {
   return null;
 }
 
+let _savingTask = false;
 async function saveTask() {
+  if (_savingTask) return;
   const practice = document.getElementById('f-practice').value;
   if (!practice) { showToast('Please select a practice', 'error'); return; }
 
@@ -5721,6 +5723,12 @@ async function saveTask() {
   const editId = _editingId;
   const editType = _editingType;
 
+  _savingTask = true;
+  const _saveBtn = document.querySelector('#modal-task .btn-primary');
+  const _origBtnText = _saveBtn?.textContent || (editId ? 'Update Task' : 'Save Task');
+  if (_saveBtn) { _saveBtn.disabled = true; _saveBtn.textContent = 'Saving…'; }
+  try {
+
   // Validate caps on new tasks only (existing tasks are exempt)
   if (!editId) {
     const capError = await validateTaskCaps(taskData);
@@ -5785,6 +5793,10 @@ async function saveTask() {
   if (projManualReset) { projManualReset.style.display = 'none'; projManualReset.value = ''; }
   // Also re-render My Tasks if contributor
   renderMyTasks();
+  } finally {
+    _savingTask = false;
+    if (_saveBtn) { _saveBtn.disabled = false; _saveBtn.textContent = _origBtnText; }
+  }
 }
 
 async function saveAccomplishment() {

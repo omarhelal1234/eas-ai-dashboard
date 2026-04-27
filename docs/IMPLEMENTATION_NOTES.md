@@ -1,5 +1,21 @@
 ---
 
+## April 27, 2026 — Save Task Double-Click Race
+
+**Trigger:** User reported that tasks duplicate when "Save Task" is clicked twice within ~1 second.
+
+**Root cause:** `saveTask()` is async and the "Save Task" modal stays open across the network insert (`closeModal('task')` is called *after* the `await Phase8.submitWithApproval(...)` resolves, see line 5749). The button itself was a plain `onclick="saveTask()"` with no debounce or disable. A second click while the first call is awaiting validation/insert enters `saveTask()` again as a parallel async call; both reach `Phase8.submitWithApproval` and each writes a separate row.
+
+**Design decisions:**
+
+1. **Re-entrancy flag (`_savingTask`) plus button disable.** Defense-in-depth: the flag protects against any caller (including future programmatic ones), the disabled+`Saving…` text gives the user visible feedback. A flag alone would be enough today (only one call site, the button), but it's cheap.
+2. **Flag is set after sync validation, not at function entry.** The early returns for missing practice, employee, etc. happen before any `await`, so they can't race. Setting the flag only after they pass means a validation error doesn't briefly flash "Saving…" on the button or block the next click while a toast is being read.
+3. **`try/finally` around the async portion** guarantees the flag and button state are restored even when `validateTaskCaps` errors out, the network insert fails, or an unexpected exception is thrown.
+4. **`saveAccomplishment()` left alone for now.** It has the same async shape, but it calls `closeModal('accomplishment')` *before* the `await`, so the button is no longer rendered/clickable during the network insert. The race window is much smaller there — flagged for follow-up if it ever surfaces.
+5. **No cache-buster bump.** The fix lives in inline JS inside `src/pages/index.html`, not a separate `.js` file with a `?v=` query string. Users need a hard reload to pick it up.
+
+---
+
 ## April 26, 2026 — Weekly Task Hour Caps
 
 **Trigger:** Admin-configurable guardrails to prevent inflated AI time-savings claims.
