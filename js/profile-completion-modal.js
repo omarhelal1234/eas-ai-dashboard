@@ -99,21 +99,21 @@
       btn.textContent = 'Saving…';
 
       try {
-        const { error } = await sb.from('users').update({
-          sector_id:        check.sectorId,
-          department_id:    check.departmentId,
-          practice:         check.practice,
-          profile_completed: true
-        }).eq('id', profile.id);
-        if (error) {
-          showError(modal, 'Failed to save: ' + error.message);
+        // Use the complete_profile RPC (sql/044) — it derives the user_id from
+        // auth.uid() server-side, so a malicious script that dispatched
+        // eas:profile-incomplete with another user's id can't impersonate them.
+        // RPC also re-runs sync_user_role_from_org server-side, no client follow-up needed.
+        const { data, error } = await sb.rpc('complete_profile', {
+          p_sector_id:     check.sectorId,
+          p_department_id: check.departmentId,
+          p_practice:      check.practice
+        });
+        if (error || (data && data.success === false)) {
+          showError(modal, 'Failed to save: ' + (error?.message || data?.error || 'unknown error'));
           btn.disabled = false;
           btn.textContent = 'Save';
           return;
         }
-        // Sync role from new org path (in case the email matches a *_spoc_email)
-        await sb.rpc('sync_user_role_from_org', { p_user_id: profile.id }).catch(() => {});
-        // Drop the modal and force a full reload so caches re-fetch with new scope.
         modal.remove();
         window.location.reload();
       } catch (e) {

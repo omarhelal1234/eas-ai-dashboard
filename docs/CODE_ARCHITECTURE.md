@@ -105,6 +105,11 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │   └── 037_role_sync_function.sql # approver_resolution type, resolve_approver() cascade RPC (multi-SPOC preserved at practice level), sync_user_role_from_org() (auto-promote, never demote), revoke_org_role() admin RPC, *_spoc_email UPDATE triggers, role_change_log audit
 │   └── 038_extend_signup_rpc.sql # signup_contributor extended to 8 args (adds p_sector_id, p_department_id), copilot_users.department_id added
 │   └── 039_org_rollups.sql     # get_sector_summary, get_unit_summary, get_org_leaderboard RPCs aggregating from denormalised sector_id
+│   └── 040_phase1_advisor_hardening.sql # RLS on audit tables, search_path lockdown on cascade triggers, REVOKE EXECUTE on trigger-only functions
+│   └── 041_phase2_org_tree_rls.sql # scoped self-service: sector_spoc edits within sector, dept_spoc within unit; ENABLE RLS on departments + practices
+│   └── 042_phase3_view_permissions.sql # web.org view permission seeded for all 8 roles
+│   └── 043_phase3_security_hardening.sql # privilege-escalation fixes from codex review: sync_user_role_from_org auth model, signup_contributor identity verification, departments_dept_spoc_update non-recursive, revoke_org_role full anchor reset, audit source param
+│   └── 044_phase4_complete_profile_and_brand.sql # complete_profile RPC (server-derived user_id), move_unit/move_practice RPCs (scope-enforcing reparent), sectors.brand_color + CHECK
 │
 ├── scripts/                # Node.js admin/migration scripts + data sync
 │   ├── create-auth-users.mjs   # One-time auth user creation

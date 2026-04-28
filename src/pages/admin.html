@@ -8,14 +8,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../../js/config.js?v=20260417b"></script>
 <script src="../../js/utils.js?v=20260417b"></script>
-<script src="../../js/auth.js?v=20260429b"></script>
-<script src="../../js/db.js?v=20260429b"></script>
+<script src="../../js/auth.js?v=20260429c"></script>
+<script src="../../js/db.js?v=20260429c"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
-<script src="../../js/approvals-modal.js?v=20260429b"></script>
-<script src="../../js/hierarchy.js?v=20260429b"></script>
-<script src="../../js/profile-completion-modal.js?v=20260429b"></script>
-<script src="../../js/admin-org-tree.js?v=20260429b"></script>
+<script src="../../js/approvals-modal.js?v=20260429c"></script>
+<script src="../../js/hierarchy.js?v=20260429c"></script>
+<script src="../../js/profile-completion-modal.js?v=20260429c"></script>
+<script src="../../js/admin-org-tree.js?v=20260429c"></script>
+<script src="../../js/admin-orphans.js?v=20260429c"></script>
 <script src="../../js/admin-events.js?v=20260424a"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
@@ -863,6 +864,19 @@ tr:hover td { background: rgba(255,255,255,0.02); }
             </table>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Migration Orphans review (admin-only) -->
+    <div id="page-manage-orphans" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Migration Orphans</h2>
+          <div class="subtitle">Rows the 036 backfill couldn't resolve to a sector. Pick a sector and resolve, or dismiss to leave sector_id NULL.</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div id="orphans-root"></div>
       </div>
     </div>
 
