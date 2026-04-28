@@ -122,10 +122,30 @@ const EAS_Auth = (() => {
 
     // Always force-refresh on page load: prevents stale localStorage cache
     // from hiding new columns (e.g. department_id) or role changes.
-    const profile = await getUserProfile(true);
+    let profile = await getUserProfile(true);
     if (!profile) {
       await signOut();
       return false;
+    }
+
+    // Auto-promote based on org-chart email match (spec §9). Never demotes.
+    // sync_user_role_from_org returns the new role on promotion or a string
+    // sentinel ('no_match', 'protected_role', 'no_demote') otherwise.
+    try {
+      const { data: promoted } = await sb.rpc('sync_user_role_from_org', { p_user_id: profile.id });
+      if (promoted && !['no_match', 'protected_role', 'no_demote', 'no_user'].includes(promoted)) {
+        profile = await getUserProfile(true); // refresh — role/scope changed
+      }
+    } catch (e) {
+      console.warn('sync_user_role_from_org failed (non-fatal):', e?.message || e);
+    }
+
+    // Profile-completion event (spec §8.2). Phase 1 dispatches the event;
+    // Phase 2 wires the cascading-dropdown modal to it.
+    if (profile && profile.profile_completed === false) {
+      try {
+        window.dispatchEvent(new CustomEvent('eas:profile-incomplete', { detail: { user: profile } }));
+      } catch (_) { /* CustomEvent unavailable — skip */ }
     }
 
     // Fire-and-forget: mount the header bell and open the upcoming-events

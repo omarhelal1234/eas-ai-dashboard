@@ -27,6 +27,7 @@
 | 2.6 | Apr 13, 2026 | Omar Ibrahim | Phase 10 — IDE Task Logger: VS Code extension + Edge Function API for logging tasks from IDE |
 | 2.7 | Apr 14, 2026 | Omar Ibrahim | Phase 11 — Data Sync: Tracker sheet + Grafana IDE usage recurring sync process |
 | 2.8 | Apr 16, 2026 | Omar Ibrahim | Phase 12 — Featured Spotlight Banner + Global Likes System |
+| 2.9 | Apr 28, 2026 | Omar Ibrahim | Org-Hierarchy Expansion **Phase 1** (Foundation: DB + Auth) — sectors table, sector_spoc role, sector-aware RLS, denormalised sector_id, email-driven auto-promotion, org rollup RPCs (sql/033-039). Phases 2-4 (signup cascade, drill-down, leaderboards, polish) pending. |
 
 ---
 

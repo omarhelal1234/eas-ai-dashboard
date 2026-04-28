@@ -1419,96 +1419,81 @@ const EAS_DB = (() => {
   }
 
   /**
-   * Determine approval routing based on saved hours.
-   * RULES (AI validation removed):
-   * - savedHours < 5    → auto-approve (no approval record needed)
-   * - 5 ≤ savedHours ≤ 10 → SPOC review only
-   * - savedHours > 10   → SPOC review first, then Admin review
-   * On any rejection: status becomes 'rejected'
-   */
-  async function determineApprovalRouting(practice, savedHours, submissionType = 'task') {
-    // Auto-approve: tasks with less than 5 hours saved (accomplishments never auto-approve)
-    if (submissionType === 'task' && savedHours < 5) {
-      return { approvalStatus: 'approved', approvalLayer: null, spocId: null, adminId: null, needsAdminReview: false, autoApproved: true };
-    }
-
-    let approvalStatus = 'spoc_review';
-    let approvalLayer = 'spoc';
-    let spocId = null;
-    let adminId = null;
-    // Accomplishments always require admin review after SPOC; tasks only if >10h
-    let needsAdminReview = submissionType === 'accomplishment' ? true : savedHours > 10;
-
-    // Look up SPOCs for this practice (multi-SPOC support)
-    const spocs = await getSpocsForPractice(practice);
-    if (spocs.length > 0) {
-      // Store the first SPOC id for the approval record (any SPOC can approve)
-      spocId = spocs[0].spoc_id;
-    } else {
-      // No SPOC configured — fall back to admin
-      console.warn(`No SPOC found for practice "${practice}", falling back to admin`);
-      const { data: adminData } = await sb
-        .from('users')
-        .select('id')
-        .eq('role', 'admin')
-        .limit(1)
-        .single();
-      adminId = adminData?.id || null;
-      approvalLayer = 'admin';
-      approvalStatus = 'admin_review';
-    }
-
-    // Pre-fetch admin ID if high-hours task (will need it after SPOC approves)
-    if (needsAdminReview && !adminId) {
-      const { data: adminData } = await sb
-        .from('users')
-        .select('id')
-        .eq('role', 'admin')
-        .limit(1)
-        .single();
-      adminId = adminData?.id || null;
-    }
-
-    return { approvalStatus, approvalLayer, spocId, adminId, needsAdminReview, autoApproved: false };
-  }
-
-  /**
-   * Create a submission approval workflow entry with proper routing.
-   * AI validation has been removed — routing is purely hours-based.
+   * Create a submission approval workflow entry.
+   *
+   * Routing comes from the `resolve_approver(p_practice, p_department_id, p_sector_id)` RPC
+   * (sql/037_role_sync_function.sql). The cascade is practice (multi-SPOC) → unit → sector → admin.
+   *
+   * Business rule preserved client-side: tasks under 5 saved-hours auto-approve and skip
+   * the approval record entirely (no DB round-trip). Accomplishments and >=5h tasks go
+   * through the cascade.
    */
   async function createSubmissionApproval(submissionType, submissionId, savedHours, practice = null) {
-    const profile = await EAS_Auth.getUserProfile();
-    
-    // Determine routing (hours-based, no AI; accomplishments always need full review)
-    const routing = await determineApprovalRouting(practice, savedHours, submissionType);
-
-    // Auto-approved tasks skip the approval record entirely
-    if (routing.autoApproved) {
+    // <5h tasks short-circuit (business rule, not routing)
+    if (submissionType === 'task' && savedHours < 5) {
       return { id: null, autoApproved: true, approval_status: 'approved' };
     }
-    
+
+    const profile = await EAS_Auth.getUserProfile();
+
+    // Resolve department_id and sector_id for the cascade. For self-submissions,
+    // these come from the user's profile. For admin/dept_spoc submitting on behalf
+    // of someone else, the form passes a practice and we derive department_id/sector_id
+    // from the practices table (sector_id falls through the populate_sector_id trigger
+    // anyway, but we pass it explicitly for transparency).
+    let departmentId = profile?.department_id || null;
+    let sectorId     = profile?.sector_id     || null;
+
+    if (practice && (!departmentId || !sectorId)) {
+      const { data: pRow } = await sb
+        .from('practices')
+        .select('department_id, departments:department_id(sector_id)')
+        .eq('name', practice)
+        .maybeSingle();
+      if (pRow) {
+        departmentId = departmentId || pRow.department_id || null;
+        sectorId     = sectorId     || pRow.departments?.sector_id || null;
+      }
+    }
+
+    const { data: routing, error: rErr } = await sb.rpc('resolve_approver', {
+      p_practice:      practice,
+      p_department_id: departmentId,
+      p_sector_id:     sectorId
+    });
+    if (rErr) {
+      console.error('createSubmissionApproval: resolve_approver failed:', rErr);
+      return null;
+    }
+
+    const escalation = routing?.escalation_level || 'admin';
+    const assignedId = routing?.assigned_user_id || null;
+
+    // §6.4 column mapping
     const payload = {
-      submission_type: submissionType,
-      submission_id: submissionId,
-      approval_status: routing.approvalStatus,
-      approval_layer: routing.approvalLayer,
-      saved_hours: savedHours,
-      practice: practice,
-      submitted_by: profile?.id,
+      submission_type:    submissionType,
+      submission_id:      submissionId,
+      approval_status:    escalation === 'admin' ? 'admin_review' : 'spoc_review',
+      approval_layer:     escalation === 'admin' ? 'admin' : 'spoc',
+      escalation_level:   escalation,
+      saved_hours:        savedHours,
+      practice:           practice,
+      sector_id:          sectorId,        // populate_sector_id trigger canonicalises this
+      submitted_by:       profile?.id,
       submitted_by_email: profile?.email,
       ai_validation_result: null,
       ai_validation_failed: false,
-      spoc_id: routing.spocId,
-      admin_id: routing.adminId
+      spoc_id:  (escalation === 'practice' || escalation === 'unit' || escalation === 'sector') ? assignedId : null,
+      admin_id: escalation === 'admin' ? assignedId : null
     };
-    
+
     const { data, error } = await sb.from('submission_approvals').insert(payload).select().single();
-    if (error) { 
+    if (error) {
       console.error('createSubmissionApproval error:', error);
       if (error.message && error.message.includes('submission_approvals')) {
-        console.warn('⚠️ Approval workflow tables not found. Please run SQL migration: sql/002_approval_workflow.sql');
+        console.warn('⚠️ Approval workflow tables not found. Run SQL migrations sql/002_approval_workflow.sql + sql/033-039_*.sql');
       }
-      return null; 
+      return null;
     }
     return data;
   }
@@ -1622,6 +1607,11 @@ const EAS_DB = (() => {
         // Dept SPOC sees spoc_review items across all practices in their department.
         // RLS (dept_spoc_approvals_select) restricts rows to their department practices.
         query = query.eq('approval_status', 'spoc_review');
+      } else if (userRole === 'sector_spoc') {
+        // Sector SPOC: full sector pipeline read-only. RLS restricts rows to their sector.
+        // Actionable subset (escalation_level='sector') is fetched separately by
+        // fetchSectorFallbackQueue — this branch returns the broader visibility list.
+        query = query.in('approval_status', ['spoc_review', 'admin_review']);
       } else if (userRole === 'spoc') {
         // Any SPOC in a practice can approve any task for that practice.
         // Match by practice rather than individual spoc_id.
@@ -1648,6 +1638,27 @@ const EAS_DB = (() => {
       console.error('fetchPendingApprovals exception:', err);
       throw err;
     }
+  }
+
+  /**
+   * Sector SPOC's actionable fallback queue: items currently routed to sector level
+   * (escalation_level='sector', approval_status='spoc_review'). RLS still restricts
+   * to the user's sector; passing sector_id explicitly is a transparency aid.
+   */
+  async function fetchSectorFallbackQueue(sectorId) {
+    if (!sectorId) return [];
+    const { data, error } = await sb
+      .from('submission_approvals')
+      .select('*')
+      .eq('sector_id', sectorId)
+      .eq('escalation_level', 'sector')
+      .eq('approval_status', 'spoc_review')
+      .order('submitted_at', { ascending: false });
+    if (error) {
+      console.error('fetchSectorFallbackQueue error:', error);
+      throw new Error(`Failed to fetch sector fallback queue: ${error.message}`);
+    }
+    return data || [];
   }
 
   /**
@@ -2796,11 +2807,11 @@ const EAS_DB = (() => {
     getSpocForPractice,
     getSpocsForPractice,
     syncPracticeSpoc,
-    determineApprovalRouting,
     createSubmissionApproval,
     fetchSubmissionApproval,
     updateSubmissionApproval,
     fetchPendingApprovals,
+    fetchSectorFallbackQueue,
     fetchApprovalHistory,
     approveSubmission,
     rejectSubmission,

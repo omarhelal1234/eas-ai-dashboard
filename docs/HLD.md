@@ -409,6 +409,8 @@ End User Browser ←──HTTPS──→ Supabase Cloud API
 | Phase 6 | PDF export, forecasting, accessibility, dark/light mode | ✅ Complete |
 | Phase 7-9 | Export Center, AI Approval Workflow, Licensed Tool Tracking | ✅ Complete |
 | Phase 10 | IDE Task Logger: VS Code extension + Edge Function API | 🚧 In Progress |
+| Org-Hierarchy Phase 1 | Sectors table above departments, sector_spoc role, sector-aware RLS, email-driven auto-promote, org rollup RPCs (sql/033-039) | ✅ Complete (local) — pending live deploy |
+| Org-Hierarchy Phase 2-4 | Signup cascade UI, admin tree, drill-down dashboards, leaderboards, polish | ⏳ Pending |
 
 ---
 

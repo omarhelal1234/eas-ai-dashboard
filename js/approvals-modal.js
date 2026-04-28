@@ -5,7 +5,7 @@
 // ============================================================
 
 const ApprovalsModal = (() => {
-  const APPROVER_ROLES = ['admin', 'spoc', 'dept_spoc', 'team_lead'];
+  const APPROVER_ROLES = ['admin', 'spoc', 'dept_spoc', 'sector_spoc', 'team_lead'];
   let _opened = false;
 
   function escapeHtml(s) {
@@ -31,6 +31,21 @@ const ApprovalsModal = (() => {
       case 'ai_review':    return 'AI Review';
       case 'pending':      return 'Pending';
       default:             return status || 'Pending';
+    }
+  }
+
+  /**
+   * Approver routing label sourced from submission_approvals.escalation_level (sql/037).
+   * Falls back to legacy approval_layer when escalation_level is null (pre-033 rows).
+   */
+  function escalationLabel(approval) {
+    if (!approval) return '';
+    switch (approval.escalation_level) {
+      case 'practice': return 'Practice SPOC';
+      case 'unit':     return 'Unit SPOC fallback';
+      case 'sector':   return 'Sector SPOC fallback';
+      case 'admin':    return 'Admin fallback';
+      default:         return approval.approval_layer || '';
     }
   }
 
@@ -68,12 +83,14 @@ const ApprovalsModal = (() => {
     const practice = escapeHtml(a.practice || '—');
     const when = escapeHtml(fmtDate(a.submitted_at || a.created_at));
     const stage = escapeHtml(stageLabel(a.approval_status));
+    const escalation = escapeHtml(escalationLabel(a));
     const hours = a.saved_hours ? `${Number(a.saved_hours).toFixed(1)}h saved` : '';
     return `
       <div class="approval-row">
         <div class="approval-row-top">
           <span class="approval-type">${type}</span>
           <span class="approval-stage-pill">${stage}</span>
+          ${escalation ? `<span class="approval-escalation-pill">${escalation}</span>` : ''}
         </div>
         <div class="approval-row-meta">
           <span>👤 ${who}</span>

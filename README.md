@@ -1,6 +1,6 @@
 # EAS AI Adoption Dashboard
 
-Enterprise AI adoption tracking platform for Enterprise Application Solutions (EAS), covering 6 practices and 120+ licensed users across GitHub Copilot, Claude, ChatGPT, and other AI tools. **Phase 10 In Progress:** VS Code extension for logging AI tasks directly from the IDE, backed by a new Supabase Edge Function API.
+Enterprise AI adoption tracking platform originally built for Enterprise Application Solutions (EAS) and being expanded org-wide across 13 Ejada sectors. Currently covers 6 EAS practices, 8 ADI industry-vertical practices, and 120+ licensed users across GitHub Copilot, Claude, ChatGPT, and other AI tools. **In progress:** VS Code extension (Phase 10) for IDE task logging; **Org-Hierarchy Phase 1 complete (local):** sectors above departments, new `sector_spoc` role, sector-aware RLS, email-driven auto-promotion (sql/033-039 — pending live deploy).
 
 ## Live URLs
 
