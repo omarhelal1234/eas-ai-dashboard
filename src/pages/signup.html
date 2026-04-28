@@ -578,7 +578,7 @@ body {
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../../js/config.js"></script>
-<script src="../../js/hierarchy.js?v=20260429c"></script>
+<script src="../../js/hierarchy.js?v=20260429d"></script>
 <script>
   const sb = getSupabaseClient();
   let hasCopilot = null;
@@ -616,10 +616,10 @@ body {
   }
 
   // ---- Step navigation ----
-  function goToStep2() {
+  async function goToStep2() {
     hideError();
     // Validate Step 1
-    const cascadeCheck = EAS_Hierarchy.validateCascade(
+    const cascadeCheck = await EAS_Hierarchy.validateCascade(
       document.getElementById('su-sector'),
       document.getElementById('su-department'),
       document.getElementById('su-practice')
@@ -728,7 +728,9 @@ body {
     btn.disabled = true;
 
     try {
-      // 1. Create auth user
+      // 1. Create auth user. Stash hierarchy anchors in user_metadata so the
+      // post-confirmation auto-complete path in login.html can finish the
+      // profile insert with the right sector/unit/practice.
       const { data: authData, error: authError } = await sb.auth.signUp({
         email,
         password: pw,
@@ -737,7 +739,9 @@ body {
             full_name: name,
             practice: practice,
             skill: skill,
-            has_copilot: hasCopilot
+            has_copilot: hasCopilot,
+            sector_id: sectorId,
+            department_id: departmentId
           }
         }
       });
@@ -801,9 +805,14 @@ body {
         document.getElementById('success-screen').classList.add('show');
 
       } else {
-        // Email confirmation required — save form data so login page can complete profile
+        // Email confirmation required — preserve full hierarchy context so the
+        // post-confirmation login can finish the profile insert with the right
+        // sector/unit/practice anchors.
         localStorage.setItem('eas_pending_signup', JSON.stringify({
-          name, email, practice, skill, has_copilot: hasCopilot
+          name, email, practice, skill,
+          has_copilot: hasCopilot,
+          sector_id: sectorId,
+          department_id: departmentId
         }));
 
         hideAllPanels();

@@ -40,10 +40,11 @@ const ApprovalsModal = (() => {
    */
   function escalationLabel(approval) {
     if (!approval) return '';
+    // Labels match spec §10.4 exactly.
     switch (approval.escalation_level) {
       case 'practice': return 'Practice SPOC';
-      case 'unit':     return 'Unit SPOC fallback';
-      case 'sector':   return 'Sector SPOC fallback';
+      case 'unit':     return 'Unit fallback';
+      case 'sector':   return 'Sector fallback';
       case 'admin':    return 'Admin fallback';
       default:         return approval.approval_layer || '';
     }
@@ -64,16 +65,28 @@ const ApprovalsModal = (() => {
 
   async function fetchQueue() {
     const profile = await EAS_Auth.getUserProfile();
-    if (!profile) return { profile: null, items: [] };
+    if (!profile) return { profile: null, items: [], fallback: [] };
     const role = profile.role;
-    if (!APPROVER_ROLES.includes(role)) return { profile, items: [] };
-    if (typeof EAS_DB === 'undefined' || !EAS_DB.fetchPendingApprovals) return { profile, items: [] };
+    if (!APPROVER_ROLES.includes(role)) return { profile, items: [], fallback: [] };
+    if (typeof EAS_DB === 'undefined' || !EAS_DB.fetchPendingApprovals) return { profile, items: [], fallback: [] };
     try {
       const items = await EAS_DB.fetchPendingApprovals(role, profile.practice, profile.id);
-      return { profile, items: items || [] };
+      // Sector SPOC: actionable fallback subset is split out (§10.4).
+      let fallback = [];
+      if (role === 'sector_spoc' && profile.sector_id && EAS_DB.fetchSectorFallbackQueue) {
+        try {
+          fallback = await EAS_DB.fetchSectorFallbackQueue(profile.sector_id) || [];
+        } catch (e) {
+          console.warn('fetchSectorFallbackQueue error:', e?.message || e);
+        }
+      }
+      // Pipeline list = items minus the fallback subset (avoid duplicate render).
+      const fbIds = new Set(fallback.map(r => r.id));
+      const pipeline = (items || []).filter(r => !fbIds.has(r.id));
+      return { profile, items: pipeline, fallback };
     } catch (err) {
       console.warn('ApprovalsModal fetch error:', err?.message || err);
-      return { profile, items: [] };
+      return { profile, items: [], fallback: [] };
     }
   }
 
@@ -102,11 +115,36 @@ const ApprovalsModal = (() => {
     `;
   }
 
-  function buildModal(profile, items) {
+  function buildModal(profile, items, fallback = []) {
     const MAX_ROWS = 5;
-    const shown = items.slice(0, MAX_ROWS);
-    const extra = Math.max(0, items.length - MAX_ROWS);
+    const isSector = profile?.role === 'sector_spoc';
     const approvalsUrl = 'index.html#approvals';
+
+    // Sector SPOC: render two sections — actionable fallback first, then read-only pipeline.
+    const fallbackShown = fallback.slice(0, MAX_ROWS);
+    const fallbackExtra = Math.max(0, fallback.length - MAX_ROWS);
+    const pipelineShown = items.slice(0, MAX_ROWS);
+    const pipelineExtra = Math.max(0, items.length - MAX_ROWS);
+    const total = (isSector ? fallback.length : 0) + items.length;
+
+    const intro = isSector
+      ? `You have <strong>${fallback.length}</strong> sector-fallback item${fallback.length === 1 ? '' : 's'} to action and <strong>${items.length}</strong> in your sector pipeline (read-only).`
+      : `You have <strong>${items.length}</strong> submission${items.length === 1 ? '' : 's'} waiting for your review.`;
+
+    const fallbackBlock = isSector && fallback.length ? `
+      <div class="approvals-section-title" style="font-size:13px;font-weight:600;margin:8px 0 4px;color:#c0392b;">Action required (sector fallback)</div>
+      ${fallbackShown.map(rowHtml).join('')}
+      ${fallbackExtra > 0 ? `<div class="approvals-more">+ ${fallbackExtra} more</div>` : ''}
+    ` : '';
+
+    const pipelineTitle = isSector
+      ? `<div class="approvals-section-title" style="font-size:13px;font-weight:600;margin:14px 0 4px;color:var(--text-muted,#666);">Sector pipeline (read-only)</div>`
+      : '';
+    const pipelineBlock = items.length ? `
+      ${pipelineTitle}
+      ${pipelineShown.map(rowHtml).join('')}
+      ${pipelineExtra > 0 ? `<div class="approvals-more">+ ${pipelineExtra} more in your queue</div>` : ''}
+    ` : '';
 
     const wrap = document.createElement('div');
     wrap.className = 'events-modal-backdrop approvals-modal-backdrop';
@@ -115,15 +153,13 @@ const ApprovalsModal = (() => {
     wrap.innerHTML = `
       <div class="events-modal approvals-modal" role="document">
         <div class="events-modal-header">
-          <h2>📝 Pending Approvals <span class="events-badge-pill">${items.length}</span></h2>
+          <h2>📝 Pending Approvals <span class="events-badge-pill">${total}</span></h2>
           <button class="events-modal-close" aria-label="Close" data-action="close-modal">✕</button>
         </div>
         <div class="events-modal-body">
-          <div class="approvals-intro">
-            You have <strong>${items.length}</strong> submission${items.length === 1 ? '' : 's'} waiting for your review.
-          </div>
-          ${shown.map(rowHtml).join('')}
-          ${extra > 0 ? `<div class="approvals-more">+ ${extra} more in your queue</div>` : ''}
+          <div class="approvals-intro">${intro}</div>
+          ${fallbackBlock}
+          ${pipelineBlock}
         </div>
         <div class="events-modal-footer">
           <button class="ev-btn ev-btn-ghost" data-action="dismiss-today">Dismiss for today</button>
@@ -177,15 +213,16 @@ const ApprovalsModal = (() => {
   async function openForCurrentUser({ auto = false } = {}) {
     if (auto && _opened) return;
     _opened = true;
-    const { profile, items } = await fetchQueue();
+    const { profile, items, fallback } = await fetchQueue();
     if (!profile) return;
     if (!APPROVER_ROLES.includes(profile.role)) return;
-    if (items.length === 0) return;
+    const total = (items?.length || 0) + (fallback?.length || 0);
+    if (total === 0) return;
     if (auto && isDismissedToday(profile.id)) return;
 
     const existing = document.querySelector('.approvals-modal-backdrop');
     if (existing) existing.remove();
-    const wrap = buildModal(profile, items);
+    const wrap = buildModal(profile, items || [], fallback || []);
     document.body.appendChild(wrap);
     attachHandlers(wrap, profile);
   }
