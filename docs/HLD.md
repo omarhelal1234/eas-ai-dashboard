@@ -409,8 +409,10 @@ End User Browser ←──HTTPS──→ Supabase Cloud API
 | Phase 6 | PDF export, forecasting, accessibility, dark/light mode | ✅ Complete |
 | Phase 7-9 | Export Center, AI Approval Workflow, Licensed Tool Tracking | ✅ Complete |
 | Phase 10 | IDE Task Logger: VS Code extension + Edge Function API | 🚧 In Progress |
-| Org-Hierarchy Phase 1 | Sectors table above departments, sector_spoc role, sector-aware RLS, email-driven auto-promote, org rollup RPCs (sql/033-039) | ✅ Complete (local) — pending live deploy |
-| Org-Hierarchy Phase 2-4 | Signup cascade UI, admin tree, drill-down dashboards, leaderboards, polish | ⏳ Pending |
+| Org-Hierarchy Phase 1 | Sectors table above departments, sector_spoc role, sector-aware RLS, email-driven auto-promote, org rollup RPCs (sql/033-040) | ✅ Complete + live |
+| Org-Hierarchy Phase 2 | Cascading sector→unit→practice signup, profile-completion modal, admin org tree with scoped self-service (sql/041, js/hierarchy.js + admin-org-tree.js) | ✅ Complete + live |
+| Org-Hierarchy Phase 3 | Drill-down landing, leaderboard tabs (sector/unit/practice), sector_spoc deep-link, security hardening from codex review (sql/042-043) | ✅ Complete + live |
+| Org-Hierarchy Phase 4 | complete_profile RPC, move_unit/move_practice RPCs, sectors.brand_color, drag-to-reparent, Migration Orphans admin page (sql/044) | ✅ Complete + live |
 
 ---
 

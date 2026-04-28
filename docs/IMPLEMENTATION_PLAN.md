@@ -27,7 +27,10 @@
 | 2.6 | Apr 13, 2026 | Omar Ibrahim | Phase 10 — IDE Task Logger: VS Code extension + Edge Function API for logging tasks from IDE |
 | 2.7 | Apr 14, 2026 | Omar Ibrahim | Phase 11 — Data Sync: Tracker sheet + Grafana IDE usage recurring sync process |
 | 2.8 | Apr 16, 2026 | Omar Ibrahim | Phase 12 — Featured Spotlight Banner + Global Likes System |
-| 2.9 | Apr 28, 2026 | Omar Ibrahim | Org-Hierarchy Expansion **Phase 1** (Foundation: DB + Auth) — sectors table, sector_spoc role, sector-aware RLS, denormalised sector_id, email-driven auto-promotion, org rollup RPCs (sql/033-039). Phases 2-4 (signup cascade, drill-down, leaderboards, polish) pending. |
+| 2.9 | Apr 28, 2026 | Omar Ibrahim | Org-Hierarchy Expansion **Phase 1** (Foundation: DB + Auth) — sectors table, sector_spoc role, sector-aware RLS, denormalised sector_id, email-driven auto-promotion, org rollup RPCs (sql/033-040). |
+| 2.10 | Apr 29, 2026 | Omar Ibrahim | Org-Hierarchy Expansion **Phase 2** (Cascading signup, profile modal, admin tree, scoped RLS — sql/041, js/hierarchy.js, js/profile-completion-modal.js, js/admin-org-tree.js). |
+| 2.11 | Apr 29, 2026 | Omar Ibrahim | Org-Hierarchy Expansion **Phase 3** (Drill-down landing, sector/unit/practice leaderboard tabs, sector_spoc deep-link; security hardening from codex review — sql/042-043, js/org-drilldown.js, js/org-leaderboard.js). |
+| 2.12 | Apr 29, 2026 | Omar Ibrahim | Org-Hierarchy Expansion **Phase 4** (complete_profile RPC, move_unit/move_practice RPCs, sectors.brand_color, drag-to-reparent, Migration Orphans admin page, codex-review fallout fixes — sql/044, js/admin-orphans.js + rewrites). All 4 phases of the org-hierarchy expansion complete and applied live to apcfnzbiylhgiutcjigg. |
 
 ---
 

@@ -28,17 +28,17 @@ const EAS_OrgDrilldown = (() => {
     return v >= 100 ? `${Math.round(v).toLocaleString()}h` : `${v.toFixed(1)}h`;
   }
 
-  function tile({ title, subtitle, contributors, tasks, hours, onClick, accentColor }) {
+  function tile({ title, subtitle, contributors, tasks, hours, navHash, accentColor }) {
     const safeTitle = escapeHtml(title);
     const safeSub = escapeHtml(subtitle || '');
-    const c = accentColor || '#7c3aed';
+    // Constrain accentColor to a hex literal so a malicious sector.brand_color
+    // can't break out of the style attribute. Default to brand purple.
+    const safeColor = (typeof accentColor === 'string' && /^#[0-9A-Fa-f]{6}$/.test(accentColor))
+      ? accentColor : '#7c3aed';
     return `
       <div class="org-tile" role="button" tabindex="0"
-           style="cursor:pointer;background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-left:4px solid ${c};border-radius:10px;padding:16px;transition:transform 0.15s, box-shadow 0.15s;"
-           onclick="${onClick}"
-           onkeypress="if(event.key==='Enter')${onClick}"
-           onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 16px rgba(0,0,0,0.08)';"
-           onmouseleave="this.style.transform='';this.style.boxShadow='';">
+           data-nav-hash="${escapeHtml(navHash || '')}"
+           style="cursor:pointer;background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-left:4px solid ${safeColor};border-radius:10px;padding:16px;transition:transform 0.15s, box-shadow 0.15s;">
         <div style="font-weight:600;font-size:15px;color:var(--text-primary,#111);">${safeTitle}</div>
         ${safeSub ? `<div style="font-size:12px;color:var(--text-muted,#666);margin-top:2px;">${safeSub}</div>` : ''}
         <div style="display:flex;gap:18px;margin-top:14px;font-size:12px;color:var(--text-muted,#444);">
@@ -48,6 +48,34 @@ const EAS_OrgDrilldown = (() => {
         </div>
       </div>
     `;
+  }
+
+  // Event delegation: tile click + Enter key (single listener bound once below).
+  let _delegationWired = false;
+  function ensureDelegation(root) {
+    if (_delegationWired || !root) return;
+    _delegationWired = true;
+    root.addEventListener('click', (ev) => {
+      const tileEl = ev.target.closest('.org-tile[data-nav-hash]');
+      if (!tileEl) return;
+      const hash = tileEl.getAttribute('data-nav-hash');
+      if (hash) window.location.hash = hash;
+    });
+    root.addEventListener('keypress', (ev) => {
+      if (ev.key !== 'Enter') return;
+      const tileEl = ev.target.closest('.org-tile[data-nav-hash]');
+      if (!tileEl) return;
+      const hash = tileEl.getAttribute('data-nav-hash');
+      if (hash) window.location.hash = hash;
+    });
+    root.addEventListener('mouseover', (ev) => {
+      const tileEl = ev.target.closest('.org-tile');
+      if (tileEl) { tileEl.style.transform = 'translateY(-2px)'; tileEl.style.boxShadow = '0 6px 16px rgba(0,0,0,0.08)'; }
+    });
+    root.addEventListener('mouseout', (ev) => {
+      const tileEl = ev.target.closest('.org-tile');
+      if (tileEl) { tileEl.style.transform = ''; tileEl.style.boxShadow = ''; }
+    });
   }
 
   function breadcrumb({ sectorName, unitName, sectorId }) {
@@ -88,8 +116,8 @@ const EAS_OrgDrilldown = (() => {
       contributors: r.contributors,
       tasks: r.tasks,
       hours: r.hours_saved,
-      onClick: `window.location.hash='org/${r.sector_id}'`,
-      accentColor: '#7c3aed'
+      navHash: `org/${r.sector_id}`,
+      accentColor: r.brand_color || '#7c3aed'
     })).join('');
     root.innerHTML = breadcrumb({}) + gridContainer(tiles);
   }
@@ -116,7 +144,7 @@ const EAS_OrgDrilldown = (() => {
       contributors: r.contributors,
       tasks: r.tasks,
       hours: r.hours_saved,
-      onClick: `window.location.hash='org/${sectorId}/${r.department_id}'`,
+      navHash: `org/${sectorId}/${r.department_id}`,
       accentColor: '#2563eb'
     })).join('');
     root.innerHTML = breadcrumb({ sectorName: sec.name }) + gridContainer(tiles);
@@ -138,7 +166,8 @@ const EAS_OrgDrilldown = (() => {
       return;
     }
     // Practice tiles use the existing get_org_leaderboard at practice level for tasks/hours.
-    const { data: lbRows } = await sb.rpc('get_org_leaderboard', { p_level: 'practice', p_quarter_id: _quarterId });
+    const { data: lbRows, error: lbErr } = await sb.rpc('get_org_leaderboard', { p_level: 'practice', p_quarter_id: _quarterId });
+    if (lbErr) console.warn('renderPracticeGrid: get_org_leaderboard failed:', lbErr.message);
     const lbBy = new Map((lbRows || []).map(r => [r.scope_id, r]));
     const tiles = practices.map(p => {
       const stats = lbBy.get(p.id) || {};
@@ -148,7 +177,7 @@ const EAS_OrgDrilldown = (() => {
         contributors: stats.contributors || 0,
         tasks: stats.tasks || 0,
         hours: stats.hours_saved || 0,
-        onClick: `window.location.hash='practice/${p.id}'`,
+        navHash: `practice/${p.id}`,
         accentColor: '#059669'
       });
     }).join('');
@@ -161,6 +190,7 @@ const EAS_OrgDrilldown = (() => {
     const root = (typeof rootEl === 'string') ? document.getElementById(rootEl) : rootEl;
     if (!root) return;
     if (opts.quarterId !== undefined) _quarterId = opts.quarterId || null;
+    ensureDelegation(root);
 
     // Parse hash: org / org/<sid> / org/<sid>/<uid>
     const h = (window.location.hash || '').replace(/^#/, '');

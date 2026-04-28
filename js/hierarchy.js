@@ -7,9 +7,12 @@
 const EAS_Hierarchy = (() => {
   const sb = (typeof getSupabaseClient === 'function') ? getSupabaseClient() : null;
 
-  let _sectorsCache = null;
-  let _depsCache    = new Map(); // sector_id → departments[]
-  let _pracsCache   = new Map(); // department_id → practices[]
+  // Cache keys include activeOnly so that a fetch with activeOnly=true and a fetch
+  // with activeOnly=false don't contaminate each other (codex review: original cache
+  // returned stale-scope rows depending on which call won the race).
+  const _sectorsCache = new Map(); // 'active'|'all' → rows[]
+  const _depsCache    = new Map(); // `${sectorId}:${active|all}` → rows[]
+  const _pracsCache   = new Map(); // `${deptId}:${active|all}` → rows[]
 
   function _client() {
     if (!sb) throw new Error('EAS_Hierarchy: Supabase client not available');
@@ -19,18 +22,20 @@ const EAS_Hierarchy = (() => {
   // ---------- Reads ----------
 
   async function fetchSectors({ activeOnly = true } = {}) {
-    if (_sectorsCache) return _sectorsCache;
-    let q = _client().from('sectors').select('id, name, sector_spoc_name, sector_spoc_email, is_active').order('name');
+    const key = activeOnly ? 'active' : 'all';
+    if (_sectorsCache.has(key)) return _sectorsCache.get(key);
+    let q = _client().from('sectors').select('id, name, sector_spoc_name, sector_spoc_email, is_active, brand_color').order('name');
     if (activeOnly) q = q.eq('is_active', true);
     const { data, error } = await q;
     if (error) { console.error('fetchSectors error:', error); return []; }
-    _sectorsCache = data || [];
-    return _sectorsCache;
+    _sectorsCache.set(key, data || []);
+    return data || [];
   }
 
   async function fetchDepartmentsBySector(sectorId, { activeOnly = true } = {}) {
     if (!sectorId) return [];
-    if (_depsCache.has(sectorId)) return _depsCache.get(sectorId);
+    const key = `${sectorId}:${activeOnly ? 'active' : 'all'}`;
+    if (_depsCache.has(key)) return _depsCache.get(key);
     let q = _client().from('departments')
       .select('id, name, sector_id, unit_spoc_name, unit_spoc_email, is_active')
       .eq('sector_id', sectorId)
@@ -38,13 +43,14 @@ const EAS_Hierarchy = (() => {
     if (activeOnly) q = q.eq('is_active', true);
     const { data, error } = await q;
     if (error) { console.error('fetchDepartmentsBySector error:', error); return []; }
-    _depsCache.set(sectorId, data || []);
+    _depsCache.set(key, data || []);
     return data || [];
   }
 
   async function fetchPracticesByDepartment(deptId, { activeOnly = true } = {}) {
     if (!deptId) return [];
-    if (_pracsCache.has(deptId)) return _pracsCache.get(deptId);
+    const key = `${deptId}:${activeOnly ? 'active' : 'all'}`;
+    if (_pracsCache.has(key)) return _pracsCache.get(key);
     let q = _client().from('practices')
       .select('id, name, department_id, practice_spoc_email, is_active')
       .eq('department_id', deptId)
@@ -52,7 +58,7 @@ const EAS_Hierarchy = (() => {
     if (activeOnly) q = q.eq('is_active', true);
     const { data, error } = await q;
     if (error) { console.error('fetchPracticesByDepartment error:', error); return []; }
-    _pracsCache.set(deptId, data || []);
+    _pracsCache.set(key, data || []);
     return data || [];
   }
 
@@ -83,7 +89,7 @@ const EAS_Hierarchy = (() => {
   }
 
   function clearCache() {
-    _sectorsCache = null;
+    _sectorsCache.clear();
     _depsCache.clear();
     _pracsCache.clear();
   }
@@ -240,9 +246,14 @@ const EAS_Hierarchy = (() => {
   // Scoped writes are enforced by RLS + the admin/sector_spoc/dept_spoc role.
   // These helpers just wrap the table writes; the DB rejects unauthorised callers.
 
-  async function upsertSector({ id, name, sector_spoc_name, sector_spoc_email, is_active }) {
-    const payload = { name, sector_spoc_name: sector_spoc_name || '', sector_spoc_email: sector_spoc_email || null };
+  async function upsertSector({ id, name, sector_spoc_name, sector_spoc_email, is_active, brand_color }) {
+    const payload = {
+      name,
+      sector_spoc_name: sector_spoc_name || '',
+      sector_spoc_email: sector_spoc_email || null
+    };
     if (typeof is_active === 'boolean') payload.is_active = is_active;
+    if (typeof brand_color === 'string') payload.brand_color = brand_color || null;
     if (id) {
       const { data, error } = await _client().from('sectors').update(payload).eq('id', id).select().single();
       if (!error) clearCache();
@@ -252,6 +263,29 @@ const EAS_Hierarchy = (() => {
       if (!error) clearCache();
       return { data, error };
     }
+  }
+
+  /**
+   * Reparent a unit to a new sector. Goes through the move_unit RPC (sql/044) which
+   * enforces both source AND destination scope server-side for sector_spoc.
+   */
+  async function moveUnit(unitId, newSectorId) {
+    const { data, error } = await _client().rpc('move_unit', {
+      p_unit_id: unitId, p_new_sector_id: newSectorId
+    });
+    if (!error) clearCache();
+    return { data, error };
+  }
+
+  /**
+   * Reparent a practice to a new unit. Goes through the move_practice RPC (sql/044).
+   */
+  async function movePractice(practiceId, newDepartmentId) {
+    const { data, error } = await _client().rpc('move_practice', {
+      p_practice_id: practiceId, p_new_department_id: newDepartmentId
+    });
+    if (!error) clearCache();
+    return { data, error };
   }
 
   async function upsertDepartment({ id, name, sector_id, unit_spoc_name, unit_spoc_email, is_active }) {
@@ -292,6 +326,8 @@ const EAS_Hierarchy = (() => {
     validateCascade,
     upsertSector,
     upsertDepartment,
-    upsertPractice
+    upsertPractice,
+    moveUnit,
+    movePractice
   };
 })();

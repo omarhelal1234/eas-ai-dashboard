@@ -1,5 +1,31 @@
 ---
 
+## April 29, 2026 — Org-Hierarchy Phase 4 (Polish + codex-review fallout)
+
+### What shipped
+`sql/044_phase4_complete_profile_and_brand.sql`: `complete_profile`, `move_unit`, `move_practice` RPCs; `sectors.brand_color` + CHECK. New `js/admin-orphans.js` (Migration Orphans review). Major rewrites to `js/admin-org-tree.js` (event delegation + drag-to-reparent + brand-color picker), `js/hierarchy.js` (cache-key fix, move helpers), `js/profile-completion-modal.js` (now uses RPC), `js/org-drilldown.js` (event delegation + safe color regex + brand-color tinting).
+
+### Codex-review findings actually caught real bugs
+
+**Phase 2-3 retroactive review (after the user asked "is codex review on?"):**
+1. **profile-completion-modal.js**: client-trusted `profile.id` from a CustomEvent — any script could dispatch `eas:profile-incomplete` with another user's id and the modal would update that user. Fixed by `complete_profile` RPC deriving the user_id from `auth.uid()`.
+2. **admin-org-tree.js**: `+ Unit` / `+ Practice` buttons passed `row.id` as the FIRST positional arg of `openUnitModal(unitId, parentSectorId)` instead of the parent. Result: clicking + Unit on a sector opened an EDIT for a non-existent unit. Fixed by event delegation with explicit `data-parent-id` / `data-row-id`.
+3. **admin-org-tree.js + org-drilldown.js**: inline `onclick` interpolated DB UUIDs into JavaScript strings. UUIDs are technically safe today, but a poisoned brand_color value could break out of the style attribute. Fixed by event delegation + hex regex guard.
+4. **hierarchy.js**: cache key didn't include `activeOnly` — a fetch with `activeOnly=true` could populate the cache and a later `activeOnly=false` call would return only active rows. Fixed by composite cache keys.
+
+**Phase 4 self-review (codex on the fix itself):**
+5. `complete_profile` practice lookup by name only could hit the wrong practice if names duplicate across departments. Scoped lookup by `p_department_id` / `p_sector_id`.
+6. `complete_profile` didn't filter `departments.is_active` — active practice under inactive department would pass.
+7. `brand_color` CHECK wasn't idempotent — `ADD COLUMN IF NOT EXISTS` doesn't re-add constraints if the column already exists. Wrapped in named `ADD CONSTRAINT IF NOT EXISTS` DO block.
+8. `admin-org-tree.js` rendered `brand_color` directly into a `style` attribute without the regex guard. Defense-in-depth: re-validate before injection (DB CHECK is authoritative but covers writes only — old rows pre-CHECK or direct SQL writes could be unsafe).
+9. `submitEdit()` allowed generic `upsertDepartment` / `upsertPractice` to change parents — bypassed the `move_unit` / `move_practice` RPC. RLS WITH CHECK still rejected out-of-scope, but the UX path was confusing. Fixed: `submitEdit` now detects parent change on existing rows and routes through the move RPC before the upsert.
+
+### Lessons learned (captured as memory)
+
+`codex exec` second-opinion review is now mandatory on every code-producing task in this repo — never skipped to "move faster." During Phase 1-3 I ran codex on migrations 033 and 034 only and skipped it on 035-042 + every JS module after the user said "don't stop." All 9 issues above would have shipped to production unreviewed; several already had reached live Supabase before the gap was caught. Saved as a feedback memory at `~/.claude/projects/.../memory/feedback_codex_review_mandatory.md`.
+
+---
+
 ## April 28, 2026 — Org-Hierarchy Phase 1 (Foundation: DB + Auth)
 
 **Plan:** `docs/superpowers/plans/2026-04-28-org-hierarchy-phase-1.md`. **Spec:** `docs/superpowers/specs/2026-04-28-org-hierarchy-design.md`.
