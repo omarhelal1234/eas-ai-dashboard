@@ -54,18 +54,30 @@ const EAS_OrgLeaderboard = (() => {
     `;
   }
 
+  function fmtPct(v) {
+    if (v == null || isNaN(Number(v))) return '—';
+    return `${Number(v).toFixed(1)}%`;
+  }
+  function fmtNum(v) {
+    if (v == null || isNaN(Number(v))) return '—';
+    return Number(v).toFixed(2);
+  }
+
   function tableHtml(rows, level) {
     if (!rows?.length) {
       return '<div style="padding:32px;text-align:center;color:var(--text-muted,#666);">No data yet at this level.</div>';
     }
+    const th = (label, align='left') => `<th style="padding:10px 12px;text-align:${align};font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted,#666);">${label}</th>`;
     const head = `
       <thead>
-        <tr style="background:var(--bg-section,#f9fafb);text-align:left;">
-          <th style="padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted,#666);">Rank</th>
+        <tr style="background:var(--bg-section,#f9fafb);">
+          ${th('Rank')}
           <th style="padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted,#666);text-transform:capitalize;">${level}</th>
-          <th style="padding:10px 12px;text-align:right;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted,#666);">Contributors</th>
-          <th style="padding:10px 12px;text-align:right;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted,#666);">Tasks</th>
-          <th style="padding:10px 12px;text-align:right;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted,#666);">Hours saved</th>
+          ${th('Contributors','right')}
+          ${th('Tasks','right')}
+          ${th('Hours saved','right')}
+          ${th('Efficiency','right')}
+          ${th('Quality avg','right')}
         </tr>
       </thead>
     `;
@@ -76,6 +88,8 @@ const EAS_OrgLeaderboard = (() => {
         <td style="padding:10px 12px;text-align:right;">${r.contributors ?? 0}</td>
         <td style="padding:10px 12px;text-align:right;">${r.tasks ?? 0}</td>
         <td style="padding:10px 12px;text-align:right;font-weight:600;">${fmtHours(r.hours_saved)}</td>
+        <td style="padding:10px 12px;text-align:right;">${fmtPct(r.efficiency_pct)}</td>
+        <td style="padding:10px 12px;text-align:right;">${fmtNum(r.quality_avg)}</td>
       </tr>
     `).join('');
     return `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:14px;">${head}<tbody>${body}</tbody></table></div>`;

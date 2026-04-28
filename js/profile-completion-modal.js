@@ -91,7 +91,7 @@
     });
 
     modal.querySelector('#pc-save-btn').addEventListener('click', async () => {
-      const check = EAS_Hierarchy.validateCascade(sectorEl, unitEl, practiceEl);
+      const check = await EAS_Hierarchy.validateCascade(sectorEl, unitEl, practiceEl);
       if (!check.ok) { showError(modal, check.error); return; }
 
       const btn = modal.querySelector('#pc-save-btn');

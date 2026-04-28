@@ -174,7 +174,13 @@ const OrgTree = (() => {
   }
 
   // ---------- Drag-to-reparent ----------
+  // Listeners are bound ONCE per container; render() replaces innerHTML but
+  // keeps the same container DOM node, so we guard against re-binding to
+  // avoid duplicate confirms/RPC dispatches (codex Phase 4 [HIGH]).
+  let _dragInflight = false;
   function wireDragDrop(container) {
+    if (container.__easDragWired) return;
+    container.__easDragWired = true;
     let _drag = null; // { kind, id, parent_id, sector_id }
 
     container.addEventListener('dragstart', (e) => {
@@ -194,6 +200,8 @@ const OrgTree = (() => {
     container.addEventListener('dragend', (e) => {
       const row = e.target.closest('[data-drag-id]');
       if (row) row.style.opacity = '';
+      // Clear any drop-target outlines left behind by dragover/dragleave races.
+      container.querySelectorAll('[data-drop-target]').forEach(el => el.style.outline = '');
       _drag = null;
     });
 
@@ -221,6 +229,8 @@ const OrgTree = (() => {
       drop.style.outline = '';
       const dropId = drop.getAttribute('data-drop-id');
       if (!dropId || dropId === _drag.parent_id) { _drag = null; return; }
+      if (_dragInflight) { _drag = null; return; }
+      _dragInflight = true;
 
       try {
         let res;
@@ -240,6 +250,7 @@ const OrgTree = (() => {
         alert('Move failed: ' + (err?.message || err));
       } finally {
         _drag = null;
+        _dragInflight = false;
       }
     });
   }

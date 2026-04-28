@@ -387,27 +387,31 @@ body {
         // 2. If no pending data, try to get from auth user_metadata (auto-confirm flow)
         if (!signupData && data.user.user_metadata) {
           const meta = data.user.user_metadata;
-          if (meta.full_name && meta.practice) {
+          if (meta.full_name && (meta.practice || meta.sector_id)) {
             signupData = {
               name: meta.full_name,
               email: data.user.email,
-              practice: meta.practice,
+              practice: meta.practice || null,
               skill: meta.skill || '',
-              has_copilot: meta.has_copilot === true
+              has_copilot: meta.has_copilot === true,
+              sector_id: meta.sector_id || null,
+              department_id: meta.department_id || null
             };
           }
         }
-        
+
         // 3. If we have signup data from either source, complete the profile
         if (signupData) {
           try {
             const { data: rpcResult, error: rpcErr } = await sb.rpc('signup_contributor', {
-              p_auth_id:     data.user.id,
-              p_name:        signupData.name,
-              p_email:       signupData.email,
-              p_practice:    signupData.practice,
-              p_skill:       signupData.skill,
-              p_has_copilot: signupData.has_copilot
+              p_auth_id:       data.user.id,
+              p_name:          signupData.name,
+              p_email:         signupData.email,
+              p_practice:      signupData.practice || null,
+              p_skill:         signupData.skill,
+              p_has_copilot:   signupData.has_copilot,
+              p_sector_id:     signupData.sector_id || null,
+              p_department_id: signupData.department_id || null
             });
 
             if (!rpcErr && rpcResult && rpcResult.success) {

@@ -113,6 +113,11 @@ const EAS_Hierarchy = (() => {
       throw new Error('attachCascade: sectorEl, unitEl, practiceEl required');
     }
 
+    // Sequence numbers protect against late-arriving fetches stomping on a
+    // newer selection (codex Phase 2 [MED]).
+    let _sectorSeq = 0;
+    let _unitSeq = 0;
+
     const fire = () => {
       if (typeof onChange === 'function') {
         onChange({
@@ -156,10 +161,12 @@ const EAS_Hierarchy = (() => {
     // Step 2: when sector changes, populate units
     async function onSectorChange() {
       const sid = sectorEl.value;
+      const seq = ++_sectorSeq;
       reset(unitEl, 'Loading units…');
       reset(practiceEl, 'Select unit first…');
       if (!sid) { fire(); return; }
       const units = await fetchDepartmentsBySector(sid);
+      if (seq !== _sectorSeq) return; // stale
       if (!units.length) {
         lockNA(unitEl, 'N/A — sector has no units');
         lockNA(practiceEl, 'N/A — sector has no practices');
@@ -179,6 +186,7 @@ const EAS_Hierarchy = (() => {
     // Step 3: when unit changes, populate practices
     async function onUnitChange() {
       const uid = unitEl.value;
+      const seq = ++_unitSeq;
       reset(practiceEl, 'Loading practices…');
       if (!uid || uid === '__NA__') {
         lockNA(practiceEl, 'N/A — unit has no practices');
@@ -186,6 +194,7 @@ const EAS_Hierarchy = (() => {
         return;
       }
       const pracs = await fetchPracticesByDepartment(uid);
+      if (seq !== _unitSeq) return; // stale
       if (!pracs.length) {
         lockNA(practiceEl, 'N/A — unit has no practices');
         fire();
@@ -220,8 +229,12 @@ const EAS_Hierarchy = (() => {
   /**
    * Validate that the cascade selection is internally consistent + all required levels are picked.
    * Returns { ok: boolean, error: string|null, sectorId, departmentId, practice }.
+   *
+   * Verifies parent-child consistency by re-checking the picked unit's sector_id
+   * and the picked practice's department_id against current cache. The server
+   * (complete_profile + signup_contributor) re-validates — this is UX only.
    */
-  function validateCascade(sectorEl, unitEl, practiceEl) {
+  async function validateCascade(sectorEl, unitEl, practiceEl) {
     const sectorId = sectorEl?.value || null;
     if (!sectorId) return { ok: false, error: 'Please select your sector.' };
 
@@ -231,13 +244,25 @@ const EAS_Hierarchy = (() => {
     const departmentId = unitVal === '__NA__' ? null : unitVal || null;
     const practice     = practiceVal === '__NA__' ? null : practiceVal || null;
 
-    // Unit dropdown must be either a real unit, an N/A lock (which means no units exist), or empty (must pick).
     if (!unitVal && unitEl?.options?.length > 1) {
       return { ok: false, error: 'Please select your unit.' };
     }
-    // Practice dropdown likewise.
     if (!practiceVal && practiceEl?.options?.length > 1) {
       return { ok: false, error: 'Please select your practice.' };
+    }
+
+    // Parent-child chain consistency (§7.3). Cheap cache lookups.
+    if (departmentId) {
+      const units = await fetchDepartmentsBySector(sectorId, { activeOnly: true });
+      if (!units.some(u => u.id === departmentId)) {
+        return { ok: false, error: 'Selected unit does not belong to this sector.' };
+      }
+    }
+    if (practice && departmentId) {
+      const pracs = await fetchPracticesByDepartment(departmentId, { activeOnly: true });
+      if (!pracs.some(p => p.name === practice)) {
+        return { ok: false, error: 'Selected practice does not belong to this unit.' };
+      }
     }
     return { ok: true, error: null, sectorId, departmentId, practice };
   }

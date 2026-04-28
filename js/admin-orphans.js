@@ -42,10 +42,15 @@ const OrgOrphans = (() => {
         <td style="padding:8px 12px;font-family:monospace;font-size:11px;">${escapeHtml(o.department_id || '—')}</td>
         <td style="padding:8px 12px;font-size:12px;color:var(--text-muted,#666);">${escapeHtml(o.reason || '')}</td>
         <td style="padding:8px 12px;">
-          <select data-orphan-sector style="padding:4px;font-family:inherit;">
-            <option value="">— pick sector —</option>
-            ${opts}
-          </select>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <select data-orphan-sector style="padding:4px;font-family:inherit;">
+              <option value="">— pick sector —</option>
+              ${opts}
+            </select>
+            <select data-orphan-unit style="padding:4px;font-family:inherit;" disabled>
+              <option value="">— optional unit —</option>
+            </select>
+          </div>
         </td>
         <td style="padding:8px 12px;">
           <button class="btn btn-sm" data-orphan-action="resolve" data-orphan-id="${escapeAttr(o.id)}" style="padding:4px 10px;font-size:12px;">Resolve</button>
@@ -93,11 +98,16 @@ const OrgOrphans = (() => {
     `;
   }
 
+  // Tables that have a department_id column we can also assign.
+  const TABLES_WITH_DEPT = new Set(['users','tasks','accomplishments','copilot_users','projects']);
+
   async function resolve(orphanId) {
     const row = document.querySelector(`tr[data-orphan-id="${CSS.escape(String(orphanId))}"]`);
     if (!row) return;
     const sectorEl = row.querySelector('[data-orphan-sector]');
+    const unitEl   = row.querySelector('[data-orphan-unit]');
     const sectorId = sectorEl?.value;
+    const unitId   = unitEl?.value || null;
     if (!sectorId) { alert('Pick a sector first.'); return; }
 
     const orphan = _orphans.find(o => String(o.id) === String(orphanId));
@@ -108,7 +118,6 @@ const OrgOrphans = (() => {
       return;
     }
 
-    // Whitelist source tables — RLS will also reject anything else, but this saves a round-trip.
     const allowed = new Set(['users','tasks','accomplishments','copilot_users','projects','submission_approvals','use_cases','prompt_library','practice_spoc','departments']);
     if (!allowed.has(orphan.source_table)) {
       alert('Unsupported source table: ' + orphan.source_table);
@@ -119,16 +128,37 @@ const OrgOrphans = (() => {
     btn.disabled = true; btn.textContent = '…';
 
     try {
-      const { error } = await sb
+      const patch = { sector_id: sectorId };
+      if (unitId && TABLES_WITH_DEPT.has(orphan.source_table)) {
+        // Revalidate at resolve time: the unit must currently belong to the
+        // selected sector. Guards against tampered DOM where the cascade
+        // dropdown was bypassed and a stale unit id was injected.
+        const units = await EAS_Hierarchy.fetchDepartmentsBySector(sectorId, { activeOnly: true });
+        if (!units.some(u => u.id === unitId)) {
+          alert('Selected unit does not belong to the selected sector.');
+          btn.disabled = false; btn.textContent = 'Resolve';
+          return;
+        }
+        patch.department_id = unitId;
+      }
+      const { data: updated, error } = await sb
         .from(orphan.source_table)
-        .update({ sector_id: sectorId })
-        .eq('id', orphan.source_id);
+        .update(patch)
+        .eq('id', orphan.source_id)
+        .select('id');
       if (error) {
         alert('Failed to update ' + orphan.source_table + ': ' + error.message);
         btn.disabled = false; btn.textContent = 'Resolve';
         return;
       }
-      // Remove the orphan row (admin-only RLS allows DELETE).
+      // Refuse to delete the orphan if no row was actually updated — that means
+      // source_id was stale or RLS blocked the write. Keep the audit row so an
+      // operator can investigate.
+      if (!updated || updated.length === 0) {
+        alert('Source row not found or update was blocked by RLS. Orphan kept for review.');
+        btn.disabled = false; btn.textContent = 'Resolve';
+        return;
+      }
       await sb.from('migration_orphans').delete().eq('id', orphan.id);
       await render();
     } catch (e) {
@@ -138,11 +168,38 @@ const OrgOrphans = (() => {
   }
 
   async function dismiss(orphanId) {
-    if (!confirm('Dismiss this orphan without resolving? The source row will keep sector_id = NULL.')) return;
+    if (!confirm(
+      'Dismiss this orphan without resolving?\n\n' +
+      'WARNING: the source row will keep sector_id = NULL, which can fail the ' +
+      'hierarchy_anchor_chk if migration 036 VALIDATE is re-run. Only dismiss ' +
+      'if the source row has been deleted or is intentionally NULL.'
+    )) return;
     const { error } = await sb.from('migration_orphans').delete().eq('id', orphanId);
     if (error) { alert('Failed to dismiss: ' + error.message); return; }
     await render();
   }
+
+  // Cascade unit dropdown when sector changes.
+  document.addEventListener('change', async (ev) => {
+    const sectorEl = ev.target.closest('[data-orphan-sector]');
+    if (!sectorEl) return;
+    const row = sectorEl.closest('tr[data-orphan-id]');
+    const unitEl = row?.querySelector('[data-orphan-unit]');
+    if (!unitEl) return;
+    unitEl.innerHTML = '<option value="">— optional unit —</option>';
+    unitEl.disabled = true;
+    const sid = sectorEl.value;
+    if (!sid) return;
+    try {
+      const units = await EAS_Hierarchy.fetchDepartmentsBySector(sid, { activeOnly: true });
+      units.forEach(u => {
+        const o = document.createElement('option');
+        o.value = u.id; o.textContent = u.name;
+        unitEl.appendChild(o);
+      });
+      unitEl.disabled = units.length === 0;
+    } catch (_) {}
+  });
 
   document.addEventListener('click', (ev) => {
     const target = ev.target.closest('[data-orphan-action]');

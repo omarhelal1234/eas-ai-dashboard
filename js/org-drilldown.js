@@ -35,10 +35,14 @@ const EAS_OrgDrilldown = (() => {
     // can't break out of the style attribute. Default to brand purple.
     const safeColor = (typeof accentColor === 'string' && /^#[0-9A-Fa-f]{6}$/.test(accentColor))
       ? accentColor : '#7c3aed';
+    // Tiles without a navHash (e.g. practice leaves) render as info cards —
+    // no role=button, no cursor:pointer, no dead-link nav target.
+    const interactive = !!navHash;
+    const navAttr = interactive ? `role="button" tabindex="0" data-nav-hash="${escapeHtml(navHash)}"` : '';
+    const cursor = interactive ? 'cursor:pointer;' : '';
     return `
-      <div class="org-tile" role="button" tabindex="0"
-           data-nav-hash="${escapeHtml(navHash || '')}"
-           style="cursor:pointer;background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-left:4px solid ${safeColor};border-radius:10px;padding:16px;transition:transform 0.15s, box-shadow 0.15s;">
+      <div class="org-tile" ${navAttr}
+           style="${cursor}background:var(--bg-card,#fff);border:1px solid var(--border,#e5e7eb);border-left:4px solid ${safeColor};border-radius:10px;padding:16px;transition:transform 0.15s, box-shadow 0.15s;">
         <div style="font-weight:600;font-size:15px;color:var(--text-primary,#111);">${safeTitle}</div>
         ${safeSub ? `<div style="font-size:12px;color:var(--text-muted,#666);margin-top:2px;">${safeSub}</div>` : ''}
         <div style="display:flex;gap:18px;margin-top:14px;font-size:12px;color:var(--text-muted,#444);">
@@ -177,7 +181,8 @@ const EAS_OrgDrilldown = (() => {
         contributors: stats.contributors || 0,
         tasks: stats.tasks || 0,
         hours: stats.hours_saved || 0,
-        navHash: `practice/${p.id}`,
+        // Practice leaves are info-only — there is no per-practice detail page.
+        navHash: null,
         accentColor: '#059669'
       });
     }).join('');
