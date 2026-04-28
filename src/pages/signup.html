@@ -430,16 +430,23 @@ body {
       <p class="subtitle">Join the EAS AI Adoption program</p>
 
       <div class="form-group">
-        <label for="su-department">Department <span class="required">*</span></label>
-        <select id="su-department" required onchange="filterPracticesByDepartment()">
-          <option value="" disabled selected>Select your department...</option>
+        <label for="su-sector">Sector <span class="required">*</span></label>
+        <select id="su-sector" required>
+          <option value="" disabled selected>Loading sectors…</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="su-department">Unit / Department <span class="required">*</span></label>
+        <select id="su-department" required>
+          <option value="" disabled selected>Select sector first…</option>
         </select>
       </div>
 
       <div class="form-group">
         <label for="su-practice">Practice <span class="required">*</span></label>
         <select id="su-practice" required>
-          <option value="" disabled selected>Select department first...</option>
+          <option value="" disabled selected>Select unit first…</option>
         </select>
       </div>
 
@@ -571,6 +578,7 @@ body {
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../../js/config.js"></script>
+<script src="../../js/hierarchy.js?v=20260429a"></script>
 <script>
   const sb = getSupabaseClient();
   let hasCopilot = null;
@@ -581,60 +589,23 @@ body {
     if (session) window.location.href = 'index.html';
   })();
 
-  // ---- Load departments & practices from DB ----
-  let _allPractices = [];
+  // ---- Cascading sector → unit → practice dropdowns (Phase 2) ----
+  // Backed by EAS_Hierarchy module (js/hierarchy.js).
+  let _selection = { sectorId: null, departmentId: null, practice: null };
 
   (async () => {
-    const deptSel = document.getElementById('su-department');
-    const pracSel = document.getElementById('su-practice');
-    const { data, error } = await sb.from('practices').select('name, department').order('name');
-
-    if (data && data.length) {
-      _allPractices = data;
-      // Populate unique departments
-      const departments = [...new Set(data.map(p => p.department))].sort();
-      departments.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        deptSel.appendChild(opt);
+    try {
+      await EAS_Hierarchy.attachCascade({
+        sectorEl:   document.getElementById('su-sector'),
+        unitEl:     document.getElementById('su-department'),
+        practiceEl: document.getElementById('su-practice'),
+        onChange: (sel) => { _selection = sel; }
       });
-    } else {
-      // Fallback if query fails
-      _allPractices = [
-        { name: 'BFSI', department: 'EAS' },
-        { name: 'CES', department: 'EAS' },
-        { name: 'EPCS', department: 'EAS' },
-        { name: 'EPS', department: 'EAS' },
-        { name: 'ERP Solutions', department: 'EAS' },
-        { name: 'GRC', department: 'EAS' },
-        { name: 'SE', department: 'Service Excellence' }
-      ];
-      ['EAS', 'Service Excellence'].forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        deptSel.appendChild(opt);
-      });
+    } catch (e) {
+      console.error('Failed to attach hierarchy cascade:', e);
+      showError('Failed to load org hierarchy. Please refresh.');
     }
   })();
-
-  function filterPracticesByDepartment() {
-    const dept = document.getElementById('su-department').value;
-    const sel = document.getElementById('su-practice');
-    sel.innerHTML = '<option value="" disabled selected>Select your practice...</option>';
-    const filtered = _allPractices.filter(p => p.department === dept);
-    filtered.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.name;
-      opt.textContent = p.name;
-      sel.appendChild(opt);
-    });
-    // Auto-select if only one practice in this department
-    if (filtered.length === 1) {
-      sel.value = filtered[0].name;
-    }
-  }
 
   // ---- Copilot toggle ----
   function selectCopilot(val) {
@@ -648,17 +619,25 @@ body {
   function goToStep2() {
     hideError();
     // Validate Step 1
-    const dept     = document.getElementById('su-department').value;
-    const name     = document.getElementById('su-name').value.trim();
-    const email    = document.getElementById('su-email').value.trim();
-    const practice = document.getElementById('su-practice').value;
-    const skill    = document.getElementById('su-skill').value.trim();
+    const cascadeCheck = EAS_Hierarchy.validateCascade(
+      document.getElementById('su-sector'),
+      document.getElementById('su-department'),
+      document.getElementById('su-practice')
+    );
+    const name  = document.getElementById('su-name').value.trim();
+    const email = document.getElementById('su-email').value.trim();
+    const skill = document.getElementById('su-skill').value.trim();
 
-    if (!dept)       { showError('Please select your department.');          return; }
+    if (!cascadeCheck.ok) { showError(cascadeCheck.error); return; }
+    _selection = {
+      sectorId:     cascadeCheck.sectorId,
+      departmentId: cascadeCheck.departmentId,
+      practice:     cascadeCheck.practice
+    };
+
     if (!name)       { showError('Please enter your full name.');           return; }
     if (!email)      { showError('Please enter your email address.');       return; }
     if (!email.includes('@')) { showError('Please enter a valid email address.'); return; }
-    if (!practice)   { showError('Please select your practice.');           return; }
     if (!skill)      { showError('Please enter your skill or title.');      return; }
     if (hasCopilot === null) { showError('Please indicate if you have GitHub Copilot access.'); return; }
 
@@ -726,10 +705,13 @@ body {
 
     const name     = document.getElementById('su-name').value.trim();
     const email    = document.getElementById('su-email').value.trim().toLowerCase();
-    const practice = document.getElementById('su-practice').value;
     const skill    = document.getElementById('su-skill').value.trim();
     const pw       = document.getElementById('su-password').value;
     const pwConfirm = document.getElementById('su-password-confirm').value;
+    // Hierarchy selection captured by goToStep2 (validated cascade)
+    const sectorId     = _selection.sectorId;
+    const departmentId = _selection.departmentId;
+    const practice     = _selection.practice;
 
     // Validate passwords
     if (!pw || pw.length < 8) {
@@ -775,12 +757,14 @@ body {
       if (authData.session) {
         // Auto-confirmed — call our RPC to create profile + copilot entry
         const { data: rpcResult, error: rpcError } = await sb.rpc('signup_contributor', {
-          p_auth_id:     authData.user.id,
-          p_name:        name,
-          p_email:       email,
-          p_practice:    practice,
-          p_skill:       skill,
-          p_has_copilot: hasCopilot
+          p_auth_id:       authData.user.id,
+          p_name:          name,
+          p_email:         email,
+          p_practice:      practice,        // may be NULL for flat-sector or unit-only signups
+          p_skill:         skill,
+          p_has_copilot:   hasCopilot,
+          p_sector_id:     sectorId,       // required (always set by cascade)
+          p_department_id: departmentId    // may be NULL for flat-sector signups
         });
 
         if (rpcError) {

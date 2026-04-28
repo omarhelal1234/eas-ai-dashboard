@@ -8,11 +8,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../../js/config.js?v=20260417b"></script>
 <script src="../../js/utils.js?v=20260417b"></script>
-<script src="../../js/auth.js?v=20260428a"></script>
-<script src="../../js/db.js?v=20260428a"></script>
+<script src="../../js/auth.js?v=20260429a"></script>
+<script src="../../js/db.js?v=20260429a"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
-<script src="../../js/approvals-modal.js?v=20260428a"></script>
+<script src="../../js/approvals-modal.js?v=20260429a"></script>
+<script src="../../js/hierarchy.js?v=20260429a"></script>
+<script src="../../js/profile-completion-modal.js?v=20260429a"></script>
+<script src="../../js/admin-org-tree.js?v=20260429a"></script>
 <script src="../../js/admin-events.js?v=20260424a"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
@@ -603,6 +606,11 @@ tr:hover td { background: rgba(255,255,255,0.02); }
     </div>
 
     <div class="nav-section">Configuration</div>
+    <div class="nav-item" data-page="manage-org-tree">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+      Org Hierarchy
+      <span class="badge" id="admin-orgtree-count">0</span>
+    </div>
     <div class="nav-item" data-page="manage-departments">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
       Departments
@@ -853,6 +861,35 @@ tr:hover td { background: rgba(255,255,255,0.02); }
               <thead><tr><th>Employee</th><th>Practice</th><th>Type</th><th>Submission</th><th>Time Saved (hrs)</th><th>Status</th><th>Approved By</th><th>Approved At</th></tr></thead>
               <tbody id="approval-history-tbody"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Org Hierarchy (sectors → units → practices) -->
+    <div id="page-manage-org-tree" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Org Hierarchy</h2>
+          <div class="subtitle">Sectors, units, and practices. Edit scope is controlled by your role: admins see everything; sector_spoc / dept_spoc see only their branch.</div>
+        </div>
+        <button class="btn btn-primary" id="org-add-sector-btn" onclick="OrgTree.openSectorModal()">+ Add Sector</button>
+      </div>
+      <div class="page-content">
+        <div id="org-tree-container" style="font-family:inherit;line-height:1.5;">
+          <div style="padding:24px;color:var(--text-muted, #888);">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Edit modal (re-used for sector/unit/practice) -->
+      <div id="org-edit-modal" class="modal hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:9999;">
+        <div class="modal-content" style="background:var(--bg-card);padding:24px;border-radius:12px;max-width:520px;width:90%;color:var(--text-primary);">
+          <h3 id="org-edit-title" style="margin:0 0 16px;">Edit</h3>
+          <div id="org-edit-fields"></div>
+          <div id="org-edit-error" style="color:#c0392b;font-size:13px;margin-top:8px;display:none;"></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+            <button class="btn" onclick="OrgTree.closeEditModal()">Cancel</button>
+            <button class="btn btn-primary" id="org-edit-save-btn" onclick="OrgTree.submitEdit()">Save</button>
           </div>
         </div>
       </div>
