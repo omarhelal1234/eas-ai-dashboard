@@ -98,6 +98,13 @@ The EAS AI Dashboard is a **static-first web application** hosted on GitHub Page
 │   └── 020_team_lead_role.sql  # Team Lead role: team_lead_assignments table, RLS, helper functions
 │   └── 022_featured_banner_and_likes.sql  # Phase 12: likes, featured_banner_config, featured_banner_pins, v_banner_candidates, toggle_like RPC
 │   └── 025_dept_spoc_role.sql  # adds dept_spoc role, department_id to users, get_user_department_id() function, 10 RLS policies
+│   └── 033_sectors.sql         # Org-hierarchy Phase 1: sectors table, sector_id columns, populate_sector_id() trigger, hierarchy-anchor CHECKs (NOT VALID), cascade-deactivate triggers
+│   └── 034_sector_spoc_role.sql # sector_spoc role, get_user_sector_id() helper, drops open submission_approvals SELECT, role-scoped SELECT policies, viewer policy, pending_approvals view recreated as security_invoker=true
+│   └── 035_seed_hierarchy.sql  # 13 Ejada sectors, 9 ECC unit rows, 8 ADI practices, Service Excellence merged into SE
+│   └── 036_backfill_hierarchy.sql # backfill sector_id via practice→department→sector chain, migration_orphans + hierarchy_migration_log audit, VALIDATE CONSTRAINT on every NOT VALID CHECK from 033
+│   └── 037_role_sync_function.sql # approver_resolution type, resolve_approver() cascade RPC (multi-SPOC preserved at practice level), sync_user_role_from_org() (auto-promote, never demote), revoke_org_role() admin RPC, *_spoc_email UPDATE triggers, role_change_log audit
+│   └── 038_extend_signup_rpc.sql # signup_contributor extended to 8 args (adds p_sector_id, p_department_id), copilot_users.department_id added
+│   └── 039_org_rollups.sql     # get_sector_summary, get_unit_summary, get_org_leaderboard RPCs aggregating from denormalised sector_id
 │
 ├── scripts/                # Node.js admin/migration scripts + data sync
 │   ├── create-auth-users.mjs   # One-time auth user creation

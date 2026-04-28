@@ -1,5 +1,58 @@
 ---
 
+## April 28, 2026 — Org-Hierarchy Phase 1 (Foundation: DB + Auth)
+
+**Plan:** `docs/superpowers/plans/2026-04-28-org-hierarchy-phase-1.md`. **Spec:** `docs/superpowers/specs/2026-04-28-org-hierarchy-design.md`.
+
+### What shipped
+
+Seven SQL migrations (033 → 039) + JS rewrites in `js/db.js`, `js/auth.js`, `js/approvals-modal.js` + cache-buster bump on index/admin/employee-status.
+
+### Key design decisions
+
+1. **`populate_sector_id()` only overrides on successful chain resolution.** Original spec text said "always override when practice is non-null." Codex review caught the silent-NULL pitfall: if a practice points at a row missing `department_id` (legacy data), the chain returns NULL and would have overwritten a valid client-supplied `sector_id`. Implementation now only assigns when the lookup actually resolves; otherwise leaves NEW.sector_id untouched.
+
+2. **`pending_approvals` view recreated as `security_invoker = true`.** Dropping `submission_approvals_read_all_authenticated` would otherwise still leak rows because the existing view ran with the view-creator's role. The view shape gained `escalation_level` and `sector_id` for downstream UI labelling.
+
+3. **`viewer` role gets an explicit SELECT policy.** Before the open policy drop, viewers got everything. Spec §6.1 already specifies viewer is "Read-only practice scope," so the new policy is `practice = get_user_practice()`. Codex flagged this as a regression risk.
+
+4. **`prompt_library` skipped from `populate_sector_id` triggers.** The table has no `practice` or `department_id` column — `CREATE TRIGGER … UPDATE OF practice` errors at definition time. Writers must set `sector_id` explicitly; the FK still ensures referential integrity.
+
+5. **Migration 002's `CREATE POLICY IF NOT EXISTS` is broken on Postgres 17.** Pre-existing drift — the syntax doesn't exist in PG 17 and never has. Local apply uses a `sed` patch to strip `IF NOT EXISTS` from CREATE POLICY at apply time. Not in scope to fix the original migration here; flagged for cleanup. Production likely has these policies via a separate path (Supabase dashboard SQL editor swallowing per-statement errors).
+
+6. **`signup_contributor` function name vs file name.** The historical file is `sql/024_signup_contributor_upsert_grafana_stats.sql` but the deployed function inside is `signup_contributor` (the `_upsert_grafana_stats` was a description, not part of the name). Migration 038 modifies the actual function and explicitly drops the old 6-arg overload before recreating with 8 args (defaulted) — otherwise both signatures would coexist and ambiguous-function errors would surface at runtime.
+
+7. **`<5h` task auto-approve stays in JS.** Spec §6.4 keeps this as a business rule, not a routing decision. `createSubmissionApproval` short-circuits before calling `resolve_approver`, preserving today's no-DB-round-trip behavior for the common short-task case.
+
+8. **No demotion via auto-sync.** `sync_user_role_from_org` returns sentinel strings (`no_demote`, `protected_role`, `no_match`, `no_user`) when it would have downgraded scope or touched admin/executive. Demotion is admin-only via `revoke_org_role(p_user_id)`.
+
+9. **Multi-SPOC preserved at practice level.** `resolve_approver` returns `(NULL, 'practice')` when active linked SPOCs exist for the practice — RLS + the existing `practice_spoc` table handle many-to-one routing. Single-owner fallback (`spoc_id = <user>`) only at unit/sector/admin levels.
+
+### Test coverage
+
+DB-side regression executed against the local stack (`supabase start`, Postgres 17.6):
+- Schema sanity (13 sectors, 10 ECC units inc. EAS+SE+ADI, 8 ADI practices)
+- `resolve_approver` cascade for practice (multi-SPOC), unknown practice, sector-only
+- Email-driven auto-promote: contributor → spoc when their email is added to `practices.practice_spoc_email`; `practice_spoc` row auto-upserted; `role_change_log` captured the transition; clearing the email did NOT demote
+- All 9 expected `submission_approvals` policies installed (3 sector-related)
+- `pending_approvals.reloptions` includes `security_invoker=true`
+- All 3 rollup RPCs return expected counts
+
+JS regression-via-Node attempted but blocked by a brew `node` upgrade lock conflict — parse-checks on all 3 modified files passed (`new Function(fs.readFileSync(...))`); browser-based regression deferred to user follow-up.
+
+### Pre-existing migration drift surfaced during local bootstrap
+
+Worth knowing if anyone else tries to apply the full migration set on a fresh DB:
+
+- `sql/001_schema.sql` defines `practice_summary` and `quarter_summary` views referencing `tasks.approval_status` — column added by 002. Apply order makes 001's views fail; tables succeed.
+- `sql/002_approval_workflow.sql` uses `CREATE POLICY IF NOT EXISTS` (not valid in PG 17). Strip with `sed` or pre-DROP each policy.
+- `sql/003_use_cases.sql` is INSERTs only — no `CREATE TABLE use_cases`. The table must exist before 003 can run.
+- `sql/023_ai_news.sql` references the `cron` schema — needs `pg_cron` extension installed first.
+
+These aren't blockers for Phase 1 (none of them touch the new sector hierarchy) but the next person to try a fresh local apply will hit them.
+
+---
+
 ## April 27, 2026 — Save Task Double-Click Race
 
 **Trigger:** User reported that tasks duplicate when "Save Task" is clicked twice within ~1 second.
