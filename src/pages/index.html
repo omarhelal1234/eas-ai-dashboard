@@ -13,14 +13,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../../js/config.js?v=20260418a"></script>
 <script src="../../js/utils.js?v=20260418a"></script>
-<script src="../../js/auth.js?v=20260429a"></script>
-<script src="../../js/db.js?v=20260429a"></script>
+<script src="../../js/auth.js?v=20260429b"></script>
+<script src="../../js/db.js?v=20260429b"></script>
 <script src="../../js/phase8-submission.js?v=20260418a"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
-<script src="../../js/approvals-modal.js?v=20260429a"></script>
-<script src="../../js/hierarchy.js?v=20260429a"></script>
-<script src="../../js/profile-completion-modal.js?v=20260429a"></script>
+<script src="../../js/approvals-modal.js?v=20260429b"></script>
+<script src="../../js/hierarchy.js?v=20260429b"></script>
+<script src="../../js/profile-completion-modal.js?v=20260429b"></script>
+<script src="../../js/org-drilldown.js?v=20260429b"></script>
+<script src="../../js/org-leaderboard.js?v=20260429b"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -56,6 +58,10 @@
   <div class="nav-item active" data-page="dashboard" data-view-key="web.dashboard">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     Dashboard
+  </div>
+  <div class="nav-item" data-page="org" data-view-key="web.org">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+    Org Overview
   </div>
   <div class="nav-item" data-page="leaderboard" data-view-key="web.leaderboard">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8m-4-4v4m-5-8l5-10 5 10M6 13h12"/></svg>
@@ -690,12 +696,25 @@
     </div>
   </div>
 
+  <!-- Org Overview Page (drill-down: sector → unit → practice) -->
+  <div id="page-org" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2>Org Overview</h2>
+        <div class="subtitle">Drill down from sectors → units → practices</div>
+      </div>
+    </div>
+    <div class="page-content">
+      <div id="org-drilldown-root"></div>
+    </div>
+  </div>
+
   <!-- Leaderboard Page -->
   <div id="page-leaderboard" class="page hidden">
     <div class="page-header">
       <div>
         <h2>Leaderboard</h2>
-        <div class="subtitle">AI adoption rankings across practices</div>
+        <div class="subtitle">AI adoption rankings — toggle between sector / unit / practice</div>
       </div>
       <div style="display:flex;gap:12px;align-items:center">
         <div class="quarter-selector-wrapper">
@@ -709,6 +728,10 @@
       </div>
     </div>
     <div class="page-content">
+      <!-- Org-wide leaderboard tabs (Phase 3) -->
+      <h3 style="margin-bottom:16px;font-size:16px">🌐 Org Rankings</h3>
+      <div id="org-leaderboard-root" style="margin-bottom:24px;"></div>
+
       <!-- Practice Rankings -->
       <h3 style="margin-bottom:16px;font-size:16px">🏢 Practice Rankings</h3>
       <div id="leaderboard-practices" class="leaderboard-grid"></div>
@@ -2335,7 +2358,31 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
     if (item.dataset.page === 'approvals') renderApprovals();
     if (item.dataset.page === 'mypractice') renderMyPractice();
     if (item.dataset.page === 'mydepartment') renderMyDepartment();
-    if (item.dataset.page === 'leaderboard') renderLeaderboard();
+    if (item.dataset.page === 'leaderboard') {
+      renderLeaderboard();
+      // Phase 3: org-wide leaderboard tabs (sector / unit / practice)
+      if (typeof EAS_OrgLeaderboard !== 'undefined') {
+        EAS_OrgLeaderboard.render('org-leaderboard-root');
+      }
+    }
+    if (item.dataset.page === 'org') {
+      // Phase 3: drill-down landing
+      if (typeof EAS_OrgDrilldown !== 'undefined') {
+        // Default to sector grid; if user is sector_spoc with a sector, deep-link to their sector view.
+        if (!window.location.hash || !/^#org/.test(window.location.hash)) {
+          (async () => {
+            const profile = await EAS_Auth.getUserProfile();
+            if (profile?.role === 'sector_spoc' && profile.sector_id) {
+              window.location.hash = 'org/' + profile.sector_id;
+            } else {
+              window.location.hash = 'org';
+            }
+          })();
+        } else {
+          EAS_OrgDrilldown.render('org-drilldown-root');
+        }
+      }
+    }
     if (item.dataset.page === 'mytasks') renderMyTasks();
     if (item.dataset.page === 'usecases') renderUseCases();
     if (item.dataset.page === 'skills') renderSkillsLibrary();
@@ -2347,10 +2394,13 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
 });
 
 // Support deep-link hashes like #approvals (used by the pending-approvals pop-up).
+// Phase 3 also supports #org, #org/<sectorId>, #org/<sectorId>/<unitId> for the
+// drill-down landing — those collapse to the 'org' page.
 function _easApplyNavHash() {
   const hash = (window.location.hash || '').replace(/^#/, '');
   if (!hash) return;
-  const target = document.querySelector(`.nav-item[data-page="${hash}"]`);
+  const pageKey = hash.startsWith('org/') || hash === 'org' ? 'org' : hash;
+  const target = document.querySelector(`.nav-item[data-page="${pageKey}"]`);
   if (target && target.style.display !== 'none') target.click();
 }
 window.addEventListener('hashchange', _easApplyNavHash);
