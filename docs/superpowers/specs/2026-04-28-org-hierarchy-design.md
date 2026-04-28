@@ -73,9 +73,21 @@ CREATE TABLE sectors (
 ### 5.2 Modified tables
 
 - `departments` — add `sector_id UUID REFERENCES sectors(id) ON DELETE SET NULL`, `unit_spoc_email TEXT`, `unit_spoc_name TEXT`. Table name retained; column comment clarifies "Unit/Department".
-- `practices` — add `practice_spoc_email TEXT`. Existing `spoc` column holds the name.
+- `practices` — add `practice_spoc_email TEXT`. **This column is org-chart metadata only — used by the auto-promotion machinery to seed `practice_spoc` rows.** It is NOT consulted by `resolve_approver` and does NOT replace the multi-SPOC `practice_spoc` table. Multi-SPOC behavior (multiple active SPOCs per practice, any can approve) is preserved (`sql/021_multi_spoc_approval.sql`).
 - `users` — add `sector_id UUID REFERENCES sectors(id) ON DELETE SET NULL`. Existing `department_id`, `practice` columns become nullable for flat-sector contributors.
-- Data tables (`tasks`, `accomplishments`, `use_cases`, `submission_approvals`, `copilot_users`, `projects`, `prompts`) — add `sector_id UUID` (nullable, denormalized for fast sector queries and RLS without 3-table joins).
+- `practice_spoc` — add `sector_id UUID` (denormalized for sector-scoped reads). The multi-SPOC table itself is unchanged in shape — it remains authoritative.
+- Data tables (`tasks`, `accomplishments`, `use_cases`, `submission_approvals`, `copilot_users`, `projects`, `prompt_library`) — add `sector_id UUID` (nullable, denormalized for fast sector queries and RLS without 3-table joins).
+- Existing `users_role_check` and `role_view_permissions_role_check` constraints (`sql/025_dept_spoc_role.sql` lines 9 and 149) are extended to include `sector_spoc`. Migration `034_sector_spoc_role.sql` drops and re-adds both constraints.
+
+### 5.2a Denormalized `sector_id` is auto-maintained by triggers
+
+The denormalized `sector_id` columns on data tables MUST be kept populated regardless of whether the calling code passes it. Frontend writes today only send `practice` (e.g., `js/db.js` line 550 `tasks.insert`, line 672 `accomplishments.insert`). Two enforcement mechanisms:
+
+1. **`BEFORE INSERT/UPDATE` triggers** on every data table that has a `sector_id` column. The trigger function `populate_sector_id()` resolves the sector via the chain: if `NEW.practice IS NOT NULL` look up `practices.department_id` then `departments.sector_id`; else if `NEW.department_id IS NOT NULL` use `departments.sector_id`; else leave whatever the caller passed (only flat-sector direct writes need to set `sector_id` explicitly via the new code paths). Trigger overrides whatever the client sent only if the client value is NULL — explicit values from sector-direct contributor writes are preserved.
+
+2. **`resolve_approver()` and `createSubmissionApproval` set `sector_id` and `escalation_level` on the new `submission_approvals` row at creation time** — same trigger fires, but `js/db.js` also passes the resolved value explicitly for transparency.
+
+The trigger ensures sector RLS policies see every row even when frontend code paths aren't updated (defensive defaulting per CLAUDE.md scoping rule — we don't refactor every insert site, we make the schema correct by construction).
 
 ### 5.3 Seed data (from Hierarchy.xlsx)
 
@@ -115,73 +127,96 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 
 ### 6.3 New SELECT policies for `sector_spoc`
 
-Applied to `tasks`, `accomplishments`, `submission_approvals`, `copilot_users`, `users`, `practice_spoc`, `projects`, `prompts`, `use_cases`:
+Applied to all tables that have a `sector_id` column per Section 5.2: `tasks`, `accomplishments`, `submission_approvals`, `copilot_users`, `practice_spoc`, `projects`, `use_cases`, `prompt_library` (the actual table name in this repo per `sql/005_prompt_library.sql`).
+
+The `users` table does not have a `sector_id` column itself — its sector membership is the column already added in Section 5.2. The `users` SELECT policy for sector_spoc uses `users.sector_id = get_user_sector_id()` directly:
 
 ```sql
+-- Standard pattern for tables with sector_id
 CREATE POLICY "sector_spoc_<table>_select" ON <table>
   FOR SELECT USING (
     get_user_role() = 'sector_spoc'
     AND sector_id = get_user_sector_id()
   );
+
+-- users table (sector_id is on users itself)
+CREATE POLICY "sector_spoc_users_select" ON users
+  FOR SELECT USING (
+    get_user_role() = 'sector_spoc'
+    AND (sector_id = get_user_sector_id() OR id = get_current_user_id())
+  );
 ```
 
 ### 6.4 Approval cascade — `resolve_approver()`
 
-All three SPOC lookups join through the `*_spoc_email` columns on the org tables (so the source of truth is the org chart, not stale `users.role` flags). A row only matches when the email holder is an active user — meaning auto-promotion has already linked them. Admin users matched by email (rare edge case) still resolve correctly because the join is purely by email, and RLS lets admins approve anyway.
+The function answers two questions: **(a) what escalation level is this submission at?** and **(b) which user_id (if any) is the singular owner of this approval?** For practices with multiple active SPOCs (the existing multi-SPOC model from `sql/021_multi_spoc_approval.sql`), we deliberately return NULL for `assigned_user_id` at the practice level — the existing pattern of "any active SPOC can approve" is preserved by the `practice_spoc` table + RLS, and the existing `pending_approvals` view already aggregates SPOC names. Only at the unit/sector/admin fallback levels do we route to a single named user.
 
 ```sql
+CREATE TYPE approver_resolution AS (
+  assigned_user_id UUID,    -- NULL means "any active SPOC in practice_spoc for this practice"
+  escalation_level TEXT     -- 'practice' | 'unit' | 'sector' | 'admin'
+);
+
 CREATE FUNCTION resolve_approver(
   p_practice TEXT,
   p_department_id UUID,
   p_sector_id UUID
-) RETURNS UUID
+) RETURNS approver_resolution
 AS $$
 DECLARE
+  v_count INT;
   v_user_id UUID;
 BEGIN
-  -- 1. Practice SPOC (email-based)
+  -- 1. Practice level (multi-SPOC preserved): if any active SPOC exists in
+  --    practice_spoc, return level='practice' and let the existing
+  --    "any active SPOC can approve" pattern handle ownership.
   IF p_practice IS NOT NULL THEN
-    SELECT u.id INTO v_user_id
-    FROM users u
-    JOIN practices pr ON lower(pr.practice_spoc_email) = lower(u.email)
-    WHERE pr.name = p_practice AND u.is_active
-    LIMIT 1;
-    IF v_user_id IS NOT NULL THEN RETURN v_user_id; END IF;
+    SELECT count(*) INTO v_count
+    FROM practice_spoc
+    WHERE practice = p_practice AND is_active = true;
+    IF v_count > 0 THEN
+      RETURN ROW(NULL::UUID, 'practice')::approver_resolution;
+    END IF;
   END IF;
 
-  -- 2. Unit (department) SPOC (email-based)
+  -- 2. Unit (department) SPOC fallback (email-based, single owner)
   IF p_department_id IS NOT NULL THEN
     SELECT u.id INTO v_user_id
     FROM users u
     JOIN departments d ON lower(d.unit_spoc_email) = lower(u.email)
     WHERE d.id = p_department_id AND u.is_active
     LIMIT 1;
-    IF v_user_id IS NOT NULL THEN RETURN v_user_id; END IF;
+    IF v_user_id IS NOT NULL THEN
+      RETURN ROW(v_user_id, 'unit')::approver_resolution;
+    END IF;
   END IF;
 
-  -- 3. Sector SPOC fallback (email-based)
+  -- 3. Sector SPOC fallback (email-based, single owner)
   IF p_sector_id IS NOT NULL THEN
     SELECT u.id INTO v_user_id
     FROM users u
     JOIN sectors s ON lower(s.sector_spoc_email) = lower(u.email)
     WHERE s.id = p_sector_id AND u.is_active
     LIMIT 1;
-    IF v_user_id IS NOT NULL THEN RETURN v_user_id; END IF;
+    IF v_user_id IS NOT NULL THEN
+      RETURN ROW(v_user_id, 'sector')::approver_resolution;
+    END IF;
   END IF;
 
   -- 4. Admin fallback
   SELECT id INTO v_user_id
-  FROM users
-  WHERE role = 'admin' AND is_active
+  FROM users WHERE role = 'admin' AND is_active
   ORDER BY created_at LIMIT 1;
-  RETURN v_user_id;
+  RETURN ROW(v_user_id, 'admin')::approver_resolution;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 ```
 
-The `escalation_level` field on `submission_approvals` is set once at creation time based on which step in `resolve_approver` matched (returned alongside the user_id via an OUT parameter or sibling helper). It's never recomputed.
+**Auto-promotion + practice_spoc sync (Section 9 cross-link):** when `sync_user_role_from_org()` matches a user against a `practice.practice_spoc_email`, it not only sets `users.role = 'spoc'` but also upserts a row in `practice_spoc` (`practice`, `spoc_id`, `spoc_name`, `spoc_email`, `is_active = true`) using the same pattern as `js/db.js` `syncPracticeSpoc()` (line 1379). This preserves the multi-SPOC model: the org-chart email is *one* of potentially many SPOCs on a practice; admins can still add additional SPOCs through the existing UI without changing the email column.
 
-`createSubmissionApproval` in `js/db.js` calls this function. The `submission_approvals` table gets an `escalation_level` column (`practice` | `unit` | `sector` | `admin`) for UI transparency ("Approving as Sector SPOC fallback").
+The `escalation_level` field on `submission_approvals` is the second component of the `approver_resolution` tuple, set once at creation time by `createSubmissionApproval`. The `assigned_user_id` (when non-null at unit/sector/admin levels) is stored as the `spoc_id` or `admin_id` on `submission_approvals` matching the existing column conventions. UI surfaces "Approving as Sector SPOC fallback" when `escalation_level = 'sector'`.
+
+`createSubmissionApproval` in `js/db.js` calls this function. The `submission_approvals` table gets an `escalation_level` column (`practice` | `unit` | `sector` | `admin`) for UI transparency.
 
 ## 7. Signup & Onboarding Flow
 
@@ -200,8 +235,8 @@ Submit enabled when all three dropdowns have a value (real or N/A). Server valid
 
 1. Create `auth.users` row via Supabase Auth.
 2. Insert `users` row with `sector_id`, `department_id` (or NULL), `practice` (or NULL), `role = 'contributor'`.
-3. Run `sync_user_role_from_org()` (Section 9) to auto-promote if email matches a `*_spoc_email` field.
-4. Upsert `grafana_stats` row keyed on the new `sector_id`.
+3. Run `sync_user_role_from_org()` (Section 9) to auto-promote if email matches a `*_spoc_email` field. When practice match auto-promotes to `spoc`, also upsert `practice_spoc` (preserves multi-SPOC).
+4. Call existing `signup_contributor_upsert_grafana_stats(...)` RPC (`sql/024_signup_contributor_upsert_grafana_stats.sql`) — this is the existing function whose body upserts a `copilot_users` row, not a `grafana_stats` table (table doesn't exist; the function name is historical). This phase extends that RPC to accept `p_sector_id` and `p_department_id` and write them onto the inserted `copilot_users` row so the new sector_id denormalization is populated from signup forward. The `BEFORE INSERT` trigger on `copilot_users` from Section 5.2a is the safety net if any caller forgets.
 
 ### 7.3 Validation
 
@@ -249,6 +284,9 @@ After login, if `profile_completed = false`, show a one-time modal with the same
      AND matched scope is broader than current role:
      promote upward.
 4. Else: no-op (do not demote, do not narrow scope, do not touch admin/executive).
+5. If the match was at the practice level (role = spoc), also UPSERT
+   into practice_spoc (practice, spoc_id, spoc_name, spoc_email, is_active=true)
+   to preserve multi-SPOC routing. Mirror of js/db.js syncPracticeSpoc().
 ```
 
 ### 9.3 Trigger points
@@ -294,10 +332,22 @@ Persistent breadcrumb across hierarchy pages. New `Sector SPOC` role badge.
 ## 11. Rollout Phases
 
 ### Phase 1 — Foundation (DB + auth)
-- Migrations: `033_sectors`, `034_sector_spoc_role`, `035_seed_hierarchy`, `036_backfill_hierarchy`, `037_role_sync_function`.
-- `js/auth.js`: post-login `sync_user_role_from_org()` call + profile-completion modal.
-- `js/db.js`: `createSubmissionApproval` uses `resolve_approver`; new `getSectorSummary` RPC wrapper.
-- **Exit:** Sector SPOCs sign up via existing flow and are auto-recognized; approvals route correctly; existing pages unchanged.
+
+Migrations (numbered 033+ to follow existing sequence):
+
+- **`033_sectors.sql`** — create `sectors` table; add `sector_id`, `unit_spoc_email`, `unit_spoc_name` to `departments`; add `practice_spoc_email` to `practices`; add `sector_id` to `users`, `practice_spoc`, and all data tables (`tasks`, `accomplishments`, `use_cases`, `submission_approvals`, `copilot_users`, `projects`, `prompt_library`); make `users.department_id` and `users.practice` explicitly nullable; add `users.profile_completed BOOLEAN DEFAULT true`; create the `populate_sector_id()` trigger function and BEFORE INSERT/UPDATE triggers on every data table that has the new column.
+- **`034_sector_spoc_role.sql`** — DROP and re-add `users_role_check` to allow `sector_spoc`. DROP and re-add `role_view_permissions_role_check` likewise (per `sql/025_dept_spoc_role.sql` lines 9 and 149). Create `get_user_sector_id()` helper. Add new `sector_spoc_*` SELECT policies on every sector_id-bearing table per Section 6.3. Seed `role_view_permissions` rows for the `sector_spoc` role (mirror of the `dept_spoc` seeding pattern in migration 025).
+- **`035_seed_hierarchy.sql`** — insert 13 sectors with SPOC name + email; insert 10 ECC unit rows in `departments` with unit_spoc_email + unit_spoc_name + `sector_id = ECC`; create 8 ADI practices in `practices` (no SPOC email); populate `practice_spoc_email` on existing EAS practices from the sheet. Wire `EAS` department → ECC sector. Merge `Service Excellence` into the new `SE` row under ECC; deactivate the old row.
+- **`036_backfill_hierarchy.sql`** — populate `sector_id` on existing rows of `users`, `practice_spoc`, and all data tables via the practice→department→sector chain. Create `migration_orphans` and `hierarchy_migration_log`. Set `profile_completed = false` on users where the chain didn't resolve.
+- **`037_role_sync_function.sql`** — create `approver_resolution` composite type; create `resolve_approver(...)` (multi-SPOC-aware per Section 6.4); create `sync_user_role_from_org(p_user_id UUID)` that also upserts into `practice_spoc` on practice match (mirroring `syncPracticeSpoc()` in `js/db.js` line 1379); install UPDATE triggers on the three `*_spoc_email` columns; create `revoke_org_role(p_user_id UUID)` admin RPC; create `role_change_log` table.
+- **`038_extend_signup_rpc.sql`** — extend `signup_contributor_upsert_grafana_stats` (existing function from `sql/024_*`) to accept `p_sector_id` and `p_department_id` and write them onto the upserted `copilot_users` row. Backwards-compatible default for older callers.
+
+Code:
+
+- `js/auth.js` — call `sync_user_role_from_org(<my user_id>)` post-login; render profile-completion modal when `profile_completed = false`.
+- `js/db.js` — `createSubmissionApproval()` calls `resolve_approver()`, stores `escalation_level` and (when non-null) `assigned_user_id` on `submission_approvals`. New `getSectorSummary(p_quarter_id, p_sector_id)` RPC wrapper. New `signup` path passes `sector_id` and `department_id` to the extended signup RPC.
+
+**Exit:** Sector SPOCs in the sheet sign up via existing flow and are auto-recognized; approvals route correctly through the new cascade with multi-SPOC preserved; sector_spoc role is valid against all CHECK constraints; existing pages unchanged.
 
 ### Phase 2 — Signup cascade + Admin tree
 - `signup.html` cascading dropdowns.
