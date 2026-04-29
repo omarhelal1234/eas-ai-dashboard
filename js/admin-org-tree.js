@@ -484,3 +484,11 @@ const OrgTree = (() => {
     closeEditModal
   };
 })();
+
+// Expose to global scope so inline `onclick="OrgTree.foo()"` handlers in
+// admin.html (Add Sector / Cancel / Save) can resolve the binding. Classic
+// scripts declared with `const` are not added to window, but inline event
+// handlers run in a scope chain that only sees globals — without this they
+// fail silently with ReferenceError. Static handlers with no interpolation
+// have no XSS risk.
+window.OrgTree = OrgTree;

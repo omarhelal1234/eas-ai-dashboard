@@ -1366,3 +1366,24 @@ Fix: Added `<div id="user-display-practice">` to the `.user-info` section of the
 - `closeDeptDrillDown()` restores the dept overview by showing `#mydept-practices-section` (not `#mydept-practice-cards` directly) — make sure to target the wrapper, not the inner grid
 
 **Files changed:** sql/025_dept_spoc_role.sql, js/auth.js, src/pages/index.html, src/pages/admin.html
+
+---
+
+## 2026-04-29 — Phase 4 review-action sweep
+
+**Inline-handler scope gotcha (admin Org Hierarchy buttons silent failure).**
+`const Foo = (() => { … })();` in a classic non-module `<script>` does NOT add `Foo` to `window`. The binding lives in the script's top-level lexical environment, which is shared between classic scripts on the page but is invisible to inline event handlers (`onclick="Foo.bar()"`) — those run with a scope chain that only sees the global object plus the element/form/document. Symptom: handlers throw `ReferenceError: Foo is not defined` and the buttons appear dead. Two valid fixes: (a) `window.Foo = Foo` after the IIFE, or (b) replace inline handlers with `data-*` event delegation. The remaining `+ Add Sector / Cancel / Save` triad in `admin.html` chose (a) — minimal blast radius, no XSS risk because the handlers are static literals with no interpolation. Other modules in the same codebase (`AdminEvents`, `OrgOrphans`) avoid the gotcha because their callers are inside `<script>` blocks, not inline `onclick=`.
+
+**`pg_get_function_arguments()` vs. `regprocedure`.**
+`pg_get_function_arguments(oid)` returns the *full* argument signature, including names AND defaults (e.g. `p_quarter_id text DEFAULT NULL::text`). `regprocedure`'s text-input form only accepts identity types (`text`, `uuid`, …). Building `(proname || '(' || pg_get_function_arguments(oid) || '))::regprocedure` therefore breaks on any function with a default. Two correct alternatives: (a) `pg_get_function_identity_arguments(oid)` — strips names AND defaults, lossless to `regprocedure`; or (b) skip the cast entirely — `has_function_privilege(role, oid, 'EXECUTE')` accepts an OID directly. Migration 050 went with (b) for the privilege check.
+
+**SECURITY DEFINER + CREATE OR REPLACE resets EXECUTE grants.**
+Postgres' default for new functions is `EXECUTE TO PUBLIC`. When migration N revokes anon EXECUTE and migration N+k re-defines the same function with `CREATE OR REPLACE`, the privilege ACL is REPLACED with the default and PUBLIC silently regains access. Migration 040 did the right initial revoke but several later migrations (043, 048) re-defined the same functions and re-opened them. Lesson: any migration that does `CREATE OR REPLACE FUNCTION` on a SECURITY DEFINER must also re-issue the REVOKE / GRANT statements at the bottom. Migration 050 catches up everything that drifted; future migrations should bake the GRANT into the same migration as the function definition.
+
+**Auth-Admin pagination silently truncates.**
+`supabase.auth.admin.listUsers({ perPage: 1000 })` returns ONE page. In a >1000-user tenant, any account on page 2+ is silently absent from the result, so a script that uses listUsers as a directory will look up unknown emails and skip them. Always loop on `page` until a short page is returned. Same trap applies to any `auth.admin.list*` endpoint.
+
+**Dry-run helpers must not emit credentials.**
+A dry-run that prints "newly generated" passwords next to "store immediately" is an operability bug — operators paste them into secret stores believing they reflect the live state, then a second LIVE run generates *different* values and the secret store desynchronises. Either compute side-effecting values only when the live flag is set, or label dry-run output unambiguously as `would rotate` and don't print the value at all. `scripts/rotate-test-passwords.mjs` chose the first path.
+
+**Files changed:** sql/049_backfill_spoc_emails_from_users.sql, sql/050_revoke_anon_security_definer.sql, scripts/cleanup_qa_phase14_data.sql, scripts/rotate-test-passwords.mjs, js/admin-org-tree.js, src/pages/admin.html (cache buster only)
