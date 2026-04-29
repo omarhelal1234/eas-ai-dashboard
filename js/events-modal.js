@@ -265,7 +265,10 @@ const EventsModal = (() => {
   }
 
   function closeExisting() {
-    const existing = document.querySelector('.events-modal-backdrop');
+    // Scope to events-only backdrops — the profile-completion modal
+    // shares the .events-modal-backdrop class but adds .profile-completion-backdrop
+    // and must not be torn down when this events modal opens.
+    const existing = document.querySelector('.events-modal-backdrop:not(.profile-completion-backdrop):not(.approvals-modal-backdrop)');
     if (existing) existing.remove();
   }
 

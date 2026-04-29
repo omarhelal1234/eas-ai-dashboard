@@ -567,7 +567,10 @@ const EAS_DB = (() => {
       status:          taskData.status || 'Pending',
       notes:           taskData.notes || null,
       quarter_id:      quarterId !== 'all' ? quarterId : (getActiveQuarter()?.id || null),
-      logged_by:       profile?.id || null
+      logged_by:       profile?.id || null,
+      // RLS tasks_contributor_sector_insert requires sector_id when practice is null.
+      // populate_sector_id trigger overrides if a practice/department anchor is set.
+      sector_id:       taskData.sectorId || profile?.sector_id || null
     };
     const { data, error } = await sb.from('tasks').insert(payload).select().single();
     if (error) { console.error('insertTask error:', error.message); return null; }

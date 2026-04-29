@@ -8,15 +8,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../../js/config.js?v=20260417b"></script>
 <script src="../../js/utils.js?v=20260417b"></script>
-<script src="../../js/auth.js?v=20260429d"></script>
-<script src="../../js/db.js?v=20260429d"></script>
+<script src="../../js/auth.js?v=20260429e"></script>
+<script src="../../js/db.js?v=20260429e"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
-<script src="../../js/approvals-modal.js?v=20260429d"></script>
-<script src="../../js/hierarchy.js?v=20260429d"></script>
-<script src="../../js/profile-completion-modal.js?v=20260429d"></script>
-<script src="../../js/admin-org-tree.js?v=20260429d"></script>
-<script src="../../js/admin-orphans.js?v=20260429d"></script>
+<script src="../../js/approvals-modal.js?v=20260429e"></script>
+<script src="../../js/hierarchy.js?v=20260429e"></script>
+<script src="../../js/profile-completion-modal.js?v=20260429e"></script>
+<script src="../../js/admin-org-tree.js?v=20260429e"></script>
+<script src="../../js/admin-orphans.js?v=20260429e"></script>
 <script src="../../js/admin-events.js?v=20260424a"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
@@ -1979,9 +1979,11 @@ async function attemptLogin() {
     return;
   }
 
-  // Check role — admin only for admin panel
+  // Admin panel hosts the Org Hierarchy editor; admins see everything,
+  // sector_spoc / dept_spoc see only the org-tree section (per page subtitle).
   const profile = await EAS_Auth.getUserProfile(true);
-  if (!profile || profile.role !== 'admin') {
+  const isOrgEditor = profile && ['admin','sector_spoc','dept_spoc'].includes(profile.role);
+  if (!isOrgEditor) {
     await EAS_Auth.signOut();
     document.getElementById('login-error').classList.add('show');
     setTimeout(() => document.getElementById('login-error').classList.remove('show'), 3000);
@@ -1991,7 +1993,20 @@ async function attemptLogin() {
   isAuthenticated = true;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('admin-app').classList.add('active');
+  applyOrgEditorScope(profile);
   initAdmin();
+}
+
+// For non-admin org editors, hide nav items unrelated to the org tree
+// and route them straight to the Org Hierarchy section.
+function applyOrgEditorScope(profile) {
+  if (!profile || profile.role === 'admin') return;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    if (el.getAttribute('data-page') !== 'manage-org-tree') el.style.display = 'none';
+  });
+  setTimeout(() => {
+    document.querySelector('.nav-item[data-page="manage-org-tree"]')?.click();
+  }, 50);
 }
 
 function logout() {
@@ -2011,10 +2026,11 @@ document.getElementById('login-user').addEventListener('keydown', e => { if (e.k
   const session = await EAS_Auth.getSession();
   if (session) {
     const profile = await EAS_Auth.getUserProfile();
-    if (profile && profile.role === 'admin') {
+    if (profile && ['admin','sector_spoc','dept_spoc'].includes(profile.role)) {
       isAuthenticated = true;
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-app').classList.add('active');
+      applyOrgEditorScope(profile);
       setTimeout(initAdmin, 0);
     }
   }
