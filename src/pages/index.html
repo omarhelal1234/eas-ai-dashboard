@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../css/dashboard.css?v=20260429h">
+<link rel="stylesheet" href="../../css/dashboard.css?v=20260429i">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../../js/config.js?v=20260418a"></script>
 <script src="../../js/utils.js?v=20260418a"></script>
@@ -22,7 +22,7 @@
 <script src="../../js/hierarchy.js?v=20260429e"></script>
 <script src="../../js/profile-completion-modal.js?v=20260429e"></script>
 <script src="../../js/org-drilldown.js?v=20260429e"></script>
-<script src="../../js/org-leaderboard.js?v=20260429h"></script>
+<script src="../../js/org-leaderboard.js?v=20260429i"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -728,13 +728,12 @@
       </div>
     </div>
     <div class="page-content">
-      <!-- Org-wide leaderboard tabs (Phase 3) -->
+      <!-- Org Rankings (Sector / Unit / Practice tabs).
+           Replaces the standalone "Practice Rankings" section — the
+           Practice tab here uses the same scoring formula and the
+           same get_org_leaderboard RPC at all 3 levels. -->
       <h3 style="margin-bottom:16px;font-size:16px">🌐 Org Rankings</h3>
       <div id="org-leaderboard-root" style="margin-bottom:24px;"></div>
-
-      <!-- Practice Rankings -->
-      <h3 style="margin-bottom:16px;font-size:16px">🏢 Practice Rankings</h3>
-      <div id="leaderboard-practices" class="leaderboard-grid"></div>
 
       <!-- Employee Rankings -->
       <h3 style="margin:24px 0 16px;font-size:16px">👤 Top Contributors</h3>
@@ -4245,9 +4244,10 @@ async function renderLeaderboard() {
   const quarterId = document.getElementById('lb-filter-quarter')?.value || EAS_DB.getSelectedQuarter();
   const fPractice = document.getElementById('lb-filter-practice')?.value || '';
 
-  // Fetch both leaderboards + accomplishments for scoring
-  const [practiceBoard, employeeBoard, accomplishments] = await Promise.all([
-    EAS_DB.fetchPracticeLeaderboard(quarterId),
+  // Practice Rankings was removed in favour of Org Rankings (Practice tab).
+  // We still need accomplishments to enrich the Top Contributors table
+  // (e.accomplishments, e.accomplishmentEffort) and for badge thresholds.
+  const [employeeBoard, accomplishments] = await Promise.all([
     EAS_DB.fetchEmployeeLeaderboard(fPractice || null, quarterId),
     EAS_DB.fetchAccomplishments(quarterId, { approvedOnly: true })
   ]);
@@ -4271,41 +4271,6 @@ async function renderLeaderboard() {
     e.accomplishments = accStat.count;
     e.accomplishmentEffort = accStat.effort;
   });
-
-  // Practice ranking cards — include accomplishment effort in total
-  const practiceAccStats = {};
-  accomplishments.forEach(a => {
-    const p = a.practice;
-    if (!practiceAccStats[p]) practiceAccStats[p] = { count: 0, effort: 0 };
-    practiceAccStats[p].count += 1;
-    practiceAccStats[p].effort += (a.effortSaved || 0);
-  });
-
-  const medals = ['🥇', '🥈', '🥉'];
-  document.getElementById('leaderboard-practices').innerHTML = practiceBoard.map((p, i) => {
-    const medal = i < 3 ? medals[i] : `#${i + 1}`;
-    const color = practiceColors[p.practice] || '#94a3b8';
-    const accStat = practiceAccStats[p.practice] || { count: 0, effort: 0 };
-    const totalSaved = p.timeSaved + accStat.effort;
-    const crumb = (p.sector || p.department)
-      ? `<div class="leaderboard-breadcrumb">${escapeHtml(p.sector || '—')} › ${escapeHtml(p.department || '—')}</div>`
-      : '';
-    return `<div class="leaderboard-card" style="border-left:4px solid ${color}">
-      <div class="leaderboard-rank">${medal}</div>
-      <div class="leaderboard-info">
-        <div class="leaderboard-name" style="color:${color}">${escapeHtml(p.practice || '—')}</div>
-        ${crumb}
-        <div class="leaderboard-stats">
-          <span>${p.tasks} tasks</span>
-          <span>${accStat.count} accomplishments</span>
-          <span>${fmt(totalSaved, 0)} hrs saved</span>
-          <span>${fmt(p.efficiency, 0)}% eff</span>
-          <span>${p.employees} contributors</span>
-        </div>
-      </div>
-      <div class="leaderboard-score">${fmt(p.score, 0)}</div>
-    </div>`;
-  }).join('');
 
   // Employee ranking table — includes accomplishment data in badges
   document.getElementById('leaderboard-tbody').innerHTML = employeeBoard.slice(0, 50).map((e, i) => {

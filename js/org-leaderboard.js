@@ -114,10 +114,21 @@ const EAS_OrgLeaderboard = (() => {
       const color = colorFor(level, name);
       const eff = fmtPct(r.efficiency_pct);
       const qual = fmtNum(r.quality_avg);
+      // Breadcrumb: only show parent rungs of the hierarchy.
+      //   sector tab   → none (the row IS the sector)
+      //   unit tab     → "Sector"
+      //   practice tab → "Sector › Department"
+      let crumb = '';
+      if (level === 'unit' && r.sector_name) {
+        crumb = `<div class="leaderboard-breadcrumb">${escapeHtml(r.sector_name)}</div>`;
+      } else if (level === 'practice' && (r.sector_name || r.department_name)) {
+        crumb = `<div class="leaderboard-breadcrumb">${escapeHtml(r.sector_name || '—')} › ${escapeHtml(r.department_name || '—')}</div>`;
+      }
       return `<div class="leaderboard-card" style="border-left:4px solid ${color}">
         <div class="leaderboard-rank">${rankBadge(i)}</div>
         <div class="leaderboard-info">
           <div class="leaderboard-name" style="color:${color}">${escapeHtml(name)}</div>
+          ${crumb}
           <div class="leaderboard-stats">
             <span>${r.contributors ?? 0} contributors</span>
             <span>${r.tasks ?? 0} tasks</span>
