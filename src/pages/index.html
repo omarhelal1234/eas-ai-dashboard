@@ -243,6 +243,9 @@
 
       <div class="kpi-grid" id="kpi-grid"></div>
 
+      <!-- Conservative ROI card (admin + Dept SPOC only; renders empty for other roles) -->
+      <div id="roi-card-slot-dashboard" style="margin-top:20px"></div>
+
       <!-- Licensed Tool Adoption Section -->
       <div class="licensed-adoption-section" style="margin-top:20px;padding:20px;border-radius:12px;background:var(--bg-card);border:1px solid var(--border)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -2514,6 +2517,9 @@ function renderDashboard() {
   renderLicensedToolKPIs();
 
   try { renderCharts(); } catch (chartErr) { console.error('renderCharts error:', chartErr); }
+
+  // Conservative ROI card — role-gated inside mount; safe to call unconditionally
+  if (window.EAS_RoiCard) { EAS_RoiCard.mount('#roi-card-slot-dashboard'); }
 }
 
 /**
