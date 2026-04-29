@@ -65,7 +65,7 @@ DECLARE
   v_scope       TEXT;
   v_m1 NUMERIC; v_m2 NUMERIC; v_m3 NUMERIC;
   v_active_users INT;
-  v_avg_per_user NUMERIC;
+  v_median_per_user NUMERIC;
   v_hours_min   NUMERIC;
   v_final_hours NUMERIC;
   v_gross_sar   NUMERIC;
@@ -80,6 +80,14 @@ BEGIN
   SELECT (value)::numeric INTO v_usd_per_day FROM app_config WHERE key = 'roi.usd_per_day';
   SELECT (value)::numeric INTO v_hrs_per_day FROM app_config WHERE key = 'roi.hours_per_day';
   SELECT (value)::numeric INTO v_sar_per_usd FROM app_config WHERE key = 'roi.sar_per_usd';
+
+  IF v_cap IS NULL OR v_coef IS NULL OR v_usd_per_day IS NULL
+     OR v_hrs_per_day IS NULL OR v_sar_per_usd IS NULL THEN
+    RAISE EXCEPTION 'app_config missing one or more roi.* keys (cap/coef/usd_per_day/hours_per_day/sar_per_usd)';
+  END IF;
+  IF v_hrs_per_day = 0 THEN
+    RAISE EXCEPTION 'app_config roi.hours_per_day must be > 0';
+  END IF;
 
   v_rate_sar_hr := (v_usd_per_day / v_hrs_per_day) * v_sar_per_usd;
 
@@ -100,15 +108,23 @@ BEGIN
       WHERE u.auth_id = auth.uid()
         AND COALESCE(ps.is_active, true) = true
     );
-    IF v_practices IS NULL OR cardinality(v_practices) = 0 THEN
-      v_practices := ARRAY(
-        SELECT practice FROM public.users
-        WHERE auth_id = auth.uid() AND practice IS NOT NULL
-      );
+    -- Fallback only when user has NO practice_spoc rows at all (not "no ACTIVE rows" —
+    -- a deactivated SPOC must NOT auto-recover via users.practice).
+    IF cardinality(v_practices) = 0 THEN
+      IF NOT EXISTS (
+        SELECT 1 FROM practice_spoc ps
+        JOIN public.users u ON u.id = ps.spoc_id
+        WHERE u.auth_id = auth.uid()
+      ) THEN
+        v_practices := ARRAY(
+          SELECT practice FROM public.users
+          WHERE auth_id = auth.uid() AND practice IS NOT NULL
+        );
+      END IF;
     END IF;
   END IF;
 
-  IF v_practices IS NULL OR cardinality(v_practices) = 0 THEN
+  IF cardinality(v_practices) = 0 THEN
     RETURN jsonb_build_object(
       'scope', v_scope,
       'practices_in_scope', '[]'::jsonb,
@@ -120,63 +136,64 @@ BEGIN
     );
   END IF;
 
-  SELECT COALESCE(SUM(LEAST(t.time_saved, v_cap)), 0)
-    INTO v_m1
-  FROM tasks t
-  WHERE t.approval_status = 'approved'
-    AND t.is_licensed_tool = true
-    AND t.time_saved > 0
-    AND t.practice = ANY(v_practices);
-
-  SELECT COALESCE(SUM(t.time_saved), 0)
-    INTO v_m2
-  FROM tasks t
-  WHERE t.approval_status = 'approved'
-    AND t.is_licensed_tool = true
-    AND t.time_saved > 0
-    AND t.practice = ANY(v_practices);
-
-  WITH per_user AS (
-    SELECT t.employee_email, SUM(t.time_saved) AS user_total
+  -- Single-pass scan over tasks. base feeds totals (m1/m2), per_user (median for m3),
+  -- and per_practice (per-practice capped sums for the breakdown).
+  -- Method 3: active_users × median(per_user_total). Median (not mean) makes this
+  -- genuinely independent of method 2 — robust to outliers.
+  -- per-practice uses capped sum directly: LEAST(capped_sum, raw_sum) is always capped_sum
+  WITH base AS (
+    SELECT t.practice, t.employee_email,
+           t.time_saved,
+           LEAST(t.time_saved, v_cap) AS capped
     FROM tasks t
     WHERE t.approval_status = 'approved'
       AND t.is_licensed_tool = true
       AND t.time_saved > 0
       AND t.practice = ANY(v_practices)
-    GROUP BY t.employee_email
+  ),
+  per_user AS (
+    SELECT employee_email, SUM(time_saved) AS user_total
+    FROM base
+    GROUP BY employee_email
+  ),
+  totals AS (
+    SELECT
+      COALESCE(SUM(capped),     0) AS m1,
+      COALESCE(SUM(time_saved), 0) AS m2
+    FROM base
+  ),
+  user_stats AS (
+    SELECT
+      COUNT(*)::int                                                        AS active_users,
+      COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY user_total), 0) AS median_per_user
+    FROM per_user
+  ),
+  per_practice AS (
+    SELECT
+      practice,
+      COALESCE(SUM(capped), 0) AS m1_p
+    FROM base
+    GROUP BY practice
   )
   SELECT
-    COUNT(*)::int,
-    COALESCE(AVG(user_total), 0)
-    INTO v_active_users, v_avg_per_user
-  FROM per_user;
-  v_m3 := v_active_users * v_avg_per_user;
+    t.m1, t.m2, us.active_users, us.median_per_user,
+    COALESCE(jsonb_agg(
+      jsonb_build_object(
+        'practice',    pp.practice,
+        'final_hours', pp.m1_p * v_coef,
+        'gross_sar',   pp.m1_p * v_coef * v_rate_sar_hr
+      ) ORDER BY pp.practice
+    ) FILTER (WHERE pp.practice IS NOT NULL), '[]'::jsonb) AS by_practice
+    INTO v_m1, v_m2, v_active_users, v_median_per_user, v_by_practice
+  FROM totals t
+  CROSS JOIN user_stats us
+  LEFT JOIN per_practice pp ON true
+  GROUP BY t.m1, t.m2, us.active_users, us.median_per_user;
 
+  v_m3          := v_active_users * v_median_per_user;
   v_hours_min   := LEAST(v_m1, v_m2, v_m3);
   v_final_hours := v_hours_min * v_coef;
   v_gross_sar   := v_final_hours * v_rate_sar_hr;
-
-  WITH per_practice AS (
-    SELECT
-      t.practice,
-      COALESCE(SUM(LEAST(t.time_saved, v_cap)), 0) AS m1_p,
-      COALESCE(SUM(t.time_saved), 0)               AS m2_p
-    FROM tasks t
-    WHERE t.approval_status = 'approved'
-      AND t.is_licensed_tool = true
-      AND t.time_saved > 0
-      AND t.practice = ANY(v_practices)
-    GROUP BY t.practice
-  )
-  SELECT COALESCE(jsonb_agg(
-    jsonb_build_object(
-      'practice',    pp.practice,
-      'final_hours', LEAST(pp.m1_p, pp.m2_p) * v_coef,
-      'gross_sar',   LEAST(pp.m1_p, pp.m2_p) * v_coef * v_rate_sar_hr
-    ) ORDER BY pp.practice
-  ), '[]'::jsonb)
-    INTO v_by_practice
-  FROM per_practice pp;
 
   RETURN jsonb_build_object(
     'scope', v_scope,
@@ -199,3 +216,13 @@ $$ LANGUAGE plpgsql SECURITY DEFINER STABLE
 
 REVOKE ALL ON FUNCTION get_conservative_roi(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION get_conservative_roi(TEXT) TO authenticated;
+
+-- Covering index for the ROI scan path (and other dashboards filtering on the same combo)
+CREATE INDEX IF NOT EXISTS idx_tasks_roi_scan
+  ON tasks (practice, approval_status, is_licensed_tool)
+  INCLUDE (time_saved, employee_email)
+  WHERE approval_status = 'approved' AND is_licensed_tool = true;
+
+COMMENT ON TABLE  app_config                IS 'Tunable, admin-editable constants. Read by SECURITY DEFINER RPCs.';
+COMMENT ON FUNCTION is_licensed_tool_value(TEXT) IS 'Pure classifier mirroring the rule used by tasks.is_licensed_tool generated column (sql/004). Kept for parity-check tests and future call sites.';
+COMMENT ON FUNCTION get_conservative_roi(TEXT) IS 'Returns conservative ROI (final hours saved + gross SAR) for admins (org-wide or filtered) and Dept SPOCs (their practice_spoc assignments only). NULL for other roles. Computes 3 independent hour methods (capped sum, raw sum, users × median per-user), takes MIN, applies humility coefficient. See docs/superpowers/specs/2026-04-29-conservative-roi-design.md.';
