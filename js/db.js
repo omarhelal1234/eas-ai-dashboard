@@ -1126,6 +1126,8 @@ const EAS_DB = (() => {
       name:          e.employee_name,
       email:         e.employee_email,
       practice:      e.practice,
+      department:    e.department_name || null,
+      sector:        e.sector_name || null,
       tasks:         Number(e.task_count) || 0,
       timeSaved:     Number(e.total_time_saved) || 0,
       timeWithout:   Number(e.total_time_without) || 0,
@@ -1149,6 +1151,8 @@ const EAS_DB = (() => {
     if (error) { console.error('fetchPracticeLeaderboard error:', error.message); return []; }
     return (data || []).map(p => ({
       practice:           p.practice,
+      department:         p.department_name || null,
+      sector:             p.sector_name || null,
       tasks:              Number(p.task_count) || 0,
       employees:          Number(p.employee_count) || 0,
       timeSaved:          Number(p.total_time_saved) || 0,

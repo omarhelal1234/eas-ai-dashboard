@@ -1,5 +1,32 @@
 ---
 
+## April 29, 2026 — Leaderboard UI polish + hierarchy enrichment
+
+### What shipped
+`sql/051_leaderboard_hierarchy.sql` adds `department_name` + `sector_name` columns to both `get_employee_leaderboard(text, text)` and `get_practice_leaderboard(text)`. `js/org-leaderboard.js` rewritten to use `.leaderboard-card` chrome instead of an inline-styled table, with a new `.leaderboard-tabs` segmented-button pill group. `src/pages/index.html` adds a `<div class="leaderboard-breadcrumb">Sector › Department</div>` line under each Practice Rankings card and inserts two `<th>Org</th><th>Unit</th>` columns into the Top Contributors table.
+
+### Why these RPCs were dropped+recreated, not `CREATE OR REPLACE`-d
+`CREATE OR REPLACE FUNCTION` cannot change a function's return type or columns, only its body. Both RPCs needed two new `RETURNS TABLE` columns, which forces a `DROP FUNCTION` first. Explicit `DROP FUNCTION IF EXISTS public.get_X(...)` with full arg signature avoids overload-collision risk.
+
+### Hierarchy resolution path: `tasks.practice`, not `users.department_id`
+Codex review pushed back on the original plan to join through `users.department_id`. That column is null for legacy / flat-sector users (signup didn't always populate it), and the leaderboard RPCs aggregate by `employee_name`, not by `user_id`, so users could drop out entirely. `tasks.practice` is `NOT NULL REFERENCES practices(name)` (sql/001:52), every practice has a `department_id` (sql/009 made it NOT NULL with backfill), and every department has a `sector_id` (sql/033). Joining through the practice chain on the *task* side resolves hierarchy for every approved task without losing rows.
+
+### Joins applied AFTER aggregation
+A `LEFT JOIN practices` before `GROUP BY` would multiply task rows when practice names duplicated across departments. The CTE pattern aggregates first, then the hierarchy joins attach to the already-aggregated row. `DISTINCT ON (LOWER(p.name)) … ORDER BY LOWER(p.name), p.id` in the `practice_lookup` CTE deterministically picks one row per case-insensitive practice name (tie-break by smallest UUID).
+
+### Codex-review findings (caught before commit)
+1. **XSS in breadcrumb + new table cells**: `${p.sector}`, `${p.department}`, `${e.sector}`, `${e.department}` were injected into `innerHTML` without `escapeHtml()`. Sectors and departments are admin-controlled and short, but a malicious admin name could still inject script. Fixed; also wrapped existing `${e.name}`, `${e.practice}`, `${p.practice}` injections that were already exploitable on the same surface.
+2. **Invalid ARIA on org-leaderboard tabs**: original draft used `role="tab"` + `aria-pressed` + `aria-selected` together. WAI-ARIA tabs require roving `tabindex` / arrow-key navigation / `aria-controls` / `tabpanel` linkage — none of which we implement. Replaced with `role="group"` + `aria-pressed` only (segmented buttons). Buttons remain keyboard-activatable via the default `<button>` semantics.
+3. **`get_practice_leaderboard` was never in source**: codex initially flagged the function as missing entirely. Querying the live DB via `pg_get_functiondef` showed it had been deployed inline during Phase 5 (commit 1643a9a) but the SQL file was never committed. Migration 051 captures the existing live definition (preserving the `time_saved*0.4 + tasks*0.3 + efficiency*0.2 + quality*2` score formula exactly) and extends it.
+
+### Stats line: efficiency + quality kept on Org Rankings
+First codex review claimed `get_org_leaderboard` only returned contributors/tasks/hours_saved. Verifying `pg_get_functiondef` showed it actually returns `efficiency_pct` and `quality_avg` as well — the original table render at `js/org-leaderboard.js:91-92` was correctly consuming them. The new card layout keeps both stats.
+
+### Cache busters
+`v=20260429f` on `js/db.js`, `js/org-leaderboard.js`, `css/dashboard.css` in `index.html` and `js/db.js` in `admin.html`. Other pages weren't touched.
+
+---
+
 ## April 29, 2026 — Org-Hierarchy Phase 4 (Polish + codex-review fallout)
 
 ### What shipped

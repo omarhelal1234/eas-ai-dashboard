@@ -9,12 +9,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../../css/dashboard.css">
+<link rel="stylesheet" href="../../css/dashboard.css?v=20260429f">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="../../js/config.js?v=20260418a"></script>
 <script src="../../js/utils.js?v=20260418a"></script>
 <script src="../../js/auth.js?v=20260429e"></script>
-<script src="../../js/db.js?v=20260429e"></script>
+<script src="../../js/db.js?v=20260429f"></script>
 <script src="../../js/phase8-submission.js?v=20260418a"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
@@ -22,7 +22,7 @@
 <script src="../../js/hierarchy.js?v=20260429e"></script>
 <script src="../../js/profile-completion-modal.js?v=20260429e"></script>
 <script src="../../js/org-drilldown.js?v=20260429e"></script>
-<script src="../../js/org-leaderboard.js?v=20260429e"></script>
+<script src="../../js/org-leaderboard.js?v=20260429f"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -746,7 +746,7 @@
       <div class="table-card">
         <div style="overflow-x:auto">
           <table aria-label="Employee leaderboard">
-            <thead><tr><th>#</th><th>Employee</th><th>Practice</th><th>Tasks</th><th>Hours Saved</th><th>Efficiency</th><th>Quality</th><th>Acc.</th><th>Badges</th></tr></thead>
+            <thead><tr><th>#</th><th>Employee</th><th>Org</th><th>Unit</th><th>Practice</th><th>Tasks</th><th>Hours Saved</th><th>Efficiency</th><th>Quality</th><th>Acc.</th><th>Badges</th></tr></thead>
             <tbody id="leaderboard-tbody"></tbody>
           </table>
         </div>
@@ -4283,10 +4283,14 @@ async function renderLeaderboard() {
     const color = practiceColors[p.practice] || '#94a3b8';
     const accStat = practiceAccStats[p.practice] || { count: 0, effort: 0 };
     const totalSaved = p.timeSaved + accStat.effort;
+    const crumb = (p.sector || p.department)
+      ? `<div class="leaderboard-breadcrumb">${escapeHtml(p.sector || '—')} › ${escapeHtml(p.department || '—')}</div>`
+      : '';
     return `<div class="leaderboard-card" style="border-left:4px solid ${color}">
       <div class="leaderboard-rank">${medal}</div>
       <div class="leaderboard-info">
-        <div class="leaderboard-name" style="color:${color}">${p.practice}</div>
+        <div class="leaderboard-name" style="color:${color}">${escapeHtml(p.practice || '—')}</div>
+        ${crumb}
         <div class="leaderboard-stats">
           <span>${p.tasks} tasks</span>
           <span>${accStat.count} accomplishments</span>
@@ -4310,8 +4314,10 @@ async function renderLeaderboard() {
     const totalSaved = e.timeSaved + (e.accomplishmentEffort || 0);
     return `<tr>
       <td style="font-weight:700;text-align:center">${medal}</td>
-      <td style="font-weight:600">${e.name}</td>
-      <td><span style="color:${practiceColors[e.practice] || '#94a3b8'}">${e.practice}</span></td>
+      <td style="font-weight:600">${escapeHtml(e.name || '—')}</td>
+      <td style="color:var(--text-muted)">${escapeHtml(e.sector || '—')}</td>
+      <td style="color:var(--text-muted)">${escapeHtml(e.department || '—')}</td>
+      <td><span style="color:${practiceColors[e.practice] || '#94a3b8'}">${escapeHtml(e.practice || '—')}</span></td>
       <td>${e.tasks}</td>
       <td style="color:var(--success);font-weight:600">${fmt(totalSaved, 1)}</td>
       <td>${fmt(e.efficiency, 0)}%</td>

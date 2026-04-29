@@ -637,6 +637,43 @@ tr:hover td { background: var(--bg-translucent); }
   min-width: 60px;
   text-align: right;
 }
+.leaderboard-breadcrumb {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+.leaderboard-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  background: var(--bg-translucent);
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+}
+.leaderboard-tabs button {
+  background: transparent;
+  border: 0;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.leaderboard-tabs button:hover {
+  color: var(--text-primary);
+}
+.leaderboard-tabs button[aria-pressed="true"] {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--accent);
+}
 
 /* Badge system */
 .badge-icon {
