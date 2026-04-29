@@ -265,7 +265,10 @@ const OrgTree = (() => {
 
   function closeEditModal() {
     const m = document.getElementById('org-edit-modal');
-    if (m) m.style.display = 'none';
+    if (m) {
+      m.classList.add('hidden');
+      m.style.display = 'none';
+    }
     _editCtx = null;
     showError('');
   }
@@ -276,6 +279,11 @@ const OrgTree = (() => {
     document.getElementById('org-edit-title').textContent = title;
     document.getElementById('org-edit-fields').innerHTML = fields;
     const m = document.getElementById('org-edit-modal');
+    // The modal element has class="modal hidden"; the .hidden utility is
+    // `display: none !important` (css/variables.css), so setting
+    // m.style.display='flex' alone is dominated by the class. Strip the
+    // class first, then apply the flex layout via inline style.
+    m.classList.remove('hidden');
     m.style.display = 'flex';
   }
 
