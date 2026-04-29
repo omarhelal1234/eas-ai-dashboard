@@ -71,7 +71,7 @@ DECLARE
   v_gross_sar   NUMERIC;
   v_by_practice JSONB;
 BEGIN
-  IF v_role NOT IN ('admin', 'spoc', 'team_lead') THEN
+  IF v_role IS NULL OR v_role NOT IN ('admin', 'spoc', 'team_lead') THEN
     RETURN NULL;
   END IF;
 
@@ -86,7 +86,7 @@ BEGIN
   IF v_role = 'admin' THEN
     IF p_practice IS NULL THEN
       v_scope     := 'org';
-      v_practices := ARRAY(SELECT DISTINCT practice FROM practices ORDER BY practice);
+      v_practices := ARRAY(SELECT DISTINCT name FROM practices WHERE COALESCE(is_active, true) = true ORDER BY name);
     ELSE
       v_scope     := 'practice';
       v_practices := ARRAY[p_practice];
