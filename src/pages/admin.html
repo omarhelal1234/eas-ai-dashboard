@@ -9,7 +9,7 @@
 <script src="../../js/config.js?v=20260417b"></script>
 <script src="../../js/utils.js?v=20260417b"></script>
 <script src="../../js/auth.js?v=20260429e"></script>
-<script src="../../js/db.js?v=20260429h"></script>
+<script src="../../js/db.js?v=20260429i"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
 <script src="../../js/approvals-modal.js?v=20260429e"></script>
@@ -2161,8 +2161,9 @@ function updateNavCounts() {
 }
 
 // ============ INIT ============
-function initAdmin() {
+async function initAdmin() {
   loadData();
+  await loadLovsFromSupabase();
   populateFilterDropdowns();
   populateFormDropdowns();
   updateNavCounts();
@@ -3274,78 +3275,164 @@ function deletePractice(id, name) {
   });
 }
 
-// ============ LISTS OF VALUES ============
-function renderLOVs() {
+// ============ LISTS OF VALUES (Supabase-backed) ============
+// Each LOV row is { id, category, value, sort_order, is_licensed }.
+// Categories on the lovs table: 'taskCategory' | 'aiTool' | 'status'.
+// Practice Names are read-only here — managed under "Practices".
+const LOV_DEFS = [
+  { category: 'taskCategory', label: 'Task Categories', color: 'var(--accent)' },
+  { category: 'aiTool',       label: 'AI Tools',        color: 'var(--success)', licensedToggle: true },
+  { category: 'status',       label: 'Task Statuses',   color: 'var(--warning)' }
+];
+let _lovRows = [];
+let _lovLoaded = false;
+const _lovAddInflight = new Set();
+
+function escapeAttr(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function syncLovsToData() {
   if (!data.lovs) data.lovs = {};
-  const lovDefs = [
-    { key: 'taskCategories', label: 'Task Categories', color: 'var(--accent)' },
-    { key: 'aiTools', label: 'AI Tools', color: 'var(--success)' },
-    { key: 'practices', label: 'Practice Names', color: 'var(--purple)', source: 'summary' },
-    { key: 'statuses', label: 'Task Statuses', color: 'var(--warning)', defaults: ['Completed','In Progress','Pending','Testing'] }
-  ];
+  data.lovs.taskCategories = _lovRows.filter(r => r.category === 'taskCategory').map(r => r.value);
+  data.lovs.aiTools        = _lovRows.filter(r => r.category === 'aiTool').map(r => r.value);
+  data.lovs.licensedTools  = _lovRows.filter(r => r.category === 'aiTool' && r.is_licensed).map(r => r.value);
+  data.lovs.otherTools     = _lovRows.filter(r => r.category === 'aiTool' && !r.is_licensed).map(r => r.value);
+  data.lovs.statuses       = _lovRows.filter(r => r.category === 'status').map(r => r.value);
+}
+
+async function loadLovsFromSupabase() {
+  try {
+    _lovRows = await EAS_DB.fetchLovsRaw();
+    _lovLoaded = true;
+    syncLovsToData();
+  } catch (e) {
+    console.error('loadLovsFromSupabase error', e);
+    // Leave _lovRows / data.lovs alone — preserve whatever was there (likely empty
+    // on cold load, but never overwrite a previously good state with []).
+  }
+}
+
+async function renderLOVs() {
+  const host = document.getElementById('lovs-content');
+  host.innerHTML = '<div class="lov-empty">Loading…</div>';
+  try {
+    _lovRows = await EAS_DB.fetchLovsRaw();
+    _lovLoaded = true;
+    syncLovsToData();
+  } catch (e) {
+    console.error('renderLOVs fetch error', e);
+    const msg = (e && e.message) ? e.message : 'unknown error';
+    host.innerHTML = `<div class="lov-empty">Failed to load LOVs from Supabase: ${escapeHtml(msg)}. Mutations disabled until reload.</div>`;
+    return;
+  }
 
   let html = '';
-  lovDefs.forEach(lov => {
-    let values;
-    if (lov.source === 'summary') {
-      values = data.summary.practices.map(p => p.name);
-    } else if (lov.defaults && !data.lovs[lov.key]) {
-      data.lovs[lov.key] = [...lov.defaults];
-      values = data.lovs[lov.key];
-    } else {
-      values = data.lovs[lov.key] || [];
-    }
-
+  LOV_DEFS.forEach(def => {
+    const rows = _lovRows.filter(r => r.category === def.category);
     html += `<div class="lov-section">
-      <h3>${lov.label} <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${values.length} items)</span></h3>
+      <h3>${escapeHtml(def.label)} <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${rows.length} items)</span></h3>
       <div class="lov-tags">`;
-    values.forEach((v, i) => {
-      const canRemove = lov.source !== 'summary';
-      html += `<div class="lov-tag" style="background:${lov.color}15;border-color:${lov.color}33;color:${lov.color}">
-        ${v}
-        ${canRemove ? `<span class="remove" onclick="removeLOV('${lov.key}', ${i})">×</span>` : ''}
+    if (!rows.length) {
+      html += `<div class="lov-empty">No ${escapeHtml(def.label.toLowerCase())} defined yet.</div>`;
+    }
+    rows.forEach(r => {
+      const tagId = escapeAttr(r.id);
+      let inner = escapeHtml(r.value);
+      if (def.licensedToggle) {
+        inner += ` <label class="licensed-toggle" title="Mark as Ejada-licensed (GitHub/M365 Copilot tier)">
+          <input type="checkbox" ${r.is_licensed ? 'checked' : ''} onchange="toggleLovLicensed('${tagId}', this.checked)">
+          Licensed
+        </label>`;
+      }
+      html += `<div class="lov-tag" style="background:${def.color}15;border-color:${def.color}33;color:${def.color}">
+        ${inner}
+        <span class="remove" onclick="removeLOV('${tagId}')" title="Delete">×</span>
       </div>`;
     });
     html += '</div>';
 
-    if (lov.source !== 'summary') {
-      html += `<div class="lov-add">
-        <input type="text" id="lov-input-${lov.key}" placeholder="Add new ${lov.label.toLowerCase().replace(/s$/, '')}..."
-          onkeydown="if(event.key==='Enter')addLOV('${lov.key}')">
-        <button class="btn btn-sm btn-primary" onclick="addLOV('${lov.key}')">Add</button>
-      </div>`;
-    } else {
-      html += `<p style="font-size:12px;color:var(--text-muted);margin-top:4px">Practice names are managed in the Practices section</p>`;
-    }
+    const inputId = `lov-input-${def.category}`;
+    const placeholder = def.label.toLowerCase().replace(/s$/, '');
+    html += `<div class="lov-add">
+      <input type="text" id="${inputId}" placeholder="Add new ${escapeAttr(placeholder)}..."
+        onkeydown="if(event.key==='Enter')addLOV('${def.category}')">
+      <button class="btn btn-sm btn-primary" onclick="addLOV('${def.category}')">Add</button>
+    </div>`;
     html += '</div>';
   });
 
-  document.getElementById('lovs-content').innerHTML = html;
-}
-
-function addLOV(key) {
-  const input = document.getElementById('lov-input-' + key);
-  const val = input.value.trim();
-  if (!val) return;
-  if (!data.lovs[key]) data.lovs[key] = [];
-  if (data.lovs[key].includes(val)) { showToast('Already exists', 'error'); return; }
-  data.lovs[key].push(val);
-  input.value = '';
-  autoSave();
-  populateFormDropdowns();
-  renderLOVs();
-  showToast('Added: ' + val);
-}
-
-function removeLOV(key, idx) {
-  const val = data.lovs[key][idx];
-  confirmAction(`Remove "${val}" from the list?`, () => {
-    data.lovs[key].splice(idx, 1);
-    autoSave();
-    populateFormDropdowns();
-    renderLOVs();
-    showToast('Removed: ' + val, 'warning');
+  // Read-only Practice Names section (sourced from practices table via summary)
+  const practiceNames = (data.summary && data.summary.practices) ? data.summary.practices.map(p => p.name) : [];
+  html += `<div class="lov-section">
+    <h3>Practice Names <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${practiceNames.length} items)</span></h3>
+    <div class="lov-tags">`;
+  practiceNames.forEach(name => {
+    html += `<div class="lov-tag" style="background:var(--purple)15;border-color:var(--purple)33;color:var(--purple)">${escapeHtml(name)}</div>`;
   });
+  html += `</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:4px">Practice names are managed in the Practices section.</p>
+  </div>`;
+
+  host.innerHTML = html;
+}
+
+async function addLOV(category) {
+  if (!_lovLoaded) { showToast('LOVs not loaded — reload page', 'error'); return; }
+  const input = document.getElementById('lov-input-' + category);
+  const btn = input ? input.parentElement.querySelector('button') : null;
+  const val = (input ? input.value : '').trim();
+  if (!val) return;
+  const inflightKey = category + '|' + val.toLowerCase();
+  if (_lovAddInflight.has(inflightKey)) return;
+  if (_lovRows.some(r => r.category === category && r.value.toLowerCase() === val.toLowerCase())) {
+    showToast('Already exists', 'error');
+    return;
+  }
+  _lovAddInflight.add(inflightKey);
+  if (input) input.disabled = true;
+  if (btn) btn.disabled = true;
+  try {
+    const result = await EAS_DB.insertLov(category, val, false);
+    if (result.error) { showToast('Failed to add: ' + result.error, 'error'); return; }
+    input.value = '';
+    await renderLOVs();
+    syncLovsToData();
+    populateFormDropdowns();
+    showToast('Added: ' + val);
+  } finally {
+    _lovAddInflight.delete(inflightKey);
+    // Inputs are recreated by renderLOVs, but if the call short-circuited
+    // (error path before re-render) re-enable the originals.
+    if (input && document.body.contains(input)) input.disabled = false;
+    if (btn && document.body.contains(btn)) btn.disabled = false;
+  }
+}
+
+function removeLOV(id) {
+  const row = _lovRows.find(r => r.id === id);
+  if (!row) return;
+  confirmAction(`Remove "${row.value}" from the list? Existing tasks/accomplishments keep their stored value.`, async () => {
+    const result = await EAS_DB.deleteLov(id);
+    if (result.error) { showToast('Failed to remove: ' + result.error, 'error'); return; }
+    await renderLOVs();
+    syncLovsToData();
+    populateFormDropdowns();
+    showToast('Removed: ' + row.value, 'warning');
+  });
+}
+
+async function toggleLovLicensed(id, isLicensed) {
+  const result = await EAS_DB.updateLovLicensed(id, isLicensed);
+  if (result.error) {
+    showToast('Failed to update: ' + result.error, 'error');
+    await renderLOVs();
+    return;
+  }
+  const row = _lovRows.find(r => r.id === id);
+  if (row) row.is_licensed = !!isLicensed;
+  syncLovsToData();
+  populateFormDropdowns();
+  showToast(`${row ? row.value : 'Tool'} marked ${isLicensed ? 'licensed' : 'unlicensed'}`);
 }
 
 // ============ DATA MANAGEMENT ============

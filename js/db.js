@@ -421,6 +421,90 @@ const EAS_DB = (() => {
   }
 
   /**
+   * Admin: fetch raw LOV rows (with id/sort/licensed flag) for management UI.
+   * Filters to active rows only — soft-deleted entries stay hidden.
+   * Throws on Supabase error so callers can preserve prior state instead of
+   * mistaking a network/RLS failure for "no rows".
+   */
+  async function fetchLovsRaw() {
+    const { data, error } = await sb
+      .from('lovs')
+      .select('id, category, value, sort_order, is_licensed, is_active')
+      .eq('is_active', true)
+      .order('category', { ascending: true })
+      .order('sort_order', { ascending: true, nullsFirst: false });
+    if (error) {
+      console.error('fetchLovsRaw error:', error.message);
+      throw new Error(error.message);
+    }
+    return data || [];
+  }
+
+  /**
+   * Admin: insert a new LOV row. category is one of 'taskCategory' | 'aiTool' | 'status'.
+   * Computes next sort_order within the category. Returns inserted row or { error }.
+   * 23505 (UNIQUE violation on (category, value)) is normalised to "Already exists".
+   */
+  async function insertLov(category, value, isLicensed = false) {
+    const trimmed = (value || '').trim();
+    if (!category || !trimmed) return { error: 'category and value required' };
+    const { data: existing, error: lookupErr } = await sb
+      .from('lovs')
+      .select('sort_order')
+      .eq('category', category)
+      .order('sort_order', { ascending: false, nullsFirst: false })
+      .limit(1);
+    if (lookupErr) {
+      console.error('insertLov sort lookup error:', lookupErr.message);
+      return { error: lookupErr.message };
+    }
+    const nextOrder = existing && existing.length ? (Number(existing[0].sort_order) || 0) + 1 : 1;
+    const { data, error } = await sb
+      .from('lovs')
+      .insert({ category, value: trimmed, sort_order: nextOrder, is_licensed: !!isLicensed, is_active: true })
+      .select()
+      .single();
+    if (error) {
+      console.error('insertLov error:', error.message);
+      if (error.code === '23505') return { error: 'Already exists' };
+      return { error: error.message };
+    }
+    return { row: data };
+  }
+
+  /**
+   * Admin: hard-delete a LOV row by id. Existing tasks/accomplishments keep their stored
+   * tool/category text — only the dropdown source changes.
+   */
+  async function deleteLov(id) {
+    if (!id) return { error: 'id required' };
+    const { error } = await sb.from('lovs').delete().eq('id', id);
+    if (error) {
+      console.error('deleteLov error:', error.message);
+      return { error: error.message };
+    }
+    return { success: true };
+  }
+
+  /**
+   * Admin: toggle the is_licensed flag for an aiTool LOV row.
+   */
+  async function updateLovLicensed(id, isLicensed) {
+    if (!id) return { error: 'id required' };
+    const { data, error } = await sb
+      .from('lovs')
+      .update({ is_licensed: !!isLicensed })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) {
+      console.error('updateLovLicensed error:', error.message);
+      return { error: error.message };
+    }
+    return { row: data };
+  }
+
+  /**
    * Fetch licensed tool adoption summary per practice (quarter-aware via RPC).
    * Returns per-practice breakdown of GitHub Copilot vs M365 Copilot vs other tool usage.
    */
@@ -2782,6 +2866,10 @@ const EAS_DB = (() => {
     parseNDJSON,
     fetchProjects,
     fetchLovs,
+    fetchLovsRaw,
+    insertLov,
+    deleteLov,
+    updateLovLicensed,
     fetchApprovedUseCases,
     fetchLicensedToolAdoption,
     fetchAllData,

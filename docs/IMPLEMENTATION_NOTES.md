@@ -1,5 +1,37 @@
 ---
 
+## April 29, 2026 — Admin "Manage LOVs" wired to Supabase (was localStorage-only)
+
+### What was broken
+The Manage LOVs page in `src/pages/admin.html` (`#page-manage-lovs`) shipped as a **localStorage-only** UI. `data.lovs.aiTools` and `data.lovs.taskCategories` defaulted to `[]` from the in-page `APP_DATA` (admin.html:2049-2052), `loadData()` only restored from `localStorage`, and `addLOV`/`removeLOV` only called `saveToLocalStorage()`. Meanwhile `index.html` reads its real list of AI tools / categories via `EAS_DB.fetchAllData()` → `fetchLovs()` → the Supabase `lovs` table. Net effect: an admin "added" a tool, it lived in their browser's localStorage only, employees never saw it, and the page rendered an empty list on a fresh browser.
+
+### Why this wasn't caught earlier
+The Tasks / Accomplishments admin edit modals call `populateFormDropdowns()` which reads `data.lovs.aiTools` — also empty on a fresh browser — but admins rarely edited those modals from a fresh login because Supabase-backed lists already populated cleanly on `index.html`. The bug surfaced as "AI tool dropdown is empty in the admin edit modal" and "tools I added in admin LOV don't show up for employees".
+
+### Fix
+Four new functions in `js/db.js`:
+- `fetchLovsRaw()` — `select('id, category, value, sort_order, is_licensed, is_active').eq('is_active', true)` ordered by `category, sort_order`. Returns rows that the admin UI keys off of (the existing `fetchLovs()` flattens to string arrays and is kept for `index.html`'s read path).
+- `insertLov(category, value, isLicensed)` — computes next `sort_order` per category from `MAX(sort_order) + 1`. Defaults `is_licensed=false`. The `lovs.UNIQUE(category, value)` constraint enforces de-dup at the DB level; the client also early-rejects with `_lovRows.some(...)` for a faster UX.
+- `deleteLov(id)` — hard delete. Existing `tasks.ai_tool` / `accomplishments.ai_tool` columns store free text, so deleting a LOV row never breaks historical data; only the dropdown source changes.
+- `updateLovLicensed(id, isLicensed)` — flips the `is_licensed` flag. The licensed/unlicensed split feeds `fetchLicensedToolAdoption()` and the practice-by-practice "GH Copilot vs M365 Copilot vs Other" breakdown on `index.html`.
+
+`src/pages/admin.html`:
+- `renderLOVs()` is async, awaits `fetchLovsRaw()`, populates `_lovRows`, then renders three sections (`taskCategory` / `aiTool` / `status`) with per-row delete buttons and — only on AI Tools — a "Licensed" checkbox.
+- `addLOV(category)`, `removeLOV(id)`, `toggleLovLicensed(id, checked)` all call the new db.js mutations and re-render.
+- Practice Names section is now read-only display-only, sourced from `data.summary.practices` with a "managed in Practices section" hint. Removed the previous `defaults: ['Completed','In Progress','Pending','Testing']` shim for statuses — those four rows already exist in the live `lovs` table (verified via MCP).
+- New `syncLovsToData()` writes `_lovRows` back into the legacy `data.lovs` shape (`taskCategories` / `aiTools` / `licensedTools` / `otherTools` / `statuses`) so `populateFormDropdowns()` keeps populating `<select id="et-tool">` and `<select id="ea-tool">` without modification.
+- `initAdmin()` now `await`s `loadLovsFromSupabase()` before `populateFormDropdowns()` runs. Without this the AI Tool dropdowns on the Tasks / Accomplishments admin edit modals would be empty until the admin clicked "Manage LOVs".
+
+### Cache buster
+`js/db.js` bumped to `v=20260429i` on both `admin.html` and `index.html`. The `db.js` API surface changed (new exports), so any cached copy without the new version on either page would break the LOV admin flow. employee-status.html still references `v=20260429d` but doesn't use any of the new exports, left as-is.
+
+### What we did NOT change
+- `lovs` table schema — no new columns or constraints.
+- The licensed-tool detection helper `isLicensedTool()` (db.js:386-393) — kept as a name-based fallback for legacy rows, applied as `row.is_licensed || isLicensedTool(row.value)` in `fetchLovs()`. The new admin toggle writes the explicit flag; the helper still covers rows imported before the flag existed.
+- `index.html` LOV rendering / consumption — still uses `fetchLovs()`. No behavior change for employees aside from picking up admin-added tools live.
+
+---
+
 ## April 29, 2026 — Leaderboard UI polish + hierarchy enrichment
 
 ### What shipped
