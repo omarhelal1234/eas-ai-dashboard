@@ -15,7 +15,7 @@
 <script src="../../js/utils.js?v=20260418a"></script>
 <script src="../../js/auth.js?v=20260429e"></script>
 <script src="../../js/db.js?v=20260429h"></script>
-<script src="../../js/roi-card.js?v=20260429a"></script>
+<script src="../../js/roi-card.js?v=20260429b"></script>
 <script src="../../js/phase8-submission.js?v=20260418a"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
@@ -71,6 +71,10 @@
   <div class="nav-item" data-page="exec-summary" data-view-key="web.exec_summary">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/><circle cx="7" cy="16" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="19" cy="6" r="1.5"/></svg>
     Executive Summary
+  </div>
+  <div class="nav-item" data-page="roi" data-role="admin,spoc,dept_spoc,team_lead" data-view-key="web.roi">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 6v12M9 9h4.5a2.5 2.5 0 0 1 0 5H9m0 0h6"/></svg>
+    ROI
   </div>
 
   <div class="nav-section" data-role="admin,spoc,dept_spoc,team_lead,viewer">Practices</div>
@@ -1541,6 +1545,27 @@ npm run compile</code></pre>
     </div>
   </div>
 
+  <!-- Standalone ROI page (admin + Dept SPOC + Team Lead only) -->
+  <div id="page-roi" class="page hidden">
+    <div class="page-header">
+      <div>
+        <h2>ROI (Conservative)</h2>
+        <div class="subtitle">
+          Approved + licensed-tool tasks &middot; min of 3 methods &middot; humility coefficient applied &middot;
+          <span id="roi-page-scope-hint">scope auto-detected from your role</span>
+        </div>
+      </div>
+    </div>
+    <div class="page-content">
+      <div id="roi-card-slot-page" style="max-width:780px"></div>
+      <div style="margin-top:18px;font-size:0.8rem;color:var(--text-muted);max-width:780px;line-height:1.5">
+        <strong>How is "Conservative ROI" calculated?</strong><br>
+        We compute hours saved three independent ways from approved tasks logged with licensed AI tools (GitHub Copilot &amp; M365 Copilot), take the smallest of the three, then multiply by a humility coefficient and an internal blended hourly rate.
+        Admins see the org-wide figure; Department SPOCs see only their assigned practices.
+      </div>
+    </div>
+  </div>
+
   <!-- Issues / Blockers Page -->
   <div id="page-issues" class="page hidden">
     <div class="page-header">
@@ -2398,6 +2423,7 @@ document.querySelectorAll('.nav-item[data-page]').forEach(item => {
     if (item.dataset.page === 'skills') renderSkillsLibrary();
     if (item.dataset.page === 'prompts') loadPromptLibrary();
     if (item.dataset.page === 'exec-summary') renderExecSummary();
+    if (item.dataset.page === 'roi') renderROIPage();
     if (item.dataset.page === 'ide-usage') renderIDEUsage();
     if (item.dataset.page === 'ainews') renderAiNews();
   });
@@ -7511,6 +7537,16 @@ async function updateNavCounts() {
 
 // ======== EXECUTIVE SUMMARY ========
 let execCharts = {};
+
+/**
+ * Standalone ROI page renderer. The card module handles its own role gate
+ * and RPC error rendering. We just trigger a fresh fetch each time the user
+ * navigates here so the figure reflects the latest approved tasks.
+ */
+function renderROIPage() {
+  if (!window.EAS_RoiCard) return;
+  EAS_RoiCard.refresh('#roi-card-slot-page');
+}
 
 async function renderExecSummary() {
   const sb = getSupabaseClient();
