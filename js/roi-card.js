@@ -19,7 +19,10 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function fmtNumber(n, d) {
-    return new Intl.NumberFormat('en-US', { maximumFractionDigits: d, minimumFractionDigits: d }).format(n || 0);
+    var num = Number(n);
+    if (!isFinite(num)) num = 0;
+    var digits = (d == null ? 0 : d);
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(num);
   }
   const SAR = (n) => fmtNumber(Math.round(n || 0), 0) + ' SAR';
   const HRS = (n) => fmtNumber(n || 0, 1) + ' h';
@@ -39,13 +42,13 @@
       '<div class="kpi-card roi-card">' +
         '<div class="kpi-label">ROI (Conservative)</div>' +
         '<div class="roi-headline">' +
-          '<div class="roi-stat">' +
-            '<div class="roi-stat-value">' + HRS(data.final_hours) + '</div>' +
-            '<div class="roi-stat-label">Final Hours Saved</div>' +
+          '<div class="roi-stat" role="group" aria-labelledby="roi-stat-hours-label">' +
+            '<div class="roi-stat-value" aria-describedby="roi-stat-hours-label">' + HRS(data.final_hours) + '</div>' +
+            '<div class="roi-stat-label" id="roi-stat-hours-label">Final Hours Saved</div>' +
           '</div>' +
-          '<div class="roi-stat">' +
-            '<div class="roi-stat-value">' + SAR(data.gross_sar) + '</div>' +
-            '<div class="roi-stat-label">Gross Value</div>' +
+          '<div class="roi-stat" role="group" aria-labelledby="roi-stat-sar-label">' +
+            '<div class="roi-stat-value" aria-describedby="roi-stat-sar-label">' + SAR(data.gross_sar) + '</div>' +
+            '<div class="roi-stat-label" id="roi-stat-sar-label">Gross Value</div>' +
           '</div>' +
         '</div>' +
         '<div class="roi-caption">' +
@@ -68,22 +71,14 @@
     );
   }
 
-  function getRole() {
-    if (global.EAS_Auth && typeof global.EAS_Auth.getUserRole === 'function') {
-      try { return global.EAS_Auth.getUserRole(); } catch (_) { /* noop */ }
-    }
-    return (global.auth && global.auth.user && global.auth.user.role)
-        || (global.currentUser && global.currentUser.role)
-        || null;
-  }
-
-  function callerHasRole(roles) {
-    const role = getRole();
-    return !!(role && roles.indexOf(role) !== -1);
-  }
-
   function getDb() {
-    return global.EAS_DB || global.db || null;
+    return global.EAS_DB || null;
+  }
+  function callerHasRole(roles) {
+    var auth = global.EAS_Auth;
+    if (!auth || typeof auth.getUserRole !== 'function') return false;
+    var role = auth.getUserRole();
+    return !!role && roles.indexOf(role) !== -1;
   }
 
   async function mount(slotSelector) {
@@ -91,25 +86,39 @@
     if (!slot) return;
     if (!callerHasRole(['admin', 'spoc', 'team_lead'])) {
       slot.innerHTML = '';
+      slot.removeAttribute('data-roi-mounted');
       return;
     }
-    const dbApi = getDb();
-    if (!dbApi || typeof dbApi.getConservativeROI !== 'function') {
-      slot.innerHTML = '';
-      console.warn('[roi-card] EAS_DB.getConservativeROI unavailable');
-      return;
-    }
+    // Avoid flashing "Loading…" on every renderExecSummary call
+    if (slot.dataset.roiMounted === '1') return;
     slot.innerHTML = '<div class="kpi-card roi-card roi-loading">Loading ROI&hellip;</div>';
     try {
+      const dbApi = getDb();
+      if (!dbApi || typeof dbApi.getConservativeROI !== 'function') {
+        slot.innerHTML = '';
+        return;
+      }
       const data = await dbApi.getConservativeROI();
-      if (!data) { slot.innerHTML = ''; return; }
+      // Re-check slot still in DOM (user may have navigated)
+      const liveSlot = document.querySelector(slotSelector);
+      if (!liveSlot) return;
+      if (!data) { liveSlot.innerHTML = ''; return; }
       const isAdmin = callerHasRole(['admin']);
-      slot.innerHTML = template(data, isAdmin);
+      liveSlot.innerHTML = template(data, isAdmin);
+      liveSlot.dataset.roiMounted = '1';
     } catch (e) {
-      slot.innerHTML = '<div class="kpi-card roi-card roi-error">ROI unavailable</div>';
+      const liveSlot = document.querySelector(slotSelector);
+      if (liveSlot) liveSlot.innerHTML = '<div class="kpi-card roi-card roi-error">ROI unavailable</div>';
       console.error('[roi-card]', e);
     }
   }
 
-  global.roiCard = { mount: mount };
+  // Public API: refresh() forces re-fetch (e.g. when the quarter selector changes)
+  function refresh(slotSelector) {
+    const slot = document.querySelector(slotSelector);
+    if (slot) slot.removeAttribute('data-roi-mounted');
+    return mount(slotSelector);
+  }
+
+  global.EAS_RoiCard = { mount: mount, refresh: refresh };
 })(window);

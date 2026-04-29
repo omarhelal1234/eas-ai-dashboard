@@ -7578,7 +7578,7 @@ async function renderExecSummary() {
   } finally {
     // ROI card mounts independently of the executive-summary RPC. It has its
     // own role gate (admin/spoc/team_lead) and error handling.
-    if (window.roiCard) { roiCard.mount('#roi-card-slot'); }
+    if (window.EAS_RoiCard) { EAS_RoiCard.mount('#roi-card-slot'); }
   }
 }
 
