@@ -240,6 +240,20 @@ These aren't blockers for Phase 1 (none of them touch the new sector hierarchy) 
 
 ---
 
+## April 29, 2026 — IDE sync ↔ Licensed AI Users alignment (migration 032)
+
+**Trigger:** After admin uploaded the latest Grafana NDJSON the per-user IDE columns (`ide_days_active`, etc.) updated correctly, but the practice-level Licensed AI Users KPIs (the `get_licensed_tool_adoption()` RPC and `practice_summary.licensed_users / active_users`) did not move. Two distinct server-side bugs were responsible.
+
+**Bug 1 — `ide_usage_user_rollup` only saw the latest window.** The view's CTE was `WITH latest_window AS (SELECT MAX(report_end_day) ... GROUP BY user_login)` and the outer query restricted to `report_end_day = max_end`. A small/partial NDJSON re-upload (e.g. one test day) became the new latest window per affected user, dropping their `ide_days_active` to whatever the partial window covered. Fix: rebuilt the view to aggregate over all rows in `ide_usage_daily` per user. The `(user_login, day)` UPSERT key on the table already prevents double-counting on re-uploads, so the rollup is now monotonic-extending and idempotent.
+
+**Bug 2 — `github_copilot_status` was never refreshed.** Migration 004 added `copilot_users.github_copilot_status` (default `'inactive'`) and made the licensed-tool KPIs depend on `COUNT(*) FILTER (WHERE github_copilot_status = 'active')`, but no code path ever flipped it based on activity. The frontend `fetchCopilotUsers()` papered over it per-row at [db.js:294](js/db.js#L294) (`u.ide_days_active > 0 ? 'active' : raw_status`), which is why the user-list page looked right while practice-level KPIs stayed frozen. Fix: `refresh_copilot_users_ide_aggregates()` now ends with an `UPDATE copilot_users SET github_copilot_status='active', github_copilot_activated_at=COALESCE(github_copilot_activated_at, NOW()) WHERE COALESCE(ide_days_active,0) > 0 AND github_copilot_status IS DISTINCT FROM 'active'`. Status is one-way (activate only) — manual admin overrides aren't clobbered, and de-licensing is still a deliberate action.
+
+**Verification (post-deploy):** ran `SELECT refresh_copilot_users_ide_aggregates()` and aggregated stats: 68 users with `ide_days_active > 0`, 68 users with `github_copilot_status = 'active'`, 0 misaligned. 38 roster rows still have `grafana_login = NULL` — these are custom logins that don't match the `<username>_ejadasa` heuristic and require manual mapping via the existing admin "Unmatched Logins" panel ([admin.html:1041](src/pages/admin.html#L1041)).
+
+**Not changed (deferred):** `practice_summary.active_users` still filters on `has_logged_task`, which only flips on manual task submission. That column reflects "logged adoption" rather than "raw IDE usage" so it's intentionally a different signal — left as is.
+
+---
+
 ## April 22, 2026 — IDE Usage Stats Redesign
 
 **Trigger:** Existing IDE view was a single flat table with aggregate-only metrics pre-computed by a Python Grafana sync script (`scripts/sync_grafana_json.py`). Visibility was limited to admin/spoc/dept_spoc/team_lead, there was no practice-level pivot, no drill-down, and the sync required shell access. User asked for a UX modeled on `RefreshedData/EAS_Users_Activity_v3.xlsx` (Summary_by_Practice + All_EAS + per-practice sheets) and a manual JSON upload flow (NDJSON Grafana dumps delivered every couple of days).
