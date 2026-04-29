@@ -3041,3 +3041,21 @@ tr:hover td { background: var(--bg-translucent); }
   color: var(--text-muted);
   margin-top: 2px;
 }
+
+/* ===== Conservative ROI Card (roi-card.js) ===== */
+.roi-card { grid-column: span 2; }
+.roi-headline { display: flex; gap: 24px; margin: 8px 0; flex-wrap: wrap; }
+.roi-stat { min-width: 140px; }
+.roi-stat-value { font-size: 1.6rem; font-weight: 600; }
+.roi-stat-label { font-size: 0.8rem; color: var(--muted, #888); }
+.roi-caption    { font-size: 0.75rem; color: var(--muted, #888); margin-top: 4px; }
+.roi-detail     { margin-top: 8px; font-size: 0.8rem; }
+.roi-detail summary { cursor: pointer; user-select: none; }
+.roi-detail table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.roi-detail td { padding: 2px 4px; }
+.roi-detail td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.roi-by-practice { margin-top: 10px; border-top: 1px solid var(--border, #eee); padding-top: 8px; }
+.roi-by-practice h5 { margin: 0 0 4px 0; font-size: 0.85rem; }
+.roi-by-practice ul { list-style: none; padding: 0; margin: 0; font-size: 0.8rem; }
+.roi-by-practice li { display: flex; justify-content: space-between; padding: 2px 0; gap: 8px; }
+.roi-loading, .roi-error { color: var(--muted, #888); font-size: 0.85rem; }

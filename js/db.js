@@ -172,6 +172,21 @@ const EAS_DB = (() => {
   }
 
   /**
+   * Conservative ROI (admin org-wide, SPOC practice-scoped). Returns null when
+   * caller's role is not permitted (RPC enforces this server-side).
+   * @param {string|null} practice - admin-only filter; ignored for SPOC callers.
+   * @returns {Promise<object|null>}
+   */
+  async function getConservativeROI(practice = null) {
+    const { data, error } = await sb.rpc('get_conservative_roi', { p_practice: practice });
+    if (error) {
+      console.error('[db.getConservativeROI]', error);
+      throw error;
+    }
+    return data;
+  }
+
+  /**
    * Fetch tasks from Supabase (quarter-filtered).
    * @param {string} quarterId - quarter filter
    * @param {object} opts - { approvedOnly: true } to only return approved tasks
@@ -2854,6 +2869,7 @@ const EAS_DB = (() => {
     // Data queries (read)
     fetchTasks,
     fetchPracticeSummary,
+    getConservativeROI,
     fetchQuarterSummary,
     fetchAccomplishments,
     fetchCopilotUsers,

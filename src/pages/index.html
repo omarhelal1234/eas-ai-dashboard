@@ -15,6 +15,7 @@
 <script src="../../js/utils.js?v=20260418a"></script>
 <script src="../../js/auth.js?v=20260429e"></script>
 <script src="../../js/db.js?v=20260429h"></script>
+<script src="../../js/roi-card.js?v=20260429a"></script>
 <script src="../../js/phase8-submission.js?v=20260418a"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
@@ -1483,6 +1484,9 @@ npm run compile</code></pre>
         <div class="kpi-card"><div class="kpi-label">Hrs / Resource</div><div class="kpi-value cyan" id="exec-kpi-hrsres">—</div><div class="kpi-sub" id="exec-kpi-hrsres-sub">— hrs / — resources</div></div>
         <div class="kpi-card"><div class="kpi-label">Practices</div><div class="kpi-value pink" id="exec-kpi-practices">—</div><div class="kpi-sub">under your oversight</div></div>
       </div>
+
+      <!-- Conservative ROI card (admin + Dept SPOC only; renders empty for other roles) -->
+      <div id="roi-card-slot" style="margin-top:20px"></div>
 
       <!-- Charts Row -->
       <div class="exec-charts-row" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px">
@@ -7571,6 +7575,10 @@ async function renderExecSummary() {
   } catch (err) {
     console.error('renderExecSummary error:', err);
     showToast('Error loading executive summary', 'error');
+  } finally {
+    // ROI card mounts independently of the executive-summary RPC. It has its
+    // own role gate (admin/spoc/team_lead) and error handling.
+    if (window.roiCard) { roiCard.mount('#roi-card-slot'); }
   }
 }
 
