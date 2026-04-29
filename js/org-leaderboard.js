@@ -32,6 +32,10 @@ const EAS_OrgLeaderboard = (() => {
     const v = Number(n);
     return v >= 100 ? Math.round(v).toLocaleString() : v.toFixed(1);
   }
+  function fmtScore(n) {
+    if (n == null || isNaN(Number(n))) return '0';
+    return Math.round(Number(n)).toLocaleString();
+  }
   function fmtPct(v) {
     if (v == null || isNaN(Number(v))) return '—';
     return `${Number(v).toFixed(1)}%`;
@@ -122,7 +126,7 @@ const EAS_OrgLeaderboard = (() => {
             <span>${qual === '—' ? '—' : qual + '/5'} quality</span>
           </div>
         </div>
-        <div class="leaderboard-score">${fmtHours(r.hours_saved)}</div>
+        <div class="leaderboard-score" title="Weighted score (hours·0.4 + tasks·0.3 + eff·0.2 + quality·2)">${fmtScore(r.score)}</div>
       </div>`;
     }).join('');
   }
