@@ -79,11 +79,6 @@ body {
   input, select, textarea {
     font-size: 16px !important;
   }
-  /* Stop horizontal scroll bleed in landscape without breaking sticky positioning */
-  html, body {
-    overflow-x: clip;
-    max-width: 100vw;
-  }
 }
 
 /* ============================================================
