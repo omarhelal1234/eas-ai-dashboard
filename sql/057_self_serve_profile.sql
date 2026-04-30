@@ -37,10 +37,26 @@ DECLARE
   v_sector_id    UUID;
   v_dept_id      UUID;
   v_complete_res JSONB;
+  v_unknown      TEXT[];
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'unauthenticated');
+  END IF;
+
+  -- Strict-keys guard: reject unknown payload keys so legacy or buggy
+  -- clients fail loud instead of getting a silent "saved" response.
+  -- Specifically blocks the previously-supported but now-removed
+  -- 'role' and 'gh_access_active' keys (see header for rationale).
+  SELECT array_agg(k) INTO v_unknown
+  FROM jsonb_object_keys(p_changes) AS k
+  WHERE k NOT IN ('name','sector_id','department_id','practice');
+  IF v_unknown IS NOT NULL THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'reason', 'unsupported_keys',
+      'detail', to_jsonb(v_unknown)
+    );
   END IF;
 
   SELECT id, email INTO v_user_id, v_email FROM users WHERE auth_id = v_uid LIMIT 1;

@@ -18,139 +18,19 @@
 
 ## Task 1: Create the SQL migration for `update_my_profile`
 
+> **Decision history (read before implementing):** The original plan had the RPC accept `role` and `gh_access_active`. Codex review flagged both as defects: `role` is a privilege-escalation vector (any user can self-promote to admin) and `gh_access_active` writes a column auto-derived from IDE telemetry. Per user decisions A2 and D1 the RPC accepts ONLY `name`, `sector_id`, `department_id`, `practice` and explicitly rejects unknown keys (P2 strict-keys guard).
+
 **Files:**
 - Create: `sql/057_self_serve_profile.sql`
 
 - [ ] **Step 1: Write the migration file**
 
-Create `sql/057_self_serve_profile.sql` with this exact content:
-
-```sql
--- ============================================================
--- EAS AI Adoption — Migration 057: Self-serve profile RPC.
--- Single SECURITY DEFINER entry point for the profile.html page.
--- Lets the authenticated caller update their own name, role,
--- organization (sector/dept/practice), and GH licensed-user status.
--- Practice change syncs to copilot_users (matched by email) so the
--- licensed-tool roster stays consistent (Q4-B).
--- Password changes go through supabase.auth.updateUser, NOT this RPC.
--- ============================================================
-
-CREATE OR REPLACE FUNCTION update_my_profile(p_changes jsonb)
-RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
-AS $$
-DECLARE
-  v_uid          UUID;
-  v_user_id      UUID;
-  v_email        TEXT;
-  v_applied      TEXT[] := ARRAY[]::TEXT[];
-  v_role         TEXT;
-  v_name         TEXT;
-  v_practice     TEXT;
-  v_sector_id    UUID;
-  v_dept_id      UUID;
-  v_gh_active    BOOLEAN;
-  v_complete_res JSONB;
-  v_copilot_hit  INTEGER;
-BEGIN
-  v_uid := auth.uid();
-  IF v_uid IS NULL THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'unauthenticated');
-  END IF;
-
-  SELECT id, email INTO v_user_id, v_email FROM users WHERE auth_id = v_uid LIMIT 1;
-  IF v_user_id IS NULL THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'no_users_row');
-  END IF;
-
-  -- ---- name ----
-  IF p_changes ? 'name' THEN
-    v_name := NULLIF(trim(p_changes->>'name'), '');
-    IF v_name IS NULL THEN
-      RETURN jsonb_build_object('ok', false, 'reason', 'invalid_name');
-    END IF;
-    UPDATE users SET name = v_name WHERE id = v_user_id;
-    v_applied := array_append(v_applied, 'name');
-  END IF;
-
-  -- ---- role ----
-  IF p_changes ? 'role' THEN
-    v_role := p_changes->>'role';
-    IF v_role NOT IN ('admin','spoc','dept_spoc','sector_spoc','team_lead','contributor','viewer','executive') THEN
-      RETURN jsonb_build_object('ok', false, 'reason', 'invalid_role');
-    END IF;
-    UPDATE users SET role = v_role WHERE id = v_user_id;
-    v_applied := array_append(v_applied, 'role');
-  END IF;
-
-  -- ---- organization (sector / department / practice) ----
-  -- Reuse complete_profile for the chain validation. It writes
-  -- users.sector_id, users.department_id, users.practice and flips
-  -- profile_completed = true. Only call when at least one of the
-  -- three keys is present in p_changes.
-  IF (p_changes ? 'sector_id') OR (p_changes ? 'department_id') OR (p_changes ? 'practice') THEN
-    -- Pull current values for any key the caller did NOT send so we
-    -- pass a complete chain to complete_profile.
-    SELECT
-      COALESCE((p_changes->>'sector_id')::uuid,     sector_id),
-      COALESCE((p_changes->>'department_id')::uuid, department_id),
-      COALESCE(NULLIF(p_changes->>'practice',''),   practice)
-    INTO v_sector_id, v_dept_id, v_practice
-    FROM users WHERE id = v_user_id;
-
-    IF v_sector_id IS NULL THEN
-      RETURN jsonb_build_object('ok', false, 'reason', 'sector_required');
-    END IF;
-
-    v_complete_res := complete_profile(v_sector_id, v_dept_id, v_practice);
-    IF (v_complete_res->>'success')::boolean IS NOT TRUE THEN
-      RETURN jsonb_build_object(
-        'ok', false,
-        'reason', 'org_validation_failed',
-        'detail', v_complete_res
-      );
-    END IF;
-
-    -- Q4-B sync: mirror the practice change into copilot_users (matched by email).
-    IF v_practice IS NOT NULL THEN
-      UPDATE copilot_users
-         SET practice = v_practice,
-             updated_at = now()
-       WHERE lower(email) = lower(v_email);
-    END IF;
-
-    v_applied := array_append(v_applied, 'organization');
-  END IF;
-
-  -- ---- GH access status (toggles copilot_users.status) ----
-  IF p_changes ? 'gh_access_active' THEN
-    v_gh_active := (p_changes->>'gh_access_active')::boolean;
-    UPDATE copilot_users
-       SET status = CASE WHEN v_gh_active THEN 'active' ELSE 'pending' END,
-           updated_at = now()
-     WHERE lower(email) = lower(v_email);
-    GET DIAGNOSTICS v_copilot_hit = ROW_COUNT;
-    IF v_copilot_hit = 0 THEN
-      RETURN jsonb_build_object(
-        'ok', false,
-        'reason', 'no_licensed_user_row',
-        'applied', to_jsonb(v_applied)
-      );
-    END IF;
-    v_applied := array_append(v_applied, 'gh_access');
-  END IF;
-
-  RETURN jsonb_build_object('ok', true, 'applied', to_jsonb(v_applied));
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION update_my_profile(jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION update_my_profile(jsonb) TO authenticated;
-
-COMMENT ON FUNCTION update_my_profile(jsonb) IS
-  'Self-serve profile update for the authenticated caller. Accepts a JSONB payload with any of: name, role, sector_id, department_id, practice, gh_access_active. Returns {ok, applied[]} or {ok:false, reason}. Practice changes are mirrored into copilot_users (Q4-B).';
-```
+**The live file `sql/057_self_serve_profile.sql` IS the source of truth for this task.** If regenerating, copy that file verbatim. The function:
+- Accepts ONLY these payload keys: `name`, `sector_id`, `department_id`, `practice`. Any other key (including `role`, `gh_access_active`) returns `{ok:false, reason:'unsupported_keys', detail:[...]}`.
+- Resolves caller from `auth.uid()` → `users.auth_id`.
+- Updates `users.name`, then runs the org branch via `complete_profile(...)` for chain validation, then mirrors `sector_id`/`department_id`/`practice` into `copilot_users` (each only if the caller sent that key).
+- Returns `{ok:true, applied[], warnings[]}` on success or `{ok:false, reason, detail?}` on validation failure.
+- `SECURITY DEFINER`, `SET search_path = public`, `REVOKE EXECUTE FROM PUBLIC; GRANT EXECUTE TO authenticated`.
 
 - [ ] **Step 2: Apply the migration via the Supabase MCP**
 
@@ -321,17 +201,11 @@ Create `src/pages/profile.html` with this exact content (sections are scaffolded
         <input id="pf-email" type="email" readonly />
       </div>
       <div class="field">
-        <label for="pf-role">Role</label>
-        <select id="pf-role">
-          <option value="admin">Administrator</option>
-          <option value="spoc">AI SPOC</option>
-          <option value="dept_spoc">Dept SPOC</option>
-          <option value="sector_spoc">Sector SPOC</option>
-          <option value="team_lead">Team Lead</option>
-          <option value="contributor">Contributor</option>
-          <option value="viewer">Viewer</option>
-          <option value="executive">Executive</option>
-        </select>
+        <label>Role</label>
+        <div id="pf-role" style="padding:8px 10px;background:var(--bg-primary);border:1px solid var(--border-color, rgba(255,255,255,0.1));border-radius:6px;font-size:14px;">—</div>
+        <p class="status-line" style="color:var(--text-muted);font-size:12px;margin-top:4px;">
+          Role changes are admin-only and managed in admin.html.
+        </p>
       </div>
       <div class="row-actions">
         <span class="status-line" id="pf-account-status"></span>
@@ -496,7 +370,9 @@ git commit -m "feat(js): Profile module skeleton with loadCurrent"
 
 ---
 
-## Task 5: Wire the Account section (name, role)
+## Task 5: Wire the Account section (name only; role is read-only display)
+
+> **Decision history:** The original plan let users self-edit `role`. Decision A2 removed that — role is admin-only. Account section saves only `name`; the role field is a non-editable display populated from the current user profile.
 
 **Files:**
 - Modify: `js/profile.js`
@@ -512,19 +388,27 @@ In `js/profile.js`, **inside** the IIFE, add this function and call it from `ini
     const roleEl = document.getElementById('pf-role');
     const btn = document.getElementById('pf-account-save');
 
-    nameEl.value  = _current.user.name || '';
-    emailEl.value = _current.user.email || '';
-    roleEl.value  = _current.user.role || 'contributor';
+    const roleLabels = {
+      admin: 'Administrator', spoc: 'AI SPOC', dept_spoc: 'Dept SPOC',
+      sector_spoc: 'Sector SPOC', team_lead: 'Team Lead',
+      contributor: 'Contributor', viewer: 'Viewer', executive: 'Executive'
+    };
+
+    nameEl.value         = _current.user.name || '';
+    emailEl.value        = _current.user.email || '';
+    roleEl.textContent   = roleLabels[_current.user.role] || _current.user.role || '—';
 
     btn.addEventListener('click', async () => {
       const name = nameEl.value.trim();
-      const role = roleEl.value;
       if (!name) { _setStatus('pf-account-status', 'err', 'Name cannot be empty.'); return; }
+      if (name === (_current.user.name || '')) {
+        _setStatus('pf-account-status', '', 'No changes.'); return;
+      }
 
       btn.disabled = true;
       _setStatus('pf-account-status', '', 'Saving…');
       const { data, error } = await _client().rpc('update_my_profile', {
-        p_changes: { name, role }
+        p_changes: { name }
       });
       btn.disabled = false;
       if (error || !data?.ok) {
@@ -532,7 +416,6 @@ In `js/profile.js`, **inside** the IIFE, add this function and call it from `ini
         return;
       }
       _current.user.name = name;
-      _current.user.role = role;
       _setStatus('pf-account-status', 'ok', 'Saved.');
     });
   }
@@ -549,7 +432,7 @@ Update `init()`:
 
 - [ ] **Step 2: Verify in browser**
 
-Reload `profile.html`. Change the name → click Save. Expected: green "Saved." appears. Reload the page → new name persists. Revert via SQL if needed:
+Reload `profile.html`. Change the name → click Save. Expected: green "Saved." appears. Reload the page → new name persists. Confirm the Role display shows the current role label and is NOT editable. Revert via SQL if needed:
 
 ```sql
 UPDATE users SET name = 'Original Name' WHERE email = 'omar.helal.1234@gmail.com';
@@ -561,7 +444,7 @@ UPDATE users SET name = 'Original Name' WHERE email = 'omar.helal.1234@gmail.com
 
 ```bash
 git add js/profile.js
-git commit -m "feat(profile): wire Account section (name, role)"
+git commit -m "feat(profile): wire Account section (name editable; role display only)"
 ```
 
 ---
@@ -824,10 +707,11 @@ git commit -m "feat(profile): wire Security section (password change)"
 
 Log in as a contributor account (not admin). On `profile.html`:
 1. Change name → Save → reload → name persists.
-2. Change role to a different valid role → Save → reload → role persists. (Revert via SQL afterwards.)
+2. Confirm Role displays the current role and is NOT editable.
 3. Change practice via the cascade → Save → check `users.practice` AND `copilot_users.practice` both updated.
-4. Toggle GH access → Save → check `copilot_users.status`.
-5. Change password → sign out → sign back in with the new password. Change it back.
+4. Change sector or department via the cascade → Save → check `users.sector_id`/`department_id` AND `copilot_users.sector_id`/`department_id` both updated.
+5. Confirm Licensed Tools card shows License status + GH active as read-only text (no toggle, no Save).
+6. Change password → sign out → sign back in with the new password. Change it back.
 
 Expected: every section saves independently and shows its own inline status.
 
@@ -836,6 +720,7 @@ Expected: every section saves independently and shows its own inline status.
 - Submit empty name → red error, no RPC call.
 - Submit mismatched password confirmation → red error, no auth call.
 - Pick an invalid sector/unit/practice combination (use DevTools to override the select before clicking Save) → server-side `complete_profile` returns failure → red error mentioning `org_validation_failed`.
+- Strict-keys guard: in DevTools, call `supabase.rpc('update_my_profile', { p_changes: { role: 'admin' } })` and confirm the response is `{ok:false, reason:'unsupported_keys', detail:['role']}` — proves the privilege-escalation surface is closed.
 
 - [ ] **Step 3: Theme + responsive**
 
