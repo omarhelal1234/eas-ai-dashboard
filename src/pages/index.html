@@ -15,7 +15,7 @@
 <script src="../../js/utils.js?v=20260418a"></script>
 <script src="../../js/auth.js?v=20260429e"></script>
 <script src="../../js/db.js?v=20260429h"></script>
-<script src="../../js/roi-card.js?v=20260429c"></script>
+<script src="../../js/roi-card.js?v=20260429d"></script>
 <script src="../../js/phase8-submission.js?v=20260418a"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
@@ -7556,7 +7556,6 @@ let execCharts = {};
  * navigates here so the figure reflects the latest approved tasks.
  */
 function renderROIPage() {
-  // Populate diagnostic info first so it's visible even if mount or RPC fail.
   (async function _populateRoiDiag() {
     try {
       var roleEl  = document.getElementById('roi-diag-role');
@@ -7567,15 +7566,20 @@ function renderROIPage() {
       var errRow  = document.getElementById('roi-diag-error-row');
       var errEl   = document.getElementById('roi-diag-error');
 
-      var role = (window.EAS_Auth && typeof EAS_Auth.getUserRole === 'function') ? EAS_Auth.getUserRole() : '(EAS_Auth missing)';
-      var name = (window.EAS_Auth && typeof EAS_Auth.getUserName === 'function') ? EAS_Auth.getUserName() : '';
-      if (roleEl)  roleEl.textContent  = role || '(none)';
-      if (nameEl)  nameEl.textContent  = name || '(none)';
+      // Resolve modules from top-level lexical bindings (this codebase doesn't put them on window)
+      var authMod = null, dbMod = null, sbClient = null;
+      try { if (typeof EAS_Auth !== 'undefined') authMod = EAS_Auth; } catch (_) {}
+      try { if (typeof EAS_DB   !== 'undefined') dbMod   = EAS_DB; } catch (_) {}
+      try { if (typeof sb       !== 'undefined') sbClient = sb; } catch (_) {}
 
-      // Email + auth uid from current Supabase session
+      var role = (authMod && typeof authMod.getUserRole === 'function') ? authMod.getUserRole() : '(EAS_Auth missing)';
+      var name = (authMod && typeof authMod.getUserName === 'function') ? authMod.getUserName() : '';
+      if (roleEl) roleEl.textContent = role || '(none)';
+      if (nameEl) nameEl.textContent = name || '(none)';
+
       try {
-        if (typeof sb !== 'undefined' && sb && sb.auth && typeof sb.auth.getUser === 'function') {
-          var resp = await sb.auth.getUser();
+        if (sbClient && sbClient.auth && typeof sbClient.auth.getUser === 'function') {
+          var resp = await sbClient.auth.getUser();
           var u = resp && resp.data && resp.data.user;
           if (emailEl) emailEl.textContent = (u && u.email) || '(no session)';
           if (uidEl)   uidEl.textContent   = (u && u.id)    || '(no session)';
@@ -7588,11 +7592,10 @@ function renderROIPage() {
         if (uidEl)   uidEl.textContent   = 'error: ' + (e1 && e1.message);
       }
 
-      // RPC call — try directly so we capture the raw response and any error
       if (errRow) errRow.style.display = 'none';
       try {
-        if (window.EAS_DB && typeof EAS_DB.getConservativeROI === 'function') {
-          var data = await EAS_DB.getConservativeROI();
+        if (dbMod && typeof dbMod.getConservativeROI === 'function') {
+          var data = await dbMod.getConservativeROI();
           if (rpcEl) rpcEl.textContent = (data === null || data === undefined) ? 'null' : JSON.stringify(data, null, 2);
         } else {
           if (rpcEl) rpcEl.textContent = '(EAS_DB.getConservativeROI not available)';
@@ -7607,7 +7610,6 @@ function renderROIPage() {
     }
   })();
 
-  // Mount the actual card (its role gate handles non-permitted roles)
   if (window.EAS_RoiCard) { EAS_RoiCard.refresh('#roi-card-slot-page'); }
 }
 

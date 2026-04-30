@@ -2,13 +2,15 @@
  * Conservative ROI Card
  * Single-purpose render module. Mounts only when caller has admin/spoc/team_lead role.
  *
+ * NOTE on globals: this codebase declares EAS_Auth, EAS_DB, sb with top-level
+ * `const` rather than `window.X = ...`. Top-level const is in the Script scope
+ * but NOT attached to window. So we resolve by bare name (with typeof guards)
+ * first, falling back to window only if needed.
+ *
  * Headline: Final Hours Saved + Gross Value (SAR)
  * Sub-line: methodology summary (humility transparency)
  * <details>: per-method breakdown so reviewers can see how the number was built
  * Admin-only: per-practice list
- *
- * NOTE: This codebase exposes the DB layer as window.EAS_DB and the auth layer
- * as window.EAS_Auth (no hasRole helper). This module bridges to those globals.
  */
 (function (global) {
   'use strict';
@@ -72,10 +74,13 @@
   }
 
   function getDb() {
-    return global.EAS_DB || null;
+    try { if (typeof EAS_DB !== 'undefined' && EAS_DB) return EAS_DB; } catch (e) {}
+    return (global && global.EAS_DB) || null;
   }
   function callerHasRole(roles) {
-    var auth = global.EAS_Auth;
+    var auth = null;
+    try { if (typeof EAS_Auth !== 'undefined') auth = EAS_Auth; } catch (e) {}
+    if (!auth) auth = (global && global.EAS_Auth) || null;
     if (!auth || typeof auth.getUserRole !== 'function') return false;
     var role = auth.getUserRole();
     return !!role && roles.indexOf(role) !== -1;
