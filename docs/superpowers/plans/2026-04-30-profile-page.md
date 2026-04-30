@@ -360,17 +360,20 @@ Create `src/pages/profile.html` with this exact content (sections are scaffolded
       </div>
     </section>
 
-    <!-- Licensed Tools -->
+    <!-- Licensed Tools (READ-ONLY — managed by licensing workflow + IDE telemetry) -->
     <section class="card" id="card-licensed">
       <h2>Licensed Tools</h2>
-      <div class="field toggle-row">
-        <input id="pf-gh-active" type="checkbox" />
-        <label for="pf-gh-active">GitHub Copilot active (mark as actively using your license)</label>
+      <div class="field">
+        <label>License status</label>
+        <div id="pf-license-status" style="padding:8px 10px;background:var(--bg-primary);border:1px solid var(--border-color, rgba(255,255,255,0.1));border-radius:6px;font-size:14px;">—</div>
       </div>
-      <div class="row-actions">
-        <span class="status-line" id="pf-licensed-status"></span>
-        <button class="btn-primary" id="pf-licensed-save">Save</button>
+      <div class="field">
+        <label>GitHub Copilot active</label>
+        <div id="pf-gh-status" style="padding:8px 10px;background:var(--bg-primary);border:1px solid var(--border-color, rgba(255,255,255,0.1));border-radius:6px;font-size:14px;">—</div>
       </div>
+      <p class="status-line" style="color:var(--text-muted);font-size:12px;margin-top:8px;">
+        These values are managed by the licensing workflow and the weekly IDE-telemetry sync. They cannot be edited here.
+      </p>
     </section>
 
     <!-- Security -->
@@ -651,52 +654,58 @@ git commit -m "feat(profile): wire Organization section (cascade + practice sync
 
 ---
 
-## Task 7: Wire the Licensed Tools section (GH access toggle)
+## Task 7: Render the Licensed Tools section (READ-ONLY)
+
+**Decision history:** The original plan had a self-serve GH active toggle. Codex review flagged that `copilot_users.github_copilot_status` is auto-derived from IDE telemetry by `refresh_copilot_users_ide_aggregates()` — any user-set value would be silently overwritten on the next sync. Decision (Issue D1): the section is read-only. Users see their license-provisioning status and GH-active state, but cannot edit them.
 
 **Files:**
 - Modify: `js/profile.js`
+- Modify: `src/pages/profile.html` — replace the toggle + Save button with a read-only display
 
-- [ ] **Step 1: Add `wireLicensed()`**
+- [ ] **Step 1: Update `src/pages/profile.html` Licensed Tools card**
+
+Replace the card body (the `<div class="field toggle-row">` and `<div class="row-actions">` blocks) with:
+
+```html
+      <div class="field">
+        <label>License status</label>
+        <div id="pf-license-status" style="padding:8px 10px;background:var(--bg-primary);border:1px solid var(--border-color, rgba(255,255,255,0.1));border-radius:6px;font-size:14px;">—</div>
+      </div>
+      <div class="field">
+        <label>GitHub Copilot active</label>
+        <div id="pf-gh-status" style="padding:8px 10px;background:var(--bg-primary);border:1px solid var(--border-color, rgba(255,255,255,0.1));border-radius:6px;font-size:14px;">—</div>
+      </div>
+      <p class="status-line" style="color:var(--text-muted);font-size:12px;margin-top:8px;">
+        These values are managed by the licensing workflow and the weekly IDE-telemetry sync. They cannot be edited here.
+      </p>
+```
+
+- [ ] **Step 2: Add `wireLicensed()` in `js/profile.js`**
 
 Add inside the IIFE:
 
 ```javascript
   function wireLicensed() {
-    const toggleEl = document.getElementById('pf-gh-active');
-    const btn      = document.getElementById('pf-licensed-save');
+    const statusEl = document.getElementById('pf-license-status');
+    const ghEl     = document.getElementById('pf-gh-status');
 
     if (!_current.licensed) {
-      toggleEl.disabled = true;
-      btn.disabled = true;
-      _setStatus('pf-licensed-status', 'err',
-        'You are not in the licensed-tool roster. Contact your SPOC to be added.');
+      statusEl.textContent = 'Not in licensed-tool roster';
+      ghEl.textContent     = '—';
       return;
     }
-
-    toggleEl.checked = (_current.licensed.status === 'active');
-
-    btn.addEventListener('click', async () => {
-      const active = !!toggleEl.checked;
-      btn.disabled = true;
-      _setStatus('pf-licensed-status', '', 'Saving…');
-      const { data, error } = await _client().rpc('update_my_profile', {
-        p_changes: { gh_access_active: active }
-      });
-      btn.disabled = false;
-      if (error || !data?.ok) {
-        if (data?.reason === 'no_licensed_user_row') {
-          _setStatus('pf-licensed-status', 'err',
-            'Your licensed-user record was removed. Refresh the page.');
-        } else {
-          _setStatus('pf-licensed-status', 'err', 'Error: ' + (error?.message || data?.reason || 'unknown'));
-        }
-        return;
-      }
-      _current.licensed.status = active ? 'active' : 'pending';
-      _setStatus('pf-licensed-status', 'ok', 'Saved.');
-    });
+    statusEl.textContent = _current.licensed.status || '—';
+    ghEl.textContent     = _current.licensed.github_copilot_status || '—';
   }
 ```
+
+Update the `loadCurrent()` query in Task 4 (only if not already present): the `select` list on `copilot_users` must include `github_copilot_status`. Edit the existing line in `js/profile.js`:
+
+```javascript
+      .select('id, email, practice, status, github_copilot_status')
+```
+
+(was `'id, email, practice, status'`).
 
 Update `init()`:
 
@@ -709,21 +718,19 @@ Update `init()`:
   }
 ```
 
-- [ ] **Step 2: Verify in browser**
+- [ ] **Step 3: Verify in browser**
 
-Reload `profile.html`. If your account has a `copilot_users` row, the toggle reflects current `status`. Flip it → Save. Expected: "Saved." Then verify via SQL:
+Reload `profile.html`. Confirm:
+- License status shows the current `copilot_users.status` value (e.g. "access granted").
+- GitHub Copilot active shows `github_copilot_status` (e.g. "active" or "inactive").
+- No Save button on this card.
+- If the user has no `copilot_users` row, the card shows "Not in licensed-tool roster".
 
-```sql
-SELECT email, status FROM copilot_users WHERE lower(email) = lower('omar.helal.1234@gmail.com');
-```
-
-Also test the empty-roster path: temporarily delete the `copilot_users` row, reload, expect the section to be disabled with the explanatory message. Restore the row afterwards.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add js/profile.js
-git commit -m "feat(profile): wire Licensed Tools section (GH access toggle)"
+git add js/profile.js src/pages/profile.html
+git commit -m "feat(profile): Licensed Tools section as read-only (auto-managed)"
 ```
 
 ---

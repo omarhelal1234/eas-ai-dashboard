@@ -1,15 +1,18 @@
 -- ============================================================
 -- EAS AI Adoption — Migration 057: Self-serve profile RPC.
 -- Single SECURITY DEFINER entry point for the profile.html page.
--- Lets the authenticated caller update their own name, organization
--- (sector / department / practice), and GH licensed-tool active flag.
+-- Lets the authenticated caller update their own name and organization
+-- (sector / department / practice).
 --
 -- Deliberately scoped (per code review):
 --   * `role` is NOT self-editable here. Role management stays in
 --     admin.html to avoid privilege escalation via this endpoint.
---   * GH toggle drives copilot_users.github_copilot_status, not
---     copilot_users.status (which is the license-provisioning state
---     and is owned by the licensing workflow, not the user).
+--   * GH/Copilot status is NOT user-editable. copilot_users.status is
+--     the license-provisioning state owned by the licensing workflow,
+--     and copilot_users.github_copilot_status is automatically derived
+--     from IDE telemetry by refresh_copilot_users_ide_aggregates(), so
+--     a user-set value would be silently overwritten by the next sync.
+--     The Licensed Tools section on profile.html is read-only.
 --   * Org changes mirror sector_id / department_id / practice into
 --     copilot_users so the licensed-tool roster stays consistent
 --     with users (Q4-B). The populate_sector_id trigger on
@@ -33,9 +36,7 @@ DECLARE
   v_practice     TEXT;
   v_sector_id    UUID;
   v_dept_id      UUID;
-  v_gh_active    BOOLEAN;
   v_complete_res JSONB;
-  v_copilot_hit  INTEGER;
 BEGIN
   v_uid := auth.uid();
   IF v_uid IS NULL THEN
@@ -105,25 +106,6 @@ BEGIN
     v_applied := array_append(v_applied, 'organization');
   END IF;
 
-  -- ---- GH licensed-tool active flag ----
-  -- Drives copilot_users.github_copilot_status ('active' | 'inactive').
-  -- copilot_users.status is the license-provisioning state and is owned
-  -- by the licensing workflow, not editable here.
-  IF p_changes ? 'gh_access_active' THEN
-    v_gh_active := (p_changes->>'gh_access_active')::boolean;
-    UPDATE copilot_users
-       SET github_copilot_status = CASE WHEN v_gh_active THEN 'active' ELSE 'inactive' END,
-           github_copilot_activated_at = CASE WHEN v_gh_active THEN COALESCE(github_copilot_activated_at, now()) ELSE github_copilot_activated_at END,
-           updated_at = now()
-     WHERE lower(email) = lower(v_email);
-    GET DIAGNOSTICS v_copilot_hit = ROW_COUNT;
-    IF v_copilot_hit = 0 THEN
-      v_warnings := array_append(v_warnings, 'no_licensed_user_row');
-    ELSE
-      v_applied := array_append(v_applied, 'gh_access');
-    END IF;
-  END IF;
-
   RETURN jsonb_build_object(
     'ok', true,
     'applied', to_jsonb(v_applied),
@@ -136,4 +118,4 @@ REVOKE EXECUTE ON FUNCTION update_my_profile(jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION update_my_profile(jsonb) TO authenticated;
 
 COMMENT ON FUNCTION update_my_profile(jsonb) IS
-  'Self-serve profile update for the authenticated caller. Accepts JSONB with any of: name, sector_id, department_id, practice, gh_access_active. Returns {ok:true, applied[], warnings[]} on success or {ok:false, reason} on validation failure. Role changes are NOT supported here (admin-only). GH toggle drives copilot_users.github_copilot_status; copilot_users.status is owned by the licensing workflow.';
+  'Self-serve profile update for the authenticated caller. Accepts JSONB with any of: name, sector_id, department_id, practice. Returns {ok:true, applied[], warnings[]} on success or {ok:false, reason} on validation failure. Role and GH/Copilot status are NOT supported here — role is admin-only (privilege-escalation risk) and GH status is auto-derived from IDE telemetry.';
