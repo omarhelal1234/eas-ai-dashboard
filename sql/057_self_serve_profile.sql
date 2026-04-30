@@ -80,12 +80,14 @@ BEGIN
   -- profile_completed = true. Only call when at least one of the
   -- three keys is present in p_changes.
   IF (p_changes ? 'sector_id') OR (p_changes ? 'department_id') OR (p_changes ? 'practice') THEN
-    -- Pull current values for any key the caller did NOT send so we
-    -- pass a complete chain to complete_profile.
+    -- For each org key: if the caller sent it (even as JSON null), use the
+    -- sent value; otherwise inherit from the current row. JSON null on a
+    -- present key means "intentionally clear" (e.g. sector with no units).
+    -- This distinction matters: COALESCE conflates null with missing.
     SELECT
-      COALESCE((p_changes->>'sector_id')::uuid,     sector_id),
-      COALESCE((p_changes->>'department_id')::uuid, department_id),
-      COALESCE(NULLIF(p_changes->>'practice',''),   practice)
+      CASE WHEN p_changes ? 'sector_id'     THEN NULLIF(p_changes->>'sector_id','')::uuid     ELSE sector_id END,
+      CASE WHEN p_changes ? 'department_id' THEN NULLIF(p_changes->>'department_id','')::uuid ELSE department_id END,
+      CASE WHEN p_changes ? 'practice'      THEN NULLIF(p_changes->>'practice','')            ELSE practice END
     INTO v_sector_id, v_dept_id, v_practice
     FROM users WHERE id = v_user_id;
 
