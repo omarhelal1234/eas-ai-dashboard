@@ -4,22 +4,9 @@ These instructions are the **single source of truth** for how Claude, GitHub Cop
 
 ---
 
-## Workflow Defaults
+## Shell Preferences
 
-- After implementing changes, commit and push automatically unless told otherwise — the user almost always wants the push as part of the task.
-- Bump cache busters (CSS/JS query strings) whenever fixing a bug the user might re-test in browser, to avoid 'same error' reports caused by caching.
-- When deleting 'dead code', verify with grep across ALL files (HTML, JS, inline handlers) before removal. Never delete a function based on static analysis alone.
-
-## Implementation Style
-
-- Skip lengthy planning/brainstorming docs for bug fixes and small features — go directly to root-cause investigation and edits. Only produce written specs when the user explicitly asks to 'design', 'spec', or 'plan'.
-- Avoid excessive clarifying questions; make a reasonable assumption and proceed, noting the assumption.
-- When the user reports a bug, investigate the actual code path before blaming the data.
-
-## Scoping Edits Carefully
-
-- When the user asks to change UI for a specific role or page, scope the edit to that role/page only — do not remove or alter shared components for all users.
-- Verify which page a feature lives on before adding UI (e.g., SPOC approvals are on index.html, not admin.html).
+Always use bash (Git Bash) for shell commands instead of PowerShell or cmd. BeyondTrust on this Ejada laptop blocks .bat/.cmd execution and PowerShell often gets killed silently. Git Bash works reliably. Use bash even when on Windows.
 
 ---
 
@@ -27,7 +14,8 @@ These instructions are the **single source of truth** for how Claude, GitHub Cop
 
 Before starting **any** task (feature, bug fix, refactor, doc edit, schema change, commit), you MUST:
 
-1. **Validate requirements** — challenge and clarify the request. Ask as many questions as needed to pin down scope, edge cases, acceptance criteria, and dependencies. Do not begin implementation until the requirement is fully understood.
+1. **Validate requirements** — challenge and clarify the request. Ask as many questions as needed to pin down scope, edge cases, acceptance criteria, and dependencies. Do not begin implementation until the requirement is fully understood, always consult codex for review and implmenetation and planning.
+
 2. **Create a TODO list** using the task-tracking tool. The list MUST contain at minimum:
    - [ ] Validate requirements with clarifying questions
    - [ ] Implement the change
