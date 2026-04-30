@@ -116,7 +116,10 @@ BEGIN
       UPDATE copilot_users SET department_id = v_dept_id, updated_at = now()
        WHERE lower(email) = lower(v_email);
     END IF;
-    IF p_changes ? 'practice' AND v_practice IS NOT NULL THEN
+    IF p_changes ? 'practice' THEN
+      -- v_practice may be NULL here (intentional clear when the new sector/unit
+      -- has no practices). The roster row must follow so it doesn't keep a
+      -- stale practice that no longer matches the user's org.
       UPDATE copilot_users SET practice = v_practice, updated_at = now()
        WHERE lower(email) = lower(v_email);
     END IF;
