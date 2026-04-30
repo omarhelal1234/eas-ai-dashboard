@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>My Profile — EAS AI Adoption Tracker</title>
+<script>if(localStorage.getItem('eas-theme')==='light')document.documentElement.setAttribute('data-theme','light')</script>
+<link rel="stylesheet" href="../../css/variables.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 32px 20px;
+  }
+  .profile-wrap { max-width: 640px; margin: 0 auto; }
+  .profile-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+  .profile-header h1 { font-size:24px; font-weight:600; }
+  .profile-header a { color: var(--accent); text-decoration:none; font-size:14px; }
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.06));
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size:16px; font-weight:600; margin-bottom:12px; }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:13px; color: var(--text-muted); margin-bottom:4px; }
+  .field input, .field select {
+    width:100%; padding:8px 10px;
+    background: var(--bg-primary); color: var(--text-primary);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    border-radius: 6px; font-size:14px; font-family:inherit;
+  }
+  .field input[readonly] { opacity: 0.6; cursor: not-allowed; }
+  .row-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; }
+  .btn-primary {
+    background: var(--accent); color:#fff; border:none;
+    padding: 8px 16px; border-radius:6px; font-size:14px; font-weight:500; cursor:pointer;
+  }
+  .btn-primary[disabled] { opacity:0.5; cursor:not-allowed; }
+  .status-line { font-size:13px; min-height:1em; }
+  .status-line.ok { color: #16a34a; }
+  .status-line.err { color: #c0392b; }
+  .toggle-row { display:flex; align-items:center; gap:10px; }
+  .toggle-row input[type="checkbox"] { width:auto; }
+</style>
+</head>
+<body>
+  <div class="profile-wrap">
+    <div class="profile-header">
+      <h1>My Profile</h1>
+      <a href="index.html">← Back to dashboard</a>
+    </div>
+
+    <!-- Account -->
+    <section class="card" id="card-account">
+      <h2>Account</h2>
+      <div class="field">
+        <label for="pf-name">Full name</label>
+        <input id="pf-name" type="text" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="pf-email">Email</label>
+        <input id="pf-email" type="email" readonly />
+      </div>
+      <div class="field">
+        <label>Role</label>
+        <div id="pf-role" style="padding:8px 10px;background:var(--bg-primary);border:1px solid var(--border-color, rgba(255,255,255,0.1));border-radius:6px;font-size:14px;">—</div>
+        <p class="status-line" style="color:var(--text-muted);font-size:12px;margin-top:4px;">
+          Role changes are admin-only and managed in admin.html.
+        </p>
+      </div>
+      <div class="row-actions">
+        <span class="status-line" id="pf-account-status"></span>
+        <button class="btn-primary" id="pf-account-save">Save</button>
+      </div>
+    </section>
+
+    <!-- Organization -->
+    <section class="card" id="card-org">
+      <h2>Organization</h2>
+      <div class="field">
+        <label for="pf-sector">Sector</label>
+        <select id="pf-sector"></select>
+      </div>
+      <div class="field">
+        <label for="pf-unit">Department / Unit</label>
+        <select id="pf-unit"></select>
+      </div>
+      <div class="field">
+        <label for="pf-practice">Practice</label>
+        <select id="pf-practice"></select>
+      </div>
+      <div class="row-actions">
+        <span class="status-line" id="pf-org-status"></span>
+        <button class="btn-primary" id="pf-org-save">Save</button>
+      </div>
+    </section>
+
+    <!-- Licensed Tools (READ-ONLY — managed by licensing workflow + IDE telemetry) -->
+    <section class="card" id="card-licensed">
+      <h2>Licensed Tools</h2>
+      <div class="field">
+        <label>License status</label>
+        <div id="pf-license-status" style="padding:8px 10px;background:var(--bg-primary);border:1px solid var(--border-color, rgba(255,255,255,0.1));border-radius:6px;font-size:14px;">—</div>
+      </div>
+      <div class="field">
+        <label>GitHub Copilot active</label>
+        <div id="pf-gh-status" style="padding:8px 10px;background:var(--bg-primary);border:1px solid var(--border-color, rgba(255,255,255,0.1));border-radius:6px;font-size:14px;">—</div>
+      </div>
+      <p class="status-line" style="color:var(--text-muted);font-size:12px;margin-top:8px;">
+        These values are managed by the licensing workflow and the weekly IDE-telemetry sync. They cannot be edited here.
+      </p>
+    </section>
+
+    <!-- Security -->
+    <section class="card" id="card-security">
+      <h2>Security</h2>
+      <div class="field">
+        <label for="pf-pw-current">Current password</label>
+        <input id="pf-pw-current" type="password" autocomplete="current-password" />
+      </div>
+      <div class="field">
+        <label for="pf-pw-new">New password</label>
+        <input id="pf-pw-new" type="password" autocomplete="new-password" />
+      </div>
+      <div class="field">
+        <label for="pf-pw-confirm">Confirm new password</label>
+        <input id="pf-pw-confirm" type="password" autocomplete="new-password" />
+      </div>
+      <div class="row-actions">
+        <span class="status-line" id="pf-security-status"></span>
+        <button class="btn-primary" id="pf-security-save">Change password</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../../js/config.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/hierarchy.js"></script>
+  <script src="../../js/profile.js"></script>
+  <script>
+    (async () => {
+      const ok = await EAS_Auth.requireAuth();
+      if (!ok) return;
+      await Profile.init();
+    })();
+  </script>
+</body>
+</html>
