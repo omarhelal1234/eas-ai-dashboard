@@ -15,7 +15,7 @@
 <script src="../../js/utils.js?v=20260418a"></script>
 <script src="../../js/auth.js?v=20260429e"></script>
 <script src="../../js/db.js?v=20260429h"></script>
-<script src="../../js/roi-card.js?v=20260429b"></script>
+<script src="../../js/roi-card.js?v=20260429c"></script>
 <script src="../../js/phase8-submission.js?v=20260418a"></script>
 <link rel="stylesheet" href="../../css/events.css">
 <script src="../../js/events-modal.js?v=20260424a"></script>
@@ -1563,6 +1563,18 @@ npm run compile</code></pre>
         We compute hours saved three independent ways from approved tasks logged with licensed AI tools (GitHub Copilot &amp; M365 Copilot), take the smallest of the three, then multiply by a humility coefficient and an internal blended hourly rate.
         Admins see the org-wide figure; Department SPOCs see only their assigned practices.
       </div>
+      <details id="roi-page-diagnostic" style="margin-top:24px;max-width:780px;font-size:0.8rem;color:var(--text-muted);border:1px solid var(--border);border-radius:8px;padding:8px 12px">
+        <summary style="cursor:pointer;font-weight:600;color:var(--text-primary,inherit)">Diagnostic info</summary>
+        <div style="margin-top:8px">
+          <div><strong>Detected role:</strong> <span id="roi-diag-role">—</span></div>
+          <div><strong>User name:</strong> <span id="roi-diag-name">—</span></div>
+          <div><strong>User email:</strong> <span id="roi-diag-email">—</span></div>
+          <div><strong>Auth user id:</strong> <span id="roi-diag-uid">—</span></div>
+          <div style="margin-top:6px"><strong>RPC response:</strong></div>
+          <pre id="roi-diag-rpc" style="background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:8px;max-height:280px;overflow:auto;white-space:pre-wrap;word-break:break-word">—</pre>
+          <div id="roi-diag-error-row" style="display:none"><strong>Error:</strong> <pre id="roi-diag-error" style="background:#3a1d1d;color:#ffb3b3;border:1px solid #5a2c2c;border-radius:6px;padding:8px;white-space:pre-wrap;word-break:break-word">—</pre></div>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -7544,8 +7556,59 @@ let execCharts = {};
  * navigates here so the figure reflects the latest approved tasks.
  */
 function renderROIPage() {
-  if (!window.EAS_RoiCard) return;
-  EAS_RoiCard.refresh('#roi-card-slot-page');
+  // Populate diagnostic info first so it's visible even if mount or RPC fail.
+  (async function _populateRoiDiag() {
+    try {
+      var roleEl  = document.getElementById('roi-diag-role');
+      var nameEl  = document.getElementById('roi-diag-name');
+      var emailEl = document.getElementById('roi-diag-email');
+      var uidEl   = document.getElementById('roi-diag-uid');
+      var rpcEl   = document.getElementById('roi-diag-rpc');
+      var errRow  = document.getElementById('roi-diag-error-row');
+      var errEl   = document.getElementById('roi-diag-error');
+
+      var role = (window.EAS_Auth && typeof EAS_Auth.getUserRole === 'function') ? EAS_Auth.getUserRole() : '(EAS_Auth missing)';
+      var name = (window.EAS_Auth && typeof EAS_Auth.getUserName === 'function') ? EAS_Auth.getUserName() : '';
+      if (roleEl)  roleEl.textContent  = role || '(none)';
+      if (nameEl)  nameEl.textContent  = name || '(none)';
+
+      // Email + auth uid from current Supabase session
+      try {
+        if (typeof sb !== 'undefined' && sb && sb.auth && typeof sb.auth.getUser === 'function') {
+          var resp = await sb.auth.getUser();
+          var u = resp && resp.data && resp.data.user;
+          if (emailEl) emailEl.textContent = (u && u.email) || '(no session)';
+          if (uidEl)   uidEl.textContent   = (u && u.id)    || '(no session)';
+        } else {
+          if (emailEl) emailEl.textContent = '(sb client not available)';
+          if (uidEl)   uidEl.textContent   = '(sb client not available)';
+        }
+      } catch (e1) {
+        if (emailEl) emailEl.textContent = 'error: ' + (e1 && e1.message);
+        if (uidEl)   uidEl.textContent   = 'error: ' + (e1 && e1.message);
+      }
+
+      // RPC call — try directly so we capture the raw response and any error
+      if (errRow) errRow.style.display = 'none';
+      try {
+        if (window.EAS_DB && typeof EAS_DB.getConservativeROI === 'function') {
+          var data = await EAS_DB.getConservativeROI();
+          if (rpcEl) rpcEl.textContent = (data === null || data === undefined) ? 'null' : JSON.stringify(data, null, 2);
+        } else {
+          if (rpcEl) rpcEl.textContent = '(EAS_DB.getConservativeROI not available)';
+        }
+      } catch (e2) {
+        if (rpcEl)  rpcEl.textContent  = '(threw)';
+        if (errRow) errRow.style.display = '';
+        if (errEl)  errEl.textContent  = (e2 && (e2.message || e2.toString())) || '(unknown error)';
+      }
+    } catch (eOuter) {
+      console.error('[renderROIPage diag]', eOuter);
+    }
+  })();
+
+  // Mount the actual card (its role gate handles non-permitted roles)
+  if (window.EAS_RoiCard) { EAS_RoiCard.refresh('#roi-card-slot-page'); }
 }
 
 async function renderExecSummary() {
