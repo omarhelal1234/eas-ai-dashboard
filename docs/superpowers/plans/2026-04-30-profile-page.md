@@ -34,7 +34,7 @@
 
 - [ ] **Step 2: Apply the migration via the Supabase MCP**
 
-Use the Supabase MCP `apply_migration` tool with name `057_self_serve_profile` and the SQL above. (Per CLAUDE.md §3, never shell out to `psql`.)
+Read the full contents of `sql/057_self_serve_profile.sql` (use the `Read` tool, not Bash `cat`) and pass that exact body as the `query` argument to the Supabase MCP `apply_migration` tool, with `name: "057_self_serve_profile"`. Do NOT hand-recreate the SQL — the file is the single source of truth and includes the strict-keys guard, the org sync block, and the function comment. (Per CLAUDE.md §3, never shell out to `psql`.)
 
 Expected: migration succeeds, function `update_my_profile(jsonb)` exists.
 
@@ -720,7 +720,7 @@ Expected: every section saves independently and shows its own inline status.
 - Submit empty name → red error, no RPC call.
 - Submit mismatched password confirmation → red error, no auth call.
 - Pick an invalid sector/unit/practice combination (use DevTools to override the select before clicking Save) → server-side `complete_profile` returns failure → red error mentioning `org_validation_failed`.
-- Strict-keys guard: in DevTools, call `supabase.rpc('update_my_profile', { p_changes: { role: 'admin' } })` and confirm the response is `{ok:false, reason:'unsupported_keys', detail:['role']}` — proves the privilege-escalation surface is closed.
+- Strict-keys guard: open the page while logged in, then in DevTools console run `(await getSupabaseClient().rpc('update_my_profile', { p_changes: { role: 'admin' } })).data` and confirm the response is `{ok:false, reason:'unsupported_keys', detail:['role']}` — proves the privilege-escalation surface is closed. (`supabase` alone is the UMD namespace from the CDN; the client instance is what `getSupabaseClient()` returns.)
 
 - [ ] **Step 3: Theme + responsive**
 
