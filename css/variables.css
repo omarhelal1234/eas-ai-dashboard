@@ -72,6 +72,20 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* iOS Safari orientation fixes (portrait + landscape) */
+@media (hover: none) and (pointer: coarse) {
+  /* Prevent auto-zoom on input focus — iOS Safari zooms when font-size < 16px.
+     Overrides per-page rules that drop inputs to 13–14px in landscape. */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  /* Stop horizontal scroll bleed in landscape without breaking sticky positioning */
+  html, body {
+    overflow-x: clip;
+    max-width: 100vw;
+  }
+}
+
 /* ============================================================
    Scrollbar (WebKit + Firefox)
    ============================================================ */
