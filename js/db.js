@@ -1,0 +1,3372 @@
+// ============================================================
+// EAS AI Dashboard — Database / Data Layer
+// Phase 3: Full Supabase integration (re-fetch per quarter)
+// ============================================================
+
+const EAS_DB = (() => {
+  const sb = getSupabaseClient();
+
+  // ---- Quarter State ----
+  let _quarters = [];
+  let _selectedQuarter = null; // 'Q1-2026', 'Q2-2026', etc. or 'all'
+
+  /** Fetch all quarters from Supabase */
+  async function loadQuarters() {
+    const { data, error } = await sb
+      .from('quarters')
+      .select('*')
+      .order('start_date', { ascending: true });
+
+    if (error) {
+      console.error('Failed to load quarters:', error.message);
+      return [];
+    }
+    _quarters = data || [];
+    return _quarters;
+  }
+
+  function getQuarters() { return _quarters; }
+
+  function getActiveQuarter() {
+    return _quarters.find(q => q.is_active) || _quarters[_quarters.length - 1];
+  }
+
+  function getSelectedQuarter() {
+    if (!_selectedQuarter) {
+      const saved = localStorage.getItem('eas_selected_quarter');
+      if (saved) {
+        _selectedQuarter = saved;
+      } else {
+        const active = getActiveQuarter();
+        _selectedQuarter = active ? active.id : 'all';
+      }
+    }
+    return _selectedQuarter;
+  }
+
+  function setSelectedQuarter(quarterId) {
+    _selectedQuarter = quarterId;
+    localStorage.setItem('eas_selected_quarter', quarterId);
+  }
+
+  function getQuarterLabel(quarterId) {
+    if (quarterId === 'all') return 'All Time';
+    const q = _quarters.find(q => q.id === quarterId);
+    return q ? q.label : quarterId;
+  }
+
+  // ---- Quarter Selector UI ----
+
+  function populateQuarterSelector(selectId = 'quarter-selector') {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    select.innerHTML = '';
+
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = 'All Time';
+    select.appendChild(allOpt);
+
+    _quarters.forEach(q => {
+      const opt = document.createElement('option');
+      opt.value = q.id;
+      opt.textContent = q.label + (q.is_active ? ' (Current)' : '') + (q.is_locked ? ' 🔒' : '');
+      select.appendChild(opt);
+    });
+
+    select.value = getSelectedQuarter();
+
+    select.addEventListener('change', (e) => {
+      setSelectedQuarter(e.target.value);
+      window.dispatchEvent(new CustomEvent('quarter-changed', { detail: { quarter: e.target.value } }));
+    });
+  }
+
+  /**
+   * Populate a page-specific quarter selector (no global side-effects).
+   * @param {string} selectId — element ID of the <select>
+   * @param {function} onChange — callback receiving the selected quarter value
+   */
+  function populatePageQuarterSelector(selectId, onChange) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '';
+
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = 'All Time';
+    select.appendChild(allOpt);
+
+    _quarters.forEach(q => {
+      const opt = document.createElement('option');
+      opt.value = q.id;
+      opt.textContent = q.label + (q.is_active ? ' (Current)' : '') + (q.is_locked ? ' 🔒' : '');
+      select.appendChild(opt);
+    });
+
+    // Default to the global selected quarter
+    select.value = getSelectedQuarter();
+
+    if (typeof onChange === 'function') {
+      select.addEventListener('change', () => onChange(select.value));
+    }
+  }
+
+  // ---- Quarter Comparison Helpers ----
+
+  function getPreviousQuarter(quarterId) {
+    if (!quarterId || quarterId === 'all') return null;
+    const idx = _quarters.findIndex(q => q.id === quarterId);
+    return idx > 0 ? _quarters[idx - 1].id : null;
+  }
+
+  function calcDelta(current, previous) {
+    if (!previous || previous === 0) return null;
+    return ((current - previous) / previous) * 100;
+  }
+
+  function formatDelta(delta) {
+    if (delta === null || delta === undefined) return '';
+    const sign = delta >= 0 ? '↑' : '↓';
+    const color = delta >= 0 ? 'var(--success)' : 'var(--danger)';
+    return `<span style="color:${color};font-size:12px;font-weight:600">${sign} ${Math.abs(delta).toFixed(1)}%</span>`;
+  }
+
+  // ===========================================================
+  // Supabase Data Queries — Full Fetch Layer (Phase 3)
+  // ===========================================================
+
+  /**
+   * Fetch practice summary (quarter-aware via RPC).
+   * If quarterId is 'all' or null, fetches aggregated across all quarters.
+   * Returns array of practice objects matching the APP_DATA.summary.practices shape.
+   */
+  async function fetchPracticeSummary(quarterId) {
+    const qid = (!quarterId || quarterId === 'all') ? null : quarterId;
+    const { data, error } = await sb.rpc('get_practice_summary', { p_quarter_id: qid });
+    if (error) {
+      console.error('fetchPracticeSummary error:', error.message);
+      return [];
+    }
+    // Transform snake_case DB → camelCase APP_DATA shape
+    return (data || []).map(p => ({
+      name:         p.practice,
+      head:         p.head,
+      spoc:         p.spoc,
+      tasks:        Number(p.tasks) || 0,
+      timeWithout:  Number(p.time_without) || 0,
+      timeWith:     Number(p.time_with) || 0,
+      timeSaved:    Number(p.time_saved) || 0,
+      efficiency:   Number(p.efficiency_pct) || 0,
+      quality:      Number(p.avg_quality) || 0,
+      completed:    Number(p.completed) || 0,
+      projects:     Number(p.project_count) || 0,
+      licensedUsers: Number(p.licensed_users) || 0,
+      activeUsers:  Number(p.active_users) || 0,
+      totalResources: Number(p.total_resources) || 0,
+      adoptionRate: Number(p.adoption_rate_pct) || 0,
+      hoursSavedPerResource: Number(p.hours_saved_per_resource) || 0,
+      overallEfficiency: Number(p.overall_efficiency_pct) || 0
+    }));
+  }
+
+  /**
+   * Conservative ROI (admin org-wide, SPOC practice-scoped). Returns null when
+   * caller's role is not permitted (RPC enforces this server-side).
+   * @param {string|null} practice - admin-only filter; ignored for SPOC callers.
+   * @returns {Promise<object|null>}
+   */
+  async function getConservativeROI(practice = null) {
+    const { data, error } = await sb.rpc('get_conservative_roi', { p_practice: practice });
+    if (error) {
+      console.error('[db.getConservativeROI]', error);
+      throw error;
+    }
+    return data;
+  }
+
+  // Columns required by _shapeTaskRow, listed explicitly so task fetches never
+  // pull `embedding` (pgvector, ~19 kB serialized per row — 17 of the 19 MB a
+  // full-quarter `select=*` transferred) or `embedding_text_hash`. Those are
+  // server-side AI-linkage internals; no client code reads them.
+  const TASK_COLUMNS = [
+    'id', 'quarter_id', 'practice', 'week_number', 'week_start', 'week_end',
+    'project', 'project_code', 'employee_name', 'employee_email',
+    'task_description', 'task_details', 'category', 'ai_tool', 'prompt_used',
+    'time_without_ai', 'time_with_ai', 'time_saved', 'efficiency',
+    'quality_rating', 'status', 'notes', 'approval_status',
+    'submission_approved', 'linked_use_case_id', 'link_status',
+    'link_confidence', 'link_source', 'expected_implementations'
+  ].join(',');
+  const TASK_SELECT = TASK_COLUMNS + ', use_case:linked_use_case_id(id,name,asset_id)';
+
+  // Internal: shape a raw `tasks` row (with embedded use_case) into the
+  // camelCase object expected by the dashboard / APP_DATA.tasks consumers.
+  function _shapeTaskRow(t) {
+    return {
+      id:          t.id,
+      practice:    t.practice,
+      week:        t.week_number,
+      weekStart:   t.week_start,
+      weekEnd:     t.week_end,
+      project:     t.project,
+      projectCode: t.project_code,
+      employee:    t.employee_name,
+      employeeEmail: t.employee_email,
+      task:        t.task_description,
+      taskDetails: t.task_details || '',
+      category:    t.category,
+      aiTool:      t.ai_tool,
+      isLicensedTool: isLicensedTool(t.ai_tool),
+      prompt:      t.prompt_used,
+      timeWithout: Number(t.time_without_ai) || 0,
+      timeWith:    Number(t.time_with_ai) || 0,
+      timeSaved:   Number(t.time_saved) || 0,
+      efficiency:  Number(t.efficiency) || 0,
+      quality:     Number(t.quality_rating) || 0,
+      status:      t.status,
+      approvalStatus: t.approval_status || 'pending',
+      submittedForApproval: t.submission_approved || false,
+      notes:       t.notes,
+      quarterId:   t.quarter_id,
+      useCaseId:   t.linked_use_case_id || null,
+      useCaseName: t.use_case?.name || null,
+      useCaseAssetId: t.use_case?.asset_id || null,
+      linkStatus:  t.link_status || null,
+      linkConfidence: t.link_confidence != null ? Number(t.link_confidence) : null,
+      linkSource:  t.link_source || null,
+      expectedImplementations: t.expected_implementations || null
+    };
+  }
+
+  // Internal: apply the standard quarter / approval filters to a tasks query.
+  function _applyTaskScope(query, quarterId, opts = {}) {
+    if (quarterId && quarterId !== 'all') {
+      query = query.eq('quarter_id', quarterId);
+    }
+    if (opts.approvedOnly) {
+      query = query.eq('approval_status', 'approved');
+    }
+    return query;
+  }
+
+  /**
+   * Fetch tasks from Supabase (quarter-filtered). Auto-paginates server-side
+   * in PAGE_SIZE chunks so callers receive the full result set without the
+   * historical 1000-row cap. Suitable for dashboard widgets that aggregate
+   * client-side; for the Tasks view, prefer `fetchTasksPage` which keeps
+   * pagination on the server.
+   * @param {string} quarterId - quarter filter ('all' or quarter id)
+   * @param {object} opts - { approvedOnly: true } to only return approved tasks
+   * @returns {Promise<Array>} rows shaped to match APP_DATA.tasks
+   */
+  async function fetchTasks(quarterId, opts = {}) {
+    const PAGE_SIZE = 1000;
+    const all = [];
+    let from = 0;
+    // Loop until a short page tells us we have everything. We must rebuild the
+    // query each iteration because PostgREST query builders are single-use
+    // after `.range()`.
+    while (true) {
+      // `id` tiebreaker keeps offset pagination stable: week_start alone has
+      // huge tie groups (one per logging week), and Postgres returns tied rows
+      // in arbitrary per-query order, silently skipping/duplicating rows at
+      // page boundaries once a quarter exceeds PAGE_SIZE.
+      let query = sb.from('tasks')
+        .select(TASK_SELECT)
+        .order('week_start', { ascending: false })
+        .order('id', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      query = _applyTaskScope(query, quarterId, opts);
+      const { data, error } = await query;
+      if (error) {
+        console.error('fetchTasks error:', error.message);
+        return [];
+      }
+      const batch = data || [];
+      for (const row of batch) all.push(_shapeTaskRow(row));
+      if (batch.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+    return all;
+  }
+
+  /**
+   * Fetch a single page of tasks with server-side filtering, sorting, and
+   * counting. Used by the Tasks view so that quarters with > 1000 tasks
+   * paginate correctly without pulling the entire dataset to the browser.
+   *
+   * @param {object} args
+   * @param {string} args.quarterId       — quarter filter, or 'all'
+   * @param {number} [args.page=1]        — 1-indexed page number
+   * @param {number} [args.pageSize=100]  — rows per page
+   * @param {object} [args.filters]       — { practice, category, aiTool, status, approvalStatus, search }
+   * @param {object} [args.scope]         — { role, practice, memberEmails } for RLS-adjacent scoping
+   * @returns {Promise<{rows:Array, total:number, approvedTotal:number|null}>}
+   */
+  async function fetchTasksPage({ quarterId, page = 1, pageSize = 100, filters = {}, scope = {} } = {}) {
+    const applyCommon = (q) => {
+      if (quarterId && quarterId !== 'all') q = q.eq('quarter_id', quarterId);
+      // Role scoping: SPOC limited to own practice, team_lead to own members.
+      // For SPOC we ignore the practice filter from the UI dropdown (matches
+      // the legacy client-side behavior in renderTasks).
+      if (scope.role === 'spoc' && scope.practice) {
+        q = q.eq('practice', scope.practice);
+      } else if (scope.role === 'team_lead') {
+        const emails = scope.memberEmails || [];
+        if (emails.length === 0) {
+          // No members → return zero rows by matching an impossible email.
+          q = q.eq('employee_email', '__no_members__');
+        } else {
+          q = q.in('employee_email', emails);
+        }
+      } else if (filters.practice) {
+        q = q.eq('practice', filters.practice);
+      }
+      if (filters.category) q = q.eq('category', filters.category);
+      if (filters.aiTool) q = q.eq('ai_tool', filters.aiTool);
+      if (filters.status) q = q.eq('status', filters.status);
+      if (filters.search) {
+        // Escape PostgREST `or()` reserved chars in the search term, then
+        // ILIKE against the same columns the legacy client-side filter checked.
+        const safe = String(filters.search).replace(/[,()*]/g, ' ').trim();
+        if (safe) {
+          const pat = `%${safe}%`;
+          q = q.or([
+            `task_description.ilike.${pat}`,
+            `project.ilike.${pat}`,
+            `employee_name.ilike.${pat}`,
+            `practice.ilike.${pat}`,
+            `category.ilike.${pat}`,
+            `ai_tool.ilike.${pat}`,
+            `notes.ilike.${pat}`
+          ].join(','));
+        }
+      }
+      return q;
+    };
+
+    const from = Math.max(0, (page - 1) * pageSize);
+    const to = from + pageSize - 1;
+
+    // Data query (includes approvalStatus filter if any).
+    let dataQ = sb.from('tasks')
+      .select(TASK_SELECT, { count: 'exact' })
+      .order('week_start', { ascending: false })
+      .order('id', { ascending: true })
+      .range(from, to);
+    dataQ = applyCommon(dataQ);
+    if (filters.approvalStatus) dataQ = dataQ.eq('approval_status', filters.approvalStatus);
+
+    // Approved-count query — count-only via limit(0) GET (HEAD requests
+    // intermittently 503 through some proxies), ignores any approvalStatus
+    // filter so the label "X of Y (N approved)" reflects the filtered set.
+    let approvedQ = sb.from('tasks').select('id', { count: 'exact' })
+      .eq('approval_status', 'approved');
+    approvedQ = applyCommon(approvedQ).limit(0);
+
+    const [dataRes, approvedRes] = await Promise.all([dataQ, approvedQ]);
+
+    if (dataRes.error) {
+      console.error('fetchTasksPage error:', dataRes.error.message);
+      return { rows: [], total: 0, approvedTotal: 0 };
+    }
+
+    const rows = (dataRes.data || []).map(_shapeTaskRow);
+    const total = dataRes.count ?? rows.length;
+    const approvedTotal = approvedRes.error ? null : (approvedRes.count ?? 0);
+    return { rows, total, approvedTotal };
+  }
+
+  /**
+   * Fetch accomplishments (quarter-filtered).
+   * @param {string} quarterId - quarter filter
+   * @param {object} opts - { approvedOnly: true } to only return approved accomplishments
+   * Returns array matching APP_DATA.accomplishments shape.
+   */
+  async function fetchAccomplishments(quarterId, opts = {}) {
+    let query = sb.from('accomplishments').select('*').order('date', { ascending: false }).limit(500);
+    if (quarterId && quarterId !== 'all') {
+      query = query.eq('quarter_id', quarterId);
+    }
+    if (opts.approvedOnly) {
+      query = query.eq('approval_status', 'approved');
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.error('fetchAccomplishments error:', error.message);
+      return [];
+    }
+    return (data || []).map(a => ({
+      id:            a.id,
+      date:          a.date,
+      practice:      a.practice,
+      project:       a.project,
+      projectCode:   a.project_code,
+      spoc:          a.spoc,
+      employees:     a.employees,
+      title:         a.title,
+      details:       a.details,
+      aiTool:        a.ai_tool,
+      category:      a.category,
+      before:        a.before_baseline,
+      after:         a.after_result,
+      impact:        a.quantified_impact,
+      businessGains: a.business_gains,
+      cost:          a.cost,
+      effortSaved:   Number(a.effort_saved) || 0,
+      status:        a.status,
+      approvalStatus: a.approval_status || 'pending',
+      submittedForApproval: a.submission_approved || false,
+      evidence:      a.evidence,
+      notes:         a.notes,
+      quarterId:     a.quarter_id
+    }));
+  }
+
+  /**
+   * Fetch copilot users (NOT quarter-filtered — global license list).
+   * Returns array matching APP_DATA.copilotUsers shape.
+   */
+  async function fetchCopilotUsers() {
+    const { data, error } = await sb
+      .from('copilot_users')
+      .select('*')
+      .order('practice', { ascending: true })
+      .order('name', { ascending: true })
+      .limit(1000);
+    if (error) {
+      console.error('fetchCopilotUsers error:', error.message);
+      return [];
+    }
+    return (data || []).map(u => ({
+      id:            u.id,
+      practice:      u.practice,
+      name:          u.name,
+      email:         u.email,
+      skill:         u.role_skill,
+      status:        u.status,
+      hasLoggedTask: u.has_logged_task,
+      lastTaskDate:  u.last_task_date,
+      copilotAccessDate: u.copilot_access_date,
+      githubCopilotStatus: u.ide_days_active > 0 ? 'active' : (u.github_copilot_status || 'inactive'),
+      m365CopilotStatus:   u.m365_copilot_status || 'inactive',
+      githubCopilotActivatedAt: u.github_copilot_activated_at,
+      m365CopilotActivatedAt:   u.m365_copilot_activated_at,
+      ideDaysActive:       u.ide_days_active || 0,
+      ideCodeGenerations:  u.ide_code_generations || 0,
+      ideCodeAcceptances:  u.ide_code_acceptances || 0
+    }));
+  }
+
+  /**
+   * Fetch projects (NOT quarter-filtered — global project list).
+   * Returns array matching APP_DATA.projects shape.
+   */
+  async function fetchProjects() {
+    const { data, error } = await sb
+      .from('projects')
+      .select('*')
+      .order('practice', { ascending: true })
+      .order('project_name', { ascending: true });
+    if (error) {
+      console.error('fetchProjects error:', error.message);
+      return [];
+    }
+    return (data || []).map(p => ({
+      id:             p.id,
+      practice:       p.practice,
+      projectCode:    p.project_code,
+      contractNumber: p.contract_number,
+      customer:       p.customer,
+      contractValue:  Number(p.contract_value) || 0,
+      startDate:      p.start_date,
+      endDate:        p.end_date,
+      projectName:    p.project_name,
+      revenueType:    p.revenue_type,
+      lineType:       p.line_type,
+      projectManager: p.project_manager,
+      isActive:       p.is_active
+    }));
+  }
+
+  /**
+   * Fetch AI Innovation approved use cases from the use_cases table.
+   * These are reference use cases approved by the AI Innovation committee.
+   * Returns array of use case objects.
+   */
+  async function fetchApprovedUseCases() {
+    const { data, error } = await sb
+      .from('use_cases')
+      .select('*')
+      .eq('is_approved_reference', true)
+      .eq('is_active', true)
+      .order('practice', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) {
+      console.error('fetchApprovedUseCases error:', error.message);
+      return [];
+    }
+    return (data || []).map(uc => ({
+      id:                     uc.id,
+      assetId:                uc.asset_id,
+      name:                   uc.name,
+      description:            uc.description,
+      practice:               uc.practice,
+      sdlcPhase:              uc.sdlc_phase,
+      category:               uc.category,
+      subcategory:            uc.subcategory,
+      aiTools:                uc.ai_tools,
+      effortsWithoutAi:       uc.efforts_without_ai,
+      effortsWithAi:          uc.efforts_with_ai,
+      hoursSavedPerImpl:      uc.hours_saved_per_impl,
+      businessBenefits:       uc.business_benefits,
+      implementationGuidelines: uc.implementation_guidelines,
+      strategicTakeaways:     uc.strategic_takeaways,
+      suggestionHowToApply:   uc.suggestion_how_to_apply,
+      validationFeedback:     uc.validation_feedback,
+      validationDetail:       uc.validation_detail,
+      validationNotes:        uc.validation_notes,
+      realityDoability:       uc.reality_doability,
+      ownerSpoc:              uc.owner_spoc,
+      currentStatus:          uc.current_status,
+      noOfAdoptions:          uc.no_of_adoptions,
+      selectedUseCase:        uc.selected_use_case,
+      isApprovedReference:    true
+    }));
+  }
+
+  /**
+   * Fetch use cases needing review (pending or revision_requested).
+   * Joined with departments, practices, and author for queue display.
+   * Caller must be ai_innovation_reviewer or admin (RLS enforces).
+   */
+  async function getReviewQueue() {
+    const { data, error } = await sb
+      .from('use_cases')
+      .select(`
+        id, asset_id, name, description, sdlc_phase, category, subcategory,
+        ai_tools, business_benefits, implementation_guidelines,
+        suggestion_how_to_apply, hours_saved_per_impl, efforts_without_ai,
+        efforts_with_ai, approval_status, review_notes, created_at,
+        department:departments(id,name),
+        practice:practices!use_cases_practice_id_fkey(id,name),
+        author:users!use_cases_author_user_id_fkey(id,name,email)
+      `)
+      .in('approval_status', ['pending', 'revision_requested'])
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+
+  /**
+   * Submit a review decision. decision ∈ {'approved','rejected','revision_requested'}.
+   * Notes optional but strongly recommended for non-approved decisions.
+   */
+  async function reviewUseCase(useCaseId, decision, notes) {
+    const { data, error } = await sb.rpc('review_use_case', {
+      p_use_case_id: useCaseId,
+      p_decision: decision,
+      p_notes: notes || null,
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  // Licensed tools — Ejada-paid, primary adoption targets
+  const LICENSED_TOOLS = ['Github Copilot', 'M365 Copilot'];
+
+  /**
+   * Check if an AI tool name is a licensed (Ejada-paid) tool.
+   * @param {string} toolName
+   * @returns {boolean}
+   */
+  function isLicensedTool(toolName) {
+    if (!toolName) return false;
+    const lower = toolName.toLowerCase();
+    return lower.includes('github copilot') || lower.includes('m365 copilot');
+  }
+
+  /**
+   * Fetch LOV values (lists of values for dropdowns).
+   * Returns object: { taskCategories: [], aiTools: [], licensedTools: [], otherTools: [] }
+   */
+  async function fetchLovs() {
+    const { data, error } = await sb
+      .from('lovs')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (error) {
+      console.error('fetchLovs error:', error.message);
+      return { taskCategories: [], aiTools: [], licensedTools: [], otherTools: [] };
+    }
+    const lovs = { taskCategories: [], aiTools: [], licensedTools: [], otherTools: [] };
+    (data || []).forEach(row => {
+      if (row.category === 'taskCategory') lovs.taskCategories.push(row.value);
+      else if (row.category === 'aiTool') {
+        lovs.aiTools.push(row.value);
+        if (row.is_licensed || isLicensedTool(row.value)) {
+          lovs.licensedTools.push(row.value);
+        } else {
+          lovs.otherTools.push(row.value);
+        }
+      }
+    });
+    return lovs;
+  }
+
+  /**
+   * Admin: fetch raw LOV rows (with id/sort/licensed flag) for management UI.
+   * Filters to active rows only — soft-deleted entries stay hidden.
+   * Throws on Supabase error so callers can preserve prior state instead of
+   * mistaking a network/RLS failure for "no rows".
+   */
+  async function fetchLovsRaw() {
+    const { data, error } = await sb
+      .from('lovs')
+      .select('id, category, value, sort_order, is_licensed, is_active')
+      .eq('is_active', true)
+      .order('category', { ascending: true })
+      .order('sort_order', { ascending: true, nullsFirst: false });
+    if (error) {
+      console.error('fetchLovsRaw error:', error.message);
+      throw new Error(error.message);
+    }
+    return data || [];
+  }
+
+  /**
+   * Admin: insert a new LOV row. category is one of 'taskCategory' | 'aiTool' | 'status'.
+   * Computes next sort_order within the category. Returns inserted row or { error }.
+   * 23505 (UNIQUE violation on (category, value)) is normalised to "Already exists".
+   */
+  async function insertLov(category, value, isLicensed = false) {
+    const trimmed = (value || '').trim();
+    if (!category || !trimmed) return { error: 'category and value required' };
+    const { data: existing, error: lookupErr } = await sb
+      .from('lovs')
+      .select('sort_order')
+      .eq('category', category)
+      .order('sort_order', { ascending: false, nullsFirst: false })
+      .limit(1);
+    if (lookupErr) {
+      console.error('insertLov sort lookup error:', lookupErr.message);
+      return { error: lookupErr.message };
+    }
+    const nextOrder = existing && existing.length ? (Number(existing[0].sort_order) || 0) + 1 : 1;
+    const { data, error } = await sb
+      .from('lovs')
+      .insert({ category, value: trimmed, sort_order: nextOrder, is_licensed: !!isLicensed, is_active: true })
+      .select()
+      .single();
+    if (error) {
+      console.error('insertLov error:', error.message);
+      if (error.code === '23505') return { error: 'Already exists' };
+      return { error: error.message };
+    }
+    return { row: data };
+  }
+
+  /**
+   * Admin: hard-delete a LOV row by id. Existing tasks/accomplishments keep their stored
+   * tool/category text — only the dropdown source changes.
+   */
+  async function deleteLov(id) {
+    if (!id) return { error: 'id required' };
+    const { error } = await sb.from('lovs').delete().eq('id', id);
+    if (error) {
+      console.error('deleteLov error:', error.message);
+      return { error: error.message };
+    }
+    return { success: true };
+  }
+
+  /**
+   * Admin: toggle the is_licensed flag for an aiTool LOV row.
+   */
+  async function updateLovLicensed(id, isLicensed) {
+    if (!id) return { error: 'id required' };
+    const { data, error } = await sb
+      .from('lovs')
+      .update({ is_licensed: !!isLicensed })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) {
+      console.error('updateLovLicensed error:', error.message);
+      return { error: error.message };
+    }
+    return { row: data };
+  }
+
+  /**
+   * Fetch licensed tool adoption summary per practice (quarter-aware via RPC).
+   * Returns per-practice breakdown of GitHub Copilot vs M365 Copilot vs other tool usage.
+   */
+  async function fetchLicensedToolAdoption(quarterId) {
+    const qid = (!quarterId || quarterId === 'all') ? null : quarterId;
+    const { data, error } = await sb.rpc('get_licensed_tool_adoption', { p_quarter_id: qid });
+    if (error) {
+      console.error('fetchLicensedToolAdoption error:', error.message);
+      return [];
+    }
+    return (data || []).map(r => ({
+      practice:             r.practice,
+      licensedUsers:        Number(r.licensed_users) || 0,
+      ghCopilotActive:      Number(r.gh_copilot_active) || 0,
+      m365CopilotActive:    Number(r.m365_copilot_active) || 0,
+      licensedToolTasks:    Number(r.licensed_tool_tasks) || 0,
+      otherToolTasks:       Number(r.other_tool_tasks) || 0,
+      licensedHoursSaved:   Number(r.licensed_hours_saved) || 0,
+      otherHoursSaved:      Number(r.other_hours_saved) || 0,
+      ghCopilotTasks:       Number(r.gh_copilot_tasks) || 0,
+      m365CopilotTasks:     Number(r.m365_copilot_tasks) || 0,
+      ghCopilotHours:       Number(r.gh_copilot_hours) || 0,
+      m365CopilotHours:     Number(r.m365_copilot_hours) || 0,
+      adoptionRateLicensed: Number(r.adoption_rate_licensed) || 0
+    }));
+  }
+
+  /**
+   * Fetch quarter summary from Supabase view.
+   */
+  async function fetchQuarterSummary() {
+    const { data, error } = await sb.from('quarter_summary').select('*');
+    if (error) { console.error('fetchQuarterSummary error:', error.message); return []; }
+    return data || [];
+  }
+
+  // ===========================================================
+  // Unified Data Loader — replaces inline APP_DATA
+  // ===========================================================
+
+  /**
+   * Fetch all dashboard data for a given quarter.
+   * Returns an object matching the legacy APP_DATA shape:
+   * {
+   *   summary: { practices: [...], totals: {...} },
+   *   tasks: [...],
+   *   accomplishments: [...],
+   *   copilotUsers: [...],
+   *   projects: [...],
+   *   lovs: { taskCategories: [...], aiTools: [...] }
+   * }
+   */
+  async function fetchAllData(quarterId) {
+    // Parallel fetch for speed
+    // Tasks and accomplishments include ALL statuses (UI shows approval badges)
+    // But practice summary RPC already filters to approved-only server-side
+    const [practices, tasks, accomplishments, copilotUsers, projects, lovs, approvedUseCases, licensedToolAdoption] = await Promise.all([
+      fetchPracticeSummary(quarterId),
+      fetchTasks(quarterId),
+      fetchAccomplishments(quarterId),
+      fetchCopilotUsers(),
+      fetchProjects(),
+      fetchLovs(),
+      fetchApprovedUseCases(),
+      fetchLicensedToolAdoption(quarterId)
+    ]);
+
+    // Compute totals from practice summaries
+    const totals = practices.reduce((acc, p) => {
+      acc.tasks       += p.tasks;
+      acc.timeWithout += p.timeWithout;
+      acc.timeWith    += p.timeWith;
+      acc.timeSaved   += p.timeSaved;
+      acc.completed   += p.completed;
+      acc.projects    += p.projects;
+      return acc;
+    }, { tasks: 0, timeWithout: 0, timeWith: 0, timeSaved: 0, completed: 0, projects: 0 });
+
+    // Calculate overall efficiency and quality from totals
+    totals.efficiency = totals.timeWithout > 0
+      ? (totals.timeSaved / totals.timeWithout * 100)
+      : 0;
+
+    // Weighted average quality (by task count)
+    const qualitySum = practices.reduce((s, p) => s + (p.quality * p.tasks), 0);
+    totals.quality = totals.tasks > 0 ? qualitySum / totals.tasks : 0;
+
+    // Compute licensed tool totals
+    const licensedTotals = (licensedToolAdoption || []).reduce((acc, r) => {
+      acc.licensedToolTasks  += r.licensedToolTasks;
+      acc.otherToolTasks     += r.otherToolTasks;
+      acc.licensedHoursSaved += r.licensedHoursSaved;
+      acc.otherHoursSaved    += r.otherHoursSaved;
+      acc.ghCopilotTasks     += r.ghCopilotTasks;
+      acc.m365CopilotTasks   += r.m365CopilotTasks;
+      acc.ghCopilotHours     += r.ghCopilotHours;
+      acc.m365CopilotHours   += r.m365CopilotHours;
+      return acc;
+    }, { licensedToolTasks: 0, otherToolTasks: 0, licensedHoursSaved: 0, otherHoursSaved: 0, ghCopilotTasks: 0, m365CopilotTasks: 0, ghCopilotHours: 0, m365CopilotHours: 0 });
+
+    return {
+      summary: { practices, totals },
+      tasks,
+      accomplishments,
+      copilotUsers,
+      projects,
+      lovs,
+      approvedUseCases,
+      licensedToolAdoption,
+      licensedTotals
+    };
+  }
+
+  // ===========================================================
+  // Write Operations — Phase 4: CRUD
+  // ===========================================================
+
+  /**
+   * Insert a new task into Supabase.
+   * Accepts camelCase form data, maps to snake_case DB columns.
+   * time_saved & efficiency are GENERATED columns — never sent.
+   * @returns {object|null} Inserted row (camelCase) or null on error.
+   */
+  async function insertTask(taskData) {
+    const profile = await EAS_Auth.getUserProfile();
+    const quarterId = getSelectedQuarter();
+    const payload = {
+      practice:        taskData.practice,
+      week_number:     taskData.week || null,
+      week_start:      taskData.weekStart || null,
+      week_end:        taskData.weekEnd || null,
+      project:         taskData.project || null,
+      project_code:    taskData.projectCode || null,
+      employee_name:   taskData.employee || profile?.name || null,
+      employee_email:  taskData.employeeEmail || profile?.email || null,
+      task_description: taskData.task || null,
+      task_details:    taskData.taskDetails || null,
+      category:        taskData.category || null,
+      ai_tool:         taskData.aiTool || null,
+      prompt_used:     taskData.prompt || null,
+      time_without_ai: taskData.timeWithout || 0,
+      time_with_ai:    taskData.timeWith || 0,
+      quality_rating:  taskData.quality || null,
+      status:          taskData.status || 'Pending',
+      notes:           taskData.notes || null,
+      quarter_id:      quarterId !== 'all' ? quarterId : (getActiveQuarter()?.id || null),
+      logged_by:       profile?.id || null,
+      // RLS tasks_contributor_sector_insert requires sector_id when practice is null.
+      // populate_sector_id trigger overrides if a practice/department anchor is set.
+      sector_id:       taskData.sectorId || profile?.sector_id || null,
+      expected_implementations: taskData.expectedImplementations || null
+    };
+    // Manual use case linkage — set link columns directly so auto-linkage is skipped
+    if (taskData.manualUseCaseId) {
+      payload.linked_use_case_id = taskData.manualUseCaseId;
+      payload.link_status = 'manual';
+      payload.link_source = 'manual';
+      payload.link_confidence = 1.0;
+      payload.linked_at = new Date().toISOString();
+    }
+    const { data, error } = await sb.from('tasks').insert(payload).select().single();
+    if (error) { console.error('insertTask error:', error.message); return null; }
+    await logActivity('INSERT', 'tasks', data.id, { task: payload.task_description });
+    return data;
+  }
+
+  /**
+   * Update an existing task.
+   * Resets approval_status to 'pending' so the task requires re-approval.
+   * @param {string} id — task UUID
+   * @param {object} taskData — camelCase fields to update
+   */
+  async function updateTask(id, taskData) {
+    const payload = {};
+    if (taskData.practice !== undefined)    payload.practice        = taskData.practice;
+    if (taskData.week !== undefined)        payload.week_number     = taskData.week;
+    if (taskData.weekStart !== undefined)   payload.week_start      = taskData.weekStart;
+    if (taskData.weekEnd !== undefined)     payload.week_end        = taskData.weekEnd;
+    if (taskData.project !== undefined)     payload.project         = taskData.project;
+    if (taskData.projectCode !== undefined) payload.project_code    = taskData.projectCode;
+    if (taskData.employee !== undefined)    payload.employee_name   = taskData.employee;
+    if (taskData.employeeEmail !== undefined) payload.employee_email = taskData.employeeEmail;
+    if (taskData.task !== undefined)        payload.task_description = taskData.task;
+    if (taskData.taskDetails !== undefined) payload.task_details     = taskData.taskDetails;
+    if (taskData.category !== undefined)    payload.category        = taskData.category;
+    if (taskData.aiTool !== undefined)      payload.ai_tool         = taskData.aiTool;
+    if (taskData.prompt !== undefined)      payload.prompt_used     = taskData.prompt;
+    if (taskData.timeWithout !== undefined) payload.time_without_ai = taskData.timeWithout;
+    if (taskData.timeWith !== undefined)    payload.time_with_ai    = taskData.timeWith;
+    if (taskData.quality !== undefined)     payload.quality_rating  = taskData.quality;
+    if (taskData.status !== undefined)      payload.status          = taskData.status;
+    if (taskData.notes !== undefined)       payload.notes           = taskData.notes;
+    if (taskData.expectedImplementations !== undefined) payload.expected_implementations = taskData.expectedImplementations;
+    // Manual use case linkage override on edit
+    if (taskData.manualUseCaseId !== undefined) {
+      if (taskData.manualUseCaseId) {
+        payload.linked_use_case_id = taskData.manualUseCaseId;
+        payload.link_status = 'manual';
+        payload.link_source = 'manual';
+        payload.link_confidence = 1.0;
+        payload.linked_at = new Date().toISOString();
+      } else {
+        // User cleared manual link — reset to pending for auto-linkage
+        payload.linked_use_case_id = null;
+        payload.link_status = 'pending';
+        payload.link_source = null;
+        payload.link_confidence = null;
+        payload.linked_at = null;
+      }
+    }
+
+    // Reset approval status — edits require re-approval
+    // Admin bypass: if calling user is admin and explicitly sets approval
+    const profile = await EAS_Auth.getUserProfile();
+    const isAdmin = profile?.role === 'admin';
+    if (!isAdmin) {
+      payload.approval_status = 'pending';
+      payload.submission_approved = false;
+      payload.approved_by = null;
+      payload.approved_by_name = null;
+    }
+
+    const { data, error } = await sb.from('tasks').update(payload).eq('id', id).select().single();
+    if (error) { console.error('updateTask error:', error.message); return null; }
+    await logActivity('UPDATE', 'tasks', id, payload);
+
+    // Create new approval workflow for the update (unless admin)
+    if (!isAdmin && data) {
+      // Retire ALL prior approval records for this task (not just approval_id-linked one).
+      // A double-click on edit can create orphaned spoc_review records that are never linked
+      // as approval_id but still pollute the SPOC queue (BUG-05 + orphan fix).
+      const { error: delAllErr } = await sb.from('submission_approvals')
+        .delete()
+        .eq('submission_id', data.id)
+        .in('approval_status', ['pending', 'spoc_review', 'admin_review']);
+      if (delAllErr) {
+        // Fallback: mark all non-terminal records as superseded
+        await sb.from('submission_approvals').update({
+          approval_status: 'superseded',
+          rejection_reason: 'Superseded by task edit'
+        }).eq('submission_id', data.id)
+          .in('approval_status', ['pending', 'spoc_review', 'admin_review']);
+      }
+      const savedHours = (data.time_without_ai || 0) - (data.time_with_ai || 0);
+      const approval = await createSubmissionApproval('task', data.id, savedHours, data.practice, data.expected_implementations);
+      if (approval?.autoApproved) {
+        // Auto-approved: clear approval_id and mark task as approved directly
+        await sb.from('tasks').update({
+          approval_id: null,
+          approval_status: 'approved'
+        }).eq('id', data.id);
+        await logActivity('AUTO_APPROVE', 'tasks', data.id, { saved_hours: savedHours, reason: 'edit_less_than_5h' });
+      } else if (approval) {
+        await sb.from('tasks').update({
+          approval_id: approval.id
+        }).eq('id', data.id);
+      }
+    }
+
+    return data;
+  }
+
+  /**
+   * Delete a task by ID.
+   */
+  async function deleteTask(id) {
+    const { error } = await sb.from('tasks').delete().eq('id', id);
+    if (error) { console.error('deleteTask error:', error.message); return false; }
+    await logActivity('DELETE', 'tasks', id);
+    return true;
+  }
+
+  /**
+   * Insert a new accomplishment.
+   */
+  async function insertAccomplishment(accData) {
+    const profile = await EAS_Auth.getUserProfile();
+    const quarterId = getSelectedQuarter();
+    const payload = {
+      date:             accData.date || null,
+      practice:         accData.practice,
+      project:          accData.project || null,
+      project_code:     accData.projectCode || null,
+      spoc:             accData.spoc || null,
+      employees:        accData.employees || null,
+      title:            accData.title || null,
+      details:          accData.details || null,
+      ai_tool:          accData.aiTool || null,
+      category:         accData.category || null,
+      before_baseline:  accData.before || null,
+      after_result:     accData.after || null,
+      quantified_impact: accData.impact || null,
+      business_gains:   accData.businessGains || null,
+      cost:             accData.cost || 'Free of Cost',
+      effort_saved:     accData.effortSaved || 0,
+      status:           accData.status || 'Completed',
+      evidence:         accData.evidence || null,
+      notes:            accData.notes || null,
+      quarter_id:       quarterId !== 'all' ? quarterId : (getActiveQuarter()?.id || null),
+      logged_by:        profile?.id || null
+    };
+    const { data, error } = await sb.from('accomplishments').insert(payload).select().single();
+    if (error) { console.error('insertAccomplishment error:', error.message); return null; }
+    await logActivity('INSERT', 'accomplishments', data.id, { title: payload.title });
+    return data;
+  }
+
+  /**
+   * Update an existing accomplishment.
+   * Resets approval_status to 'pending' so the accomplishment requires re-approval.
+   */
+  async function updateAccomplishment(id, accData) {
+    const payload = {};
+    if (accData.date !== undefined)          payload.date             = accData.date;
+    if (accData.practice !== undefined)      payload.practice         = accData.practice;
+    if (accData.project !== undefined)       payload.project          = accData.project;
+    if (accData.projectCode !== undefined)   payload.project_code     = accData.projectCode;
+    if (accData.spoc !== undefined)          payload.spoc             = accData.spoc;
+    if (accData.employees !== undefined)     payload.employees        = accData.employees;
+    if (accData.title !== undefined)         payload.title            = accData.title;
+    if (accData.details !== undefined)       payload.details          = accData.details;
+    if (accData.aiTool !== undefined)        payload.ai_tool          = accData.aiTool;
+    if (accData.category !== undefined)      payload.category         = accData.category;
+    if (accData.before !== undefined)        payload.before_baseline  = accData.before;
+    if (accData.after !== undefined)         payload.after_result     = accData.after;
+    if (accData.impact !== undefined)        payload.quantified_impact = accData.impact;
+    if (accData.businessGains !== undefined) payload.business_gains   = accData.businessGains;
+    if (accData.cost !== undefined)          payload.cost             = accData.cost;
+    if (accData.effortSaved !== undefined)   payload.effort_saved     = accData.effortSaved;
+    if (accData.status !== undefined)        payload.status           = accData.status;
+    if (accData.evidence !== undefined)      payload.evidence         = accData.evidence;
+    if (accData.notes !== undefined)         payload.notes            = accData.notes;
+
+    // Reset approval status — edits require re-approval
+    const profile = await EAS_Auth.getUserProfile();
+    const isAdmin = profile?.role === 'admin';
+    if (!isAdmin) {
+      payload.approval_status = 'pending';
+      payload.submission_approved = false;
+      payload.approved_by = null;
+      payload.approved_by_name = null;
+    }
+
+    const { data, error } = await sb.from('accomplishments').update(payload).eq('id', id).select().single();
+    if (error) { console.error('updateAccomplishment error:', error.message); return null; }
+    await logActivity('UPDATE', 'accomplishments', id, payload);
+
+    // Create new approval workflow for the update (unless admin)
+    if (!isAdmin && data) {
+      // Retire ALL prior approval records for this accomplishment (orphan fix — same as tasks).
+      const { error: delAllErr } = await sb.from('submission_approvals')
+        .delete()
+        .eq('submission_id', data.id)
+        .in('approval_status', ['pending', 'spoc_review', 'admin_review']);
+      if (delAllErr) {
+        await sb.from('submission_approvals').update({
+          approval_status: 'superseded',
+          rejection_reason: 'Superseded by accomplishment edit'
+        }).eq('submission_id', data.id)
+          .in('approval_status', ['pending', 'spoc_review', 'admin_review']);
+      }
+      const savedHours = data.effort_saved || 0;
+      const approval = await createSubmissionApproval('accomplishment', data.id, savedHours, data.practice);
+      if (approval) {
+        await sb.from('accomplishments').update({
+          approval_id: approval.id
+        }).eq('id', data.id);
+      }
+    }
+
+    return data;
+  }
+
+  /**
+   * Delete an accomplishment by ID.
+   */
+  async function deleteAccomplishment(id) {
+    const { error } = await sb.from('accomplishments').delete().eq('id', id);
+    if (error) { console.error('deleteAccomplishment error:', error.message); return false; }
+    await logActivity('DELETE', 'accomplishments', id);
+    return true;
+  }
+
+  /**
+   * Insert a new copilot user.
+   */
+  async function insertCopilotUser(userData) {
+    const payload = {
+      practice:    userData.practice,
+      name:        userData.name || null,
+      email:       userData.email || null,
+      role_skill:  userData.skill || null,
+      status:      userData.status || 'pending'
+    };
+    const { data, error } = await sb.from('copilot_users').insert(payload).select().single();
+    if (error) { console.error('insertCopilotUser error:', error.message); return null; }
+    await logActivity('INSERT', 'copilot_users', data.id, { name: payload.name, email: payload.email });
+    return data;
+  }
+
+  /**
+   * Update an existing copilot user.
+   */
+  async function updateCopilotUser(id, userData) {
+    const payload = {};
+    if (userData.practice !== undefined) payload.practice   = userData.practice;
+    if (userData.name !== undefined)     payload.name       = userData.name;
+    if (userData.email !== undefined)    payload.email      = userData.email;
+    if (userData.skill !== undefined)    payload.role_skill = userData.skill;
+    if (userData.status !== undefined)   payload.status     = userData.status;
+
+    const { data, error } = await sb.from('copilot_users').update(payload).eq('id', id).select().single();
+    if (error) { console.error('updateCopilotUser error:', error.message); return null; }
+    await logActivity('UPDATE', 'copilot_users', id, payload);
+    return data;
+  }
+
+  /**
+   * Delete a copilot user by ID.
+   */
+  async function deleteCopilotUser(id) {
+    const { error } = await sb.from('copilot_users').delete().eq('id', id);
+    if (error) { console.error('deleteCopilotUser error:', error.message); return false; }
+    await logActivity('DELETE', 'copilot_users', id);
+    return true;
+  }
+
+  // ===========================================================
+  // Projects CRUD — Phase 11
+  // ===========================================================
+
+  /**
+   * Insert a new project into Supabase.
+   * @param {object} projData — camelCase fields
+   * @returns {object|null} Inserted row or null on error.
+   */
+  async function insertProject(projData) {
+    const profile = await EAS_Auth.getUserProfile();
+    const payload = {
+      practice:        projData.practice,
+      project_name:    projData.projectName || projData.name || '',
+      project_code:    projData.projectCode || projData.code || null,
+      contract_number: projData.contractNumber || null,
+      customer:        projData.customer || null,
+      contract_value:  projData.contractValue || projData.value || 0,
+      start_date:      projData.startDate || projData.start || null,
+      end_date:        projData.endDate || projData.end || null,
+      revenue_type:    projData.revenueType || null,
+      line_type:       projData.lineType || null,
+      project_manager: projData.projectManager || projData.pm || null,
+      is_active:       projData.isActive !== undefined ? projData.isActive : true
+    };
+    const { data, error } = await sb.from('projects').insert(payload).select().single();
+    if (error) { console.error('insertProject error:', error.message); return null; }
+    await logActivity('INSERT', 'projects', data.id, { project: payload.project_name });
+    return data;
+  }
+
+  /**
+   * Update an existing project.
+   * @param {string} id — project UUID
+   * @param {object} projData — camelCase fields to update
+   */
+  async function updateProject(id, projData) {
+    const payload = {};
+    if (projData.practice !== undefined)       payload.practice        = projData.practice;
+    if (projData.projectName !== undefined || projData.name !== undefined)
+      payload.project_name = projData.projectName || projData.name;
+    if (projData.projectCode !== undefined || projData.code !== undefined)
+      payload.project_code = projData.projectCode || projData.code;
+    if (projData.contractNumber !== undefined)  payload.contract_number = projData.contractNumber;
+    if (projData.customer !== undefined)        payload.customer        = projData.customer;
+    if (projData.contractValue !== undefined || projData.value !== undefined)
+      payload.contract_value = projData.contractValue || projData.value;
+    if (projData.startDate !== undefined || projData.start !== undefined)
+      payload.start_date = projData.startDate || projData.start;
+    if (projData.endDate !== undefined || projData.end !== undefined)
+      payload.end_date = projData.endDate || projData.end;
+    if (projData.revenueType !== undefined)     payload.revenue_type    = projData.revenueType;
+    if (projData.lineType !== undefined)        payload.line_type       = projData.lineType;
+    if (projData.projectManager !== undefined || projData.pm !== undefined)
+      payload.project_manager = projData.projectManager || projData.pm;
+    if (projData.isActive !== undefined)        payload.is_active       = projData.isActive;
+
+    const { data, error } = await sb.from('projects').update(payload).eq('id', id).select().single();
+    if (error) { console.error('updateProject error:', error.message); return null; }
+    await logActivity('UPDATE', 'projects', id, payload);
+    return data;
+  }
+
+  /**
+   * Delete a project by ID.
+   */
+  async function deleteProject(id) {
+    const { error } = await sb.from('projects').delete().eq('id', id);
+    if (error) { console.error('deleteProject error:', error.message); return false; }
+    await logActivity('DELETE', 'projects', id);
+    return true;
+  }
+
+  // ===========================================================
+  // Reported Issues / Blockers — Phase 11
+  // ===========================================================
+
+  /**
+   * Fetch all reported issues/blockers.
+   * @returns {Array} issues in camelCase format
+   */
+  async function fetchReportedIssues() {
+    const { data, error } = await sb
+      .from('reported_issues')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('fetchReportedIssues error:', error.message);
+      return [];
+    }
+    return (data || []).map(i => ({
+      id:             i.id,
+      title:          i.title,
+      description:    i.description,
+      severity:       i.severity,
+      aiTool:         i.ai_tool,
+      practice:       i.practice,
+      reportedBy:     i.reported_by,
+      reportedByName: i.reported_by_name,
+      reportedByEmail:i.reported_by_email,
+      status:         i.status,
+      resolution:     i.resolution,
+      resolvedBy:     i.resolved_by,
+      resolvedAt:     i.resolved_at,
+      createdAt:      i.created_at,
+      updatedAt:      i.updated_at
+    }));
+  }
+
+  /**
+   * Insert a new reported issue / blocker.
+   * @param {object} issueData — camelCase fields
+   * @returns {object|null} Inserted row or null on error.
+   */
+  async function insertReportedIssue(issueData) {
+    const profile = await EAS_Auth.getUserProfile();
+    const payload = {
+      title:             issueData.title,
+      description:       issueData.description || '',
+      severity:          issueData.severity || 'medium',
+      ai_tool:           issueData.aiTool || null,
+      practice:          issueData.practice || profile?.practice || '',
+      reported_by:       profile?.id || null,
+      reported_by_name:  profile?.name || '',
+      reported_by_email: profile?.email || '',
+      status:            'open'
+    };
+    const { data, error } = await sb.from('reported_issues').insert(payload).select().single();
+    if (error) { console.error('insertReportedIssue error:', error.message); return null; }
+    await logActivity('INSERT', 'reported_issues', data.id, { title: payload.title });
+    return data;
+  }
+
+  /**
+   * Update an existing reported issue.
+   * @param {string} id — issue UUID
+   * @param {object} issueData — camelCase fields to update
+   */
+  async function updateReportedIssue(id, issueData) {
+    const payload = {};
+    if (issueData.title !== undefined)       payload.title       = issueData.title;
+    if (issueData.description !== undefined) payload.description = issueData.description;
+    if (issueData.severity !== undefined)    payload.severity    = issueData.severity;
+    if (issueData.aiTool !== undefined)      payload.ai_tool     = issueData.aiTool;
+    if (issueData.status !== undefined)      payload.status      = issueData.status;
+    if (issueData.resolution !== undefined)  payload.resolution  = issueData.resolution;
+
+    // If resolving, track who resolved it
+    if (issueData.status === 'resolved' || issueData.status === 'closed') {
+      const profile = await EAS_Auth.getUserProfile();
+      payload.resolved_by = profile?.id || null;
+      payload.resolved_at = new Date().toISOString();
+    }
+
+    const { data, error } = await sb.from('reported_issues').update(payload).eq('id', id).select().single();
+    if (error) { console.error('updateReportedIssue error:', error.message); return null; }
+    await logActivity('UPDATE', 'reported_issues', id, payload);
+    return data;
+  }
+
+  /**
+   * Delete a reported issue by ID.
+   */
+  async function deleteReportedIssue(id) {
+    const { error } = await sb.from('reported_issues').delete().eq('id', id);
+    if (error) { console.error('deleteReportedIssue error:', error.message); return false; }
+    await logActivity('DELETE', 'reported_issues', id);
+    return true;
+  }
+
+  // ===========================================================
+  // Password Management — Phase 11
+  // ===========================================================
+
+  /**
+   * Change the current user's password (requires being logged in).
+   * Uses Supabase Auth updateUser.
+   * @param {string} newPassword — the new password (min 6 chars)
+   * @returns {object} — { success: boolean, error?: string }
+   */
+  async function changePassword(newPassword) {
+    const { data, error } = await sb.auth.updateUser({ password: newPassword });
+    if (error) {
+      console.error('changePassword error:', error.message);
+      return { success: false, error: error.message };
+    }
+    await logActivity('UPDATE', 'auth', null, { action: 'password_changed' });
+    return { success: true };
+  }
+
+  // ===========================================================
+  // Audit Logging — Phase 4
+  // ===========================================================
+
+  /**
+   * Log an activity to the activity_log table.
+   * @param {string} action   — INSERT, UPDATE, DELETE
+   * @param {string} entity   — table name (tasks, accomplishments, copilot_users)
+   * @param {string} entityId — UUID of the affected row
+   * @param {object} details  — optional JSON payload with change data
+   */
+  async function logActivity(action, entity, entityId, details = {}) {
+    try {
+      const profile = await EAS_Auth.getUserProfile();
+      await sb.from('activity_log').insert({
+        action,
+        entity_type: entity,
+        entity_id:   entityId || null,
+        details:     details,
+        user_id:     profile?.id || null,
+        user_email:  profile?.email || null
+      });
+    } catch (err) {
+      // Logging should never block the main operation
+      console.warn('logActivity failed:', err.message);
+    }
+  }
+
+  /**
+   * Create a data dump (snapshot) of specified entities.
+   * @param {string} name — descriptive dump name
+   * @param {string[]} entityTypes — ['tasks','accomplishments','copilot_users']
+   * @returns {object|null} — the created dump record
+   */
+  async function createDump(name, entityTypes = ['tasks', 'accomplishments', 'copilot_users']) {
+    const profile = await EAS_Auth.getUserProfile();
+    const dumpData = {};
+    const rowCounts = {};
+
+    for (const entity of entityTypes) {
+      const { data, error } = await sb.from(entity).select('*').limit(5000);
+      if (error) {
+        console.error(`createDump: failed to fetch ${entity}:`, error.message);
+        dumpData[entity] = [];
+        rowCounts[entity] = 0;
+      } else {
+        dumpData[entity] = data || [];
+        rowCounts[entity] = (data || []).length;
+      }
+    }
+
+    const { data: dump, error } = await sb.from('data_dumps').insert({
+      dump_name:    name,
+      dump_type:    'manual',
+      entity_types: entityTypes,
+      data:         dumpData,
+      row_counts:   rowCounts,
+      created_by:   profile?.id || null,
+      notes:        `Created by ${profile?.name || 'unknown'} at ${new Date().toISOString()}`
+    }).select().single();
+
+    if (error) { console.error('createDump error:', error.message); return null; }
+    await logActivity('DUMP', 'data_dumps', dump.id, { name, entityTypes, rowCounts });
+    return dump;
+  }
+
+  /**
+   * Fetch paginated activity log entries for the admin audit view.
+   * @param {object} opts
+   * @param {string} [opts.dateFrom]   — ISO date string lower bound (inclusive)
+   * @param {string} [opts.dateTo]     — ISO date string upper bound (inclusive, extended to end of day)
+   * @param {string} [opts.actionType] — exact action filter (e.g. 'INSERT', 'DELETE')
+   * @param {number} [opts.page=1]
+   * @param {number} [opts.pageSize=50]
+   * @returns {{ rows: object[], total: number }}
+   */
+  async function fetchActivityLog({ dateFrom, dateTo, actionType, page = 1, pageSize = 50 } = {}) {
+    let q = sb
+      .from('activity_log')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (dateFrom)    q = q.gte('created_at', dateFrom);
+    if (dateTo)      q = q.lte('created_at', dateTo + 'T23:59:59.999Z');
+    if (actionType)  q = q.eq('action', actionType);
+
+    const from = (page - 1) * pageSize;
+    q = q.range(from, from + pageSize - 1);
+
+    const { data, error, count } = await q;
+    if (error) { console.error('fetchActivityLog error:', error.message); return { rows: [], total: 0 }; }
+    return { rows: data || [], total: count || 0 };
+  }
+
+  // ===========================================================
+  // Phase 5: Leaderboard, Badges, Nudge Queries
+  // ===========================================================
+
+  /**
+   * Fetch employee leaderboard ranked by time saved.
+   * @param {string|null} practice — filter to one practice, or null for all
+   * @param {string|null} quarterId — filter to one quarter, or null for all
+   */
+  async function fetchEmployeeLeaderboard(practice = null, quarterId = null) {
+    const p = practice || null;
+    const q = (!quarterId || quarterId === 'all') ? null : quarterId;
+    const { data, error } = await sb.rpc('get_employee_leaderboard', {
+      p_practice: p,
+      p_quarter_id: q
+    });
+    if (error) { console.error('fetchEmployeeLeaderboard error:', error.message); return []; }
+    return (data || []).map(e => ({
+      name:                 e.employee_name,
+      email:                e.employee_email,
+      practice:             e.practice,
+      department:           e.department_name || null,
+      sector:               e.sector_name || null,
+      tasks:                Number(e.task_count) || 0,
+      timeSaved:            Number(e.total_time_saved) || 0,
+      timeWithout:          Number(e.total_time_without) || 0,
+      efficiency:           Number(e.avg_efficiency) || 0,
+      quality:              Number(e.avg_quality) || 0,
+      completed:            Number(e.completed_count) || 0,
+      firstTask:            e.first_task_date,
+      lastTask:             e.last_task_date,
+      streakWeeks:          Number(e.streak_weeks) || 0,
+      accomplishments:      Number(e.accomplishment_count) || 0,
+      accomplishmentEffort: Number(e.accomplishment_effort) || 0,
+      score:                Number(e.score) || 0
+    }));
+  }
+
+  /**
+   * Fetch practice leaderboard (cross-practice ranking).
+   */
+  async function fetchPracticeLeaderboard(quarterId = null) {
+    const q = (!quarterId || quarterId === 'all') ? null : quarterId;
+    const { data, error } = await sb.rpc('get_practice_leaderboard', {
+      p_quarter_id: q
+    });
+    if (error) { console.error('fetchPracticeLeaderboard error:', error.message); return []; }
+    return (data || []).map(p => ({
+      practice:           p.practice,
+      department:         p.department_name || null,
+      sector:             p.sector_name || null,
+      tasks:              Number(p.task_count) || 0,
+      employees:          Number(p.employee_count) || 0,
+      timeSaved:          Number(p.total_time_saved) || 0,
+      timeWithout:        Number(p.total_time_without) || 0,
+      efficiency:         Number(p.avg_efficiency) || 0,
+      quality:            Number(p.avg_quality) || 0,
+      completed:          Number(p.completed_count) || 0,
+      accomplishments:    Number(p.accomplishment_count) || 0,
+      copilotUsers:       Number(p.copilot_users) || 0,
+      score:              Number(p.score) || 0
+    }));
+  }
+
+  /**
+   * Compute achievement badges for an employee from their stats.
+   * Returns array of badge objects { id, icon, title, description, earned }.
+   */
+  function computeBadges(employee) {
+    const badges = [];
+    // Combined time saved: tasks + accomplishment effort
+    const totalTimeSaved = (employee.timeSaved || 0) + (employee.accomplishmentEffort || 0);
+    // First Task
+    badges.push({
+      id: 'first-task', icon: '🚀', title: 'First Task',
+      description: 'Logged your first AI task',
+      earned: employee.tasks >= 1
+    });
+    // Streak Master (3+ weeks)
+    badges.push({
+      id: 'streak', icon: '🔥', title: 'Streak Master',
+      description: 'Logged tasks for 3+ weeks',
+      earned: employee.streakWeeks >= 3
+    });
+    // Time Saver (10+ hours — tasks + accomplishments)
+    badges.push({
+      id: 'time-saver', icon: '⏱️', title: 'Time Saver',
+      description: 'Saved 10+ hours with AI (tasks + accomplishments)',
+      earned: totalTimeSaved >= 10
+    });
+    // Efficiency Pro (80%+)
+    badges.push({
+      id: 'efficiency-pro', icon: '⚡', title: 'Efficiency Pro',
+      description: 'Achieved 80%+ efficiency',
+      earned: employee.efficiency >= 80
+    });
+    // Quality Champion (4.5+ avg)
+    badges.push({
+      id: 'quality-champion', icon: '🏆', title: 'Quality Champion',
+      description: 'Maintained 4.5+ quality rating',
+      earned: employee.quality >= 4.5
+    });
+    // Prolific (20+ tasks)
+    badges.push({
+      id: 'prolific', icon: '📊', title: 'Prolific',
+      description: 'Logged 20+ AI tasks',
+      earned: employee.tasks >= 20
+    });
+    // Centurion (50+ hours saved — tasks + accomplishments)
+    badges.push({
+      id: 'centurion', icon: '💎', title: 'Centurion',
+      description: 'Saved 50+ hours with AI (tasks + accomplishments)',
+      earned: totalTimeSaved >= 50
+    });
+    // Innovator (1+ approved accomplishment)
+    badges.push({
+      id: 'innovator', icon: '💡', title: 'Innovator',
+      description: 'Submitted your first approved accomplishment',
+      earned: (employee.accomplishments || 0) >= 1
+    });
+    // Impact Maker (3+ approved accomplishments)
+    badges.push({
+      id: 'impact-maker', icon: '🌟', title: 'Impact Maker',
+      description: 'Achieved 3+ approved accomplishments',
+      earned: (employee.accomplishments || 0) >= 3
+    });
+    return badges;
+  }
+
+  /**
+  * Fetch inactive team members (copilot users whose task activity is stale).
+   * @param {string} practice — practice to check
+   * @param {number} daysSince — inactivity threshold in days (default 14)
+   */
+  async function fetchInactiveMembers(practice, daysSince = 14) {
+    const { data: users, error } = await sb
+      .from('copilot_users')
+      .select('id, name, email, practice, nudged_at, status, ide_days_active, ide_last_active_date')
+      .eq('practice', practice)
+      .eq('status', 'access granted')
+      .order('name', { ascending: true });
+    if (error) { console.error('fetchInactiveMembers error:', error.message); return []; }
+
+    const emails = (users || [])
+      .map(u => (u.email || '').trim())
+      .filter(email => email.length > 0);
+
+    const lastTaskByEmail = new Map();
+    if (emails.length > 0) {
+      const pageSize = 1000;
+      for (let from = 0; ; from += pageSize) {
+        const { data: tasks, error: taskError } = await sb
+          .from('tasks')
+          .select('employee_email, created_at')
+          .eq('practice', practice)
+          .in('employee_email', emails)
+          .order('created_at', { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (taskError) {
+          console.error('fetchInactiveMembers tasks error:', taskError.message);
+          break;
+        }
+        (tasks || []).forEach(t => {
+          const emailKey = (t.employee_email || '').trim().toLowerCase();
+          if (!emailKey) return;
+          const existing = lastTaskByEmail.get(emailKey);
+          if (!existing || new Date(t.created_at) > new Date(existing)) {
+            lastTaskByEmail.set(emailKey, t.created_at);
+          }
+        });
+        if (!tasks || tasks.length < pageSize) break;
+      }
+    }
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysSince);
+
+    return (users || []).filter(u => {
+      const emailKey = (u.email || '').trim().toLowerCase();
+      const lastTask = emailKey ? lastTaskByEmail.get(emailKey) : null;
+      // User is active if they have a recent task
+      if (lastTask && new Date(lastTask) >= cutoff) return false;
+      // User is active if they have recent IDE activity
+      if (u.ide_last_active_date) {
+        const ideDate = new Date(u.ide_last_active_date);
+        if (ideDate >= cutoff) return false;
+      }
+      return true;
+    }).map(u => {
+      const emailKey = (u.email || '').trim().toLowerCase();
+      const lastTask = emailKey ? lastTaskByEmail.get(emailKey) : null;
+      const ideActive = u.ide_last_active_date ? new Date(u.ide_last_active_date) : null;
+      // Last activity = most recent of task or IDE
+      const lastActivity = (lastTask && ideActive)
+        ? (new Date(lastTask) > ideActive ? lastTask : u.ide_last_active_date)
+        : (lastTask || u.ide_last_active_date || null);
+      return {
+        id:           u.id,
+        name:         u.name,
+        email:        u.email,
+        practice:     u.practice,
+        hasLoggedTask: Boolean(lastTask),
+        lastTaskDate: lastTask || null,
+        lastActivity: lastActivity,
+        ideDaysActive: Number(u.ide_days_active) || 0,
+        ideLastActive: u.ide_last_active_date || null,
+        nudgedAt:     u.nudged_at,
+        status:       u.status,
+        daysSinceTask: lastTask
+          ? Math.floor((Date.now() - new Date(lastTask).getTime()) / 86400000)
+          : null,
+        daysSinceActivity: lastActivity
+          ? Math.floor((Date.now() - new Date(lastActivity).getTime()) / 86400000)
+          : null
+      };
+    });
+  }
+
+  /**
+   * Mark a copilot user as nudged (update nudged_at timestamp).
+   */
+  async function nudgeUser(userId) {
+    const { data, error } = await sb
+      .from('copilot_users')
+      .update({ nudged_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select()
+      .single();
+    if (error) { console.error('nudgeUser error:', error.message); return null; }
+    await logActivity('NUDGE', 'copilot_users', userId, { action: 'nudge_inactive' });
+    return data;
+  }
+
+  /**
+   * Get Copilot users by practice for autocomplete.
+   * Returns ALL users regardless of status so every team member
+   * can be selected when logging a task.
+   */
+  async function fetchCopilotUsersByPractice(practice) {
+    if (!practice) {
+      const { data, error } = await sb
+        .from('copilot_users')
+        .select('id, name, email, practice, role_skill, status')
+        .order('name');
+      if (error) { console.error('fetchCopilotUsersByPractice error:', error.message); return []; }
+      return data || [];
+    }
+    const { data, error } = await sb
+      .from('copilot_users')
+      .select('id, name, email, practice, role_skill, status')
+      .eq('practice', practice)
+      .order('name');
+    if (error) { console.error('fetchCopilotUsersByPractice error:', error.message); return []; }
+    return data || [];
+  }
+
+  /**
+   * Get SPOC for a practice.
+   * Returns the first active SPOC (legacy single-SPOC callers).
+   */
+  async function getSpocForPractice(practice) {
+    const spocs = await getSpocsForPractice(practice);
+    return spocs.length > 0 ? spocs[0] : null;
+  }
+
+  /**
+   * Get ALL active SPOCs for a practice (multi-SPOC support).
+   * Returns array of { spoc_id, spoc_name, spoc_email }.
+   */
+  async function getSpocsForPractice(practice) {
+    const { data, error } = await sb
+      .from('practice_spoc')
+      .select('spoc_id, spoc_name, spoc_email')
+      .eq('practice', practice)
+      .eq('is_active', true)
+      .order('spoc_name', { ascending: true });
+    if (error) { console.error('getSpocsForPractice error:', error.message); return []; }
+    return data || [];
+  }
+
+  /**
+   * Sync practice_spoc when a user's role changes.
+   * - Role set to 'spoc': upsert an active row for user+practice.
+   * - Role changed away from 'spoc': deactivate (is_active = false).
+   */
+  async function syncPracticeSpoc(userId, newRole, practice, userName, userEmail) {
+    if (newRole === 'spoc' && practice) {
+      // Upsert: insert or reactivate
+      const { data: existing } = await sb
+        .from('practice_spoc')
+        .select('id, is_active')
+        .eq('spoc_id', userId)
+        .eq('practice', practice)
+        .maybeSingle();
+
+      if (existing) {
+        if (!existing.is_active) {
+          await sb.from('practice_spoc').update({ is_active: true, spoc_name: userName, spoc_email: userEmail }).eq('id', existing.id);
+        }
+      } else {
+        await sb.from('practice_spoc').insert({
+          practice,
+          spoc_id: userId,
+          spoc_name: userName || null,
+          spoc_email: userEmail || null,
+          is_active: true
+        });
+      }
+      await logActivity('SPOC_ASSIGN', 'practice_spoc', userId, { practice, spoc_name: userName });
+    } else if (newRole !== 'spoc') {
+      // Deactivate any practice_spoc rows for this user
+      const { data: rows } = await sb
+        .from('practice_spoc')
+        .select('id')
+        .eq('spoc_id', userId)
+        .eq('is_active', true);
+      if (rows && rows.length > 0) {
+        await sb.from('practice_spoc').update({ is_active: false }).eq('spoc_id', userId);
+        await logActivity('SPOC_REMOVE', 'practice_spoc', userId, { reason: 'role_changed_to_' + newRole });
+      }
+    }
+  }
+
+  /**
+   * Create a submission approval workflow entry.
+   *
+   * Routing comes from the `resolve_approver(p_practice, p_department_id, p_sector_id)` RPC
+   * (sql/037_role_sync_function.sql). The cascade is practice (multi-SPOC) → unit → sector → admin.
+   *
+   * Business rule preserved client-side: tasks under 5 saved-hours auto-approve and skip
+   * the approval record entirely (no DB round-trip). Accomplishments and >=5h tasks go
+   * through the cascade.
+   */
+  async function createSubmissionApproval(submissionType, submissionId, savedHours, practice = null, expectedImplementations = null) {
+    // <5h tasks short-circuit (business rule, not routing)
+    // EXCEPT if expectedImplementations > 1: force SPOC approval (frequency-based override)
+    if (submissionType === 'task' && savedHours < 5 && (!expectedImplementations || expectedImplementations <= 1)) {
+      return { id: null, autoApproved: true, approval_status: 'approved' };
+    }
+
+    const profile = await EAS_Auth.getUserProfile();
+
+    // Resolve department_id and sector_id for the cascade. For self-submissions,
+    // these come from the user's profile. For admin/dept_spoc submitting on behalf
+    // of someone else, the form passes a practice and we derive department_id/sector_id
+    // from the practices table (sector_id falls through the populate_sector_id trigger
+    // anyway, but we pass it explicitly for transparency).
+    let departmentId = profile?.department_id || null;
+    let sectorId     = profile?.sector_id     || null;
+
+    if (practice && (!departmentId || !sectorId)) {
+      const { data: pRow } = await sb
+        .from('practices')
+        .select('department_id, departments:department_id(sector_id)')
+        .eq('name', practice)
+        .maybeSingle();
+      if (pRow) {
+        departmentId = departmentId || pRow.department_id || null;
+        sectorId     = sectorId     || pRow.departments?.sector_id || null;
+      }
+    }
+
+    const { data: routing, error: rErr } = await sb.rpc('resolve_approver', {
+      p_practice:      practice,
+      p_department_id: departmentId,
+      p_sector_id:     sectorId
+    });
+    if (rErr) {
+      console.error('createSubmissionApproval: resolve_approver failed:', rErr);
+      return null;
+    }
+
+    const escalation = routing?.escalation_level || 'admin';
+    const assignedId = routing?.assigned_user_id || null;
+
+    // §6.4 column mapping
+    const payload = {
+      submission_type:    submissionType,
+      submission_id:      submissionId,
+      approval_status:    escalation === 'admin' ? 'admin_review' : 'spoc_review',
+      approval_layer:     escalation === 'admin' ? 'admin' : 'spoc',
+      escalation_level:   escalation,
+      saved_hours:        savedHours,
+      practice:           practice,
+      sector_id:          sectorId,        // populate_sector_id trigger canonicalises this
+      submitted_by:       profile?.id,
+      submitted_by_email: profile?.email,
+      ai_validation_result: null,
+      ai_validation_failed: false,
+      spoc_id:  (escalation === 'practice' || escalation === 'unit' || escalation === 'sector') ? assignedId : null,
+      admin_id: escalation === 'admin' ? assignedId : null
+    };
+
+    const { data, error } = await sb.from('submission_approvals').insert(payload).select().single();
+    if (error) {
+      console.error('createSubmissionApproval error:', error);
+      if (error.message && error.message.includes('submission_approvals')) {
+        console.warn('⚠️ Approval workflow tables not found. Run SQL migrations sql/002_approval_workflow.sql + sql/033-039_*.sql');
+      }
+      return null;
+    }
+    return data;
+  }
+
+  /**
+   * Fetch submission approval status
+   */
+  async function fetchSubmissionApproval(submissionId, submissionType) {
+    const { data, error } = await sb
+      .from('submission_approvals')
+      .select('*')
+      .eq('submission_id', submissionId)
+      .eq('submission_type', submissionType)
+      .single();
+    if (error && error.code !== 'PGRST116') { console.error('fetchSubmissionApproval error:', error); }
+    return data || null;
+  }
+
+  /**
+   * Update submission approval status
+   */
+  async function updateSubmissionApproval(approvalId, updates) {
+    const payload = {};
+    if (updates.approvalStatus !== undefined) payload.approval_status = updates.approvalStatus;
+    if (updates.aiValidationResult !== undefined) payload.ai_validation_result = updates.aiValidationResult;
+    if (updates.approverName !== undefined) payload.approver_name = updates.approverName;
+    if (updates.approvalNotes !== undefined) payload.approval_notes = updates.approvalNotes;
+    if (updates.rejectedReason !== undefined) payload.rejection_reason = updates.rejectedReason;
+
+    const { data, error } = await sb.from('submission_approvals').update(payload).eq('id', approvalId).select().single();
+    if (error) { console.error('updateSubmissionApproval error:', error.message); return null; }
+    return data;
+  }
+
+  /**
+   * Submit task with approval workflow.
+   * When expectedImplementations > 1, creates N task copies and creates a separate
+   * approval record for EACH copy (sequential approval mode).
+   */
+  async function submitTaskWithApproval(taskData) {
+    // Insert the first task
+    const task = await insertTask(taskData);
+    if (!task) return null;
+
+    // Collect all task IDs (first + duplicates)
+    const taskIds = [task.id];
+    const expectedImpls = taskData.expectedImplementations || 1;
+    
+    if (expectedImpls > 1) {
+      for (let i = 1; i < expectedImpls; i++) {
+        const dupTask = await insertTask(taskData);
+        if (dupTask) taskIds.push(dupTask.id);
+      }
+    }
+
+    // Create approval workflow with hours-based routing (no AI validation)
+    const savedHours = (taskData.timeWithout || 0) - (taskData.timeWith || 0);
+    const practice = taskData.practice;
+    
+    // Create approval for EACH task copy
+    const approvals = [];
+    for (const taskId of taskIds) {
+      const approval = await createSubmissionApproval('task', taskId, savedHours, practice, expectedImpls);
+      
+      // Auto-approved: mark task as approved directly, no approval record
+      if (approval?.autoApproved) {
+        await sb.from('tasks').update({ 
+          approval_status: 'approved'
+        }).eq('id', taskId);
+        await logActivity('AUTO_APPROVE', 'tasks', taskId, { saved_hours: savedHours, reason: 'Less than 5 hours saved' });
+        approvals.push({ taskId, approval: { autoApproved: true, approval_status: 'approved' } });
+      } else if (approval) {
+        // Normal approval flow: link approval record to task and sync status (BUG-06 fix)
+        await sb.from('tasks').update({
+          approval_id: approval.id,
+          approval_status: approval.approval_status
+        }).eq('id', taskId);
+        approvals.push({ taskId, approval });
+      }
+    }
+
+    // Return first task and its approval (for UI feedback)
+    return { task, approval: approvals[0]?.approval };
+  }
+
+  /**
+   * Submit accomplishment with approval workflow
+   */
+  async function submitAccomplishmentWithApproval(accData) {
+    // Insert accomplishment
+    const acc = await insertAccomplishment(accData);
+    if (!acc) return null;
+
+    // Create approval workflow with hours-based routing (no AI validation)
+    const savedHours = accData.effortSaved || 0;
+    const practice = accData.practice;
+    
+    const approval = await createSubmissionApproval('accomplishment', acc.id, savedHours, practice);
+
+    // Accomplishments always require full review (SPOC → Admin), no auto-approve
+    // Also sync approval_status back to the accomplishment row (BUG-06 fix)
+    if (approval) {
+      await sb.from('accomplishments').update({
+        approval_id: approval.id,
+        approval_status: approval.approval_status
+      }).eq('id', acc.id);
+    }
+
+    return { acc, approval };
+  }
+
+  /**
+   * Fetch pending approvals for admin/SPOC.
+   * SPOC matching uses spoc_id first, with practice-based fallback for
+   * legacy records where spoc_id was never backfilled.
+   */
+  async function fetchPendingApprovals(userRole, userPractice, userId) {
+    try {
+      let query = sb
+        .from('submission_approvals')
+        .select('*')
+        .order('submitted_at', { ascending: false });
+
+      if (userRole === 'admin') {
+        // Admin sees items at their layer (admin_review) + all other pending for visibility
+        query = query.in('approval_status', ['pending', 'admin_review', 'spoc_review']);
+      } else if (userRole === 'dept_spoc') {
+        // Dept SPOC sees spoc_review items across all practices in their department.
+        // RLS (dept_spoc_approvals_select) restricts rows to their department practices.
+        query = query.eq('approval_status', 'spoc_review');
+      } else if (userRole === 'sector_spoc') {
+        // Sector SPOC: full sector pipeline read-only. RLS restricts rows to their sector.
+        // Actionable subset (escalation_level='sector') is fetched separately by
+        // fetchSectorFallbackQueue — this branch returns the broader visibility list.
+        query = query.in('approval_status', ['spoc_review', 'admin_review']);
+      } else if (userRole === 'spoc') {
+        // Any SPOC in a practice can approve any task for that practice.
+        // Match by practice rather than individual spoc_id.
+        query = query
+          .eq('approval_status', 'spoc_review')
+          .eq('practice', userPractice);
+      } else if (userRole === 'team_lead') {
+        // Team Lead sees approvals for their assigned members only
+        const memberEmails = await fetchTeamLeadMemberEmails(userId);
+        if (memberEmails.length === 0) return [];
+        query = query
+          .eq('approval_status', 'spoc_review')
+          .eq('practice', userPractice)
+          .in('submitted_by_email', memberEmails);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('fetchPendingApprovals error:', error);
+        throw new Error(`Failed to fetch pending approvals: ${error.message}`);
+      }
+      return data || [];
+    } catch (err) {
+      console.error('fetchPendingApprovals exception:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Sector SPOC's actionable fallback queue: items currently routed to sector level
+   * (escalation_level='sector', approval_status='spoc_review'). RLS still restricts
+   * to the user's sector; passing sector_id explicitly is a transparency aid.
+   */
+  async function fetchSectorFallbackQueue(sectorId) {
+    if (!sectorId) return [];
+    const { data, error } = await sb
+      .from('submission_approvals')
+      .select('*')
+      .eq('sector_id', sectorId)
+      .eq('escalation_level', 'sector')
+      .eq('approval_status', 'spoc_review')
+      .order('submitted_at', { ascending: false });
+    if (error) {
+      console.error('fetchSectorFallbackQueue error:', error);
+      throw new Error(`Failed to fetch sector fallback queue: ${error.message}`);
+    }
+    return data || [];
+  }
+
+  /**
+   * Fetch completed approvals for dashboard history.
+   * Approved only — rejected submissions are intentionally excluded from the
+   * Approvals pages (rejected items go back to the submitter for revision).
+   */
+  async function fetchApprovalHistory(userRole, userPractice, limit = 50) {
+    try {
+      let query = sb
+        .from('submission_approvals')
+        .select('*')
+        .eq('approval_status', 'approved')
+        .order('approved_at', { ascending: false })
+        .limit(limit);
+
+      if (userRole === 'spoc') {
+        query = query.eq('practice', userPractice);
+      } else if (userRole === 'team_lead') {
+        query = query.eq('practice', userPractice);
+        // Further filter to assigned members client-side after fetch
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('fetchApprovalHistory error:', error);
+        throw new Error(`Failed to fetch approval history: ${error.message}`);
+      }
+
+      // For team_lead, filter to only their assigned members
+      if (userRole === 'team_lead') {
+        const profile = await EAS_Auth.getUserProfile();
+        const memberEmails = await fetchTeamLeadMemberEmails(profile?.id);
+        return (data || []).filter(a => memberEmails.includes(a.submitted_by_email));
+      }
+
+      return data || [];
+    } catch (err) {
+      console.error('fetchApprovalHistory exception:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Approve a task/accomplishment — implements state machine:
+   * AI → SPOC (mandatory) → Admin (if ≥15h) → approved
+   * Each approval advances to the next layer, not directly to 'approved'.
+   */
+  async function approveSubmission(approvalId, approvalNotes = '') {
+    const profile = await EAS_Auth.getUserProfile();
+    const userRole = profile?.role;
+
+    // Fetch current approval state
+    const { data: current, error: fetchErr } = await sb
+      .from('submission_approvals')
+      .select('*')
+      .eq('id', approvalId)
+      .single();
+    if (fetchErr || !current) {
+      console.error('approveSubmission: could not fetch approval', fetchErr);
+      return null;
+    }
+
+    const currentStatus = current.approval_status;
+    const savedHours = current.saved_hours || 0;
+    let nextStatus = 'approved';
+    let nextLayer = null;
+
+    // State machine: determine next state
+    // Tasks:          spoc_review → (admin_review if >10h, else approved) → approved
+    // Accomplishments: spoc_review → admin_review (always) → approved
+    // Admin override: admin can approve at any stage directly
+    const isAccomplishment = current.submission_type === 'accomplishment';
+
+    if (userRole === 'admin') {
+      // Admin bypasses normal flow — approve immediately regardless of stage
+      nextStatus = 'approved';
+      nextLayer = null;
+    } else if (currentStatus === 'spoc_review') {
+      if (isAccomplishment) {
+        // Accomplishments always require admin review after SPOC
+        nextStatus = 'admin_review';
+        nextLayer = 'admin';
+      } else if (savedHours > 10) {
+        // Tasks >10h need admin review
+        nextStatus = 'admin_review';
+        nextLayer = 'admin';
+      } else {
+        nextStatus = 'approved';
+        nextLayer = null;
+      }
+    } else if (currentStatus === 'admin_review') {
+      // Admin reviewed → final approval
+      nextStatus = 'approved';
+      nextLayer = null;
+    } else if (currentStatus === 'ai_review') {
+      // Legacy: if somehow still at ai_review, advance to SPOC
+      nextStatus = 'spoc_review';
+      nextLayer = 'spoc';
+    }
+
+    const payload = {
+      approval_status: nextStatus,
+      approval_layer: nextLayer || current.approval_layer,
+    };
+
+    // Track who acted at each layer
+    if (currentStatus === 'ai_review') {
+      payload.ai_reviewed_at = new Date().toISOString();
+      payload.ai_approval_notes = approvalNotes || null;
+    } else if (currentStatus === 'spoc_review') {
+      payload.spoc_reviewed_by = profile?.id;
+      payload.spoc_reviewed_by_name = profile?.name;
+      payload.spoc_reviewed_at = new Date().toISOString();
+      payload.spoc_approval_notes = approvalNotes || null;
+    }
+
+    // Mark final approval metadata
+    if (nextStatus === 'approved') {
+      payload.approved_by = profile?.id;
+      payload.approved_by_name = profile?.name;
+      payload.approved_by_email = profile?.email;
+      payload.approved_at = new Date().toISOString();
+      payload.admin_approval_notes = approvalNotes || null;
+      payload.admin_reviewed_at = new Date().toISOString();
+    } else if (currentStatus === 'admin_review') {
+      payload.approved_by = profile?.id;
+      payload.approved_by_name = profile?.name;
+      payload.approved_by_email = profile?.email;
+      payload.approved_at = new Date().toISOString();
+      payload.admin_approval_notes = approvalNotes || null;
+      payload.admin_reviewed_at = new Date().toISOString();
+    }
+
+    const { data: approval, error } = await sb
+      .from('submission_approvals')
+      .update(payload)
+      .eq('id', approvalId)
+      .select()
+      .single();
+    
+    if (error) { console.error('approveSubmission error:', error.message); return null; }
+
+    // Update the actual task/accomplishment status to match (only for final states)
+    if (approval) {
+      const table = approval.submission_type === 'task' ? 'tasks' : 'accomplishments';
+      // tasks/accomplishments only allow: pending, approved, rejected
+      const mappedStatus = (nextStatus === 'approved' || nextStatus === 'rejected') ? nextStatus : 'pending';
+      const taskUpdate = { approval_status: mappedStatus };
+      if (nextStatus === 'approved') {
+        taskUpdate.approved_by = profile?.id;
+        taskUpdate.approved_by_name = profile?.name;
+      }
+      await sb.from(table).update(taskUpdate).eq('id', approval.submission_id);
+
+      const actionLabel = nextStatus === 'approved' ? 'APPROVE' : 'ADVANCE';
+      await logActivity(actionLabel, `submission_approvals`, approvalId, { 
+        submission_type: approval.submission_type,
+        submission_id: approval.submission_id,
+        saved_hours: approval.saved_hours,
+        from_status: currentStatus,
+        to_status: nextStatus
+      });
+    }
+
+    return approval;
+  }
+
+  /**
+   * Reject a task/accomplishment
+   */
+  async function rejectSubmission(approvalId, rejectionReason) {
+    const profile = await EAS_Auth.getUserProfile();
+
+    // Fetch current approval stage to stamp the correct audit fields (BUG-10 fix)
+    const { data: currentApproval } = await sb
+      .from('submission_approvals')
+      .select('approval_status')
+      .eq('id', approvalId)
+      .single();
+
+    const now = new Date().toISOString();
+    const payload = {
+      approval_status: 'rejected',
+      rejection_reason: rejectionReason || 'No reason provided',
+      admin_approved: false,
+      admin_reviewed_at: now
+    };
+
+    // Stamp SPOC audit fields when rejection happens at spoc_review stage
+    if (currentApproval?.approval_status === 'spoc_review') {
+      payload.spoc_reviewed_by = profile?.id;
+      payload.spoc_reviewed_by_name = profile?.name;
+      payload.spoc_reviewed_at = now;
+    }
+
+    const { data: approval, error } = await sb
+      .from('submission_approvals')
+      .update(payload)
+      .eq('id', approvalId)
+      .select()
+      .single();
+    
+    if (error) { console.error('rejectSubmission error:', error.message); return null; }
+
+    // Update the actual task/accomplishment
+    if (approval) {
+      const table = approval.submission_type === 'task' ? 'tasks' : 'accomplishments';
+      await sb.from(table).update({
+        approval_status: 'rejected'
+      }).eq('id', approval.submission_id);
+
+      await logActivity('REJECT', `submission_approvals`, approvalId, { 
+        submission_type: approval.submission_type,
+        submission_id: approval.submission_id,
+        reason: rejectionReason
+      });
+    }
+
+    return approval;
+  }
+
+  /**
+   * Fetch employee's task approval status
+   */
+  async function fetchEmployeeTaskApprovals(employeeEmail) {
+    try {
+      // ilike (no wildcards) = case-insensitive exact match. Task emails come
+      // from copilot_users and may differ in casing from the auth profile
+      // email; a case-sensitive eq() silently hides those tasks here.
+      const { data, error } = await sb
+        .from('employee_task_approvals')
+        .select('*')
+        .ilike('employee_email', employeeEmail)
+        .order('submitted_at', { ascending: false });
+
+      if (error) {
+        console.error('fetchEmployeeTaskApprovals error:', error);
+        throw new Error(`Failed to fetch task approvals: ${error.message}`);
+      }
+      return data || [];
+    } catch (err) {
+      console.error('fetchEmployeeTaskApprovals exception:', err);
+      throw err;
+    }
+  }
+
+  // ===========================================================
+  // Prompt Library (Guide Me)
+  // ===========================================================
+
+  /**
+   * Fetch all active prompts from the prompt_library table.
+   * Returns array of grouped-friendly objects sorted by role + sort_order.
+   * Includes author name by looking up created_by (auth UUID) in public.users.
+   */
+  async function fetchPromptLibrary() {
+    const { data, error } = await sb
+      .from('prompt_library')
+      .select('*')
+      .eq('is_active', true)
+      .order('role', { ascending: true })
+      .order('sort_order', { ascending: true });
+    if (error) {
+      console.error('fetchPromptLibrary error:', error.message);
+      return [];
+    }
+
+    // Collect unique auth UUIDs to look up author names
+    const authIds = [...new Set((data || []).map(p => p.created_by).filter(Boolean))];
+    let authorMap = {};
+    if (authIds.length > 0) {
+      const { data: users, error: uErr } = await sb
+        .from('users')
+        .select('auth_id, name')
+        .in('auth_id', authIds);
+      if (!uErr && users) {
+        users.forEach(u => { authorMap[u.auth_id] = u.name; });
+      }
+    }
+
+    return (data || []).map(p => ({
+      id:         p.id,
+      role:       p.role,
+      roleLabel:  p.role_label,
+      category:   p.category,
+      text:       p.prompt_text,
+      sortOrder:  p.sort_order,
+      copyCount:  p.copy_count,
+      createdBy:  p.created_by,
+      authorName: authorMap[p.created_by] || null
+    }));
+  }
+
+  /**
+   * Increment the copy count for a prompt via the DB RPC.
+   * Fire-and-forget — does not block the UI.
+   */
+  async function incrementPromptCopy(promptId) {
+    const { error } = await sb.rpc('increment_prompt_copy', { p_prompt_id: promptId });
+    if (error) console.error('incrementPromptCopy error:', error.message);
+  }
+
+  /**
+   * Add a community-submitted prompt. Any authenticated user can call this.
+   * @param {string} role     – role key (pm, sa, ba, dev, dba, admin, dm)
+   * @param {string} roleLabel – human-readable role name
+   * @param {string} category  – prompt category
+   * @param {string} promptText – the prompt content
+   * @returns {Object|null} the newly created prompt, or null on error
+   */
+  async function addCommunityPrompt(role, roleLabel, category, promptText) {
+    const { data, error } = await sb.rpc('add_community_prompt', {
+      p_role: role,
+      p_role_label: roleLabel,
+      p_category: category,
+      p_prompt_text: promptText
+    });
+    if (error) {
+      console.error('addCommunityPrompt error:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  /**
+   * Cast, change, or remove a vote on a prompt.
+   * @param {string} promptId  – UUID of the prompt
+   * @param {string|null} voteType – 'like', 'dislike', or null to remove vote
+   * @returns {Object} { deleted, like_count, dislike_count, user_vote }
+   */
+  async function votePrompt(promptId, voteType) {
+    const { data, error } = await sb.rpc('vote_prompt', {
+      p_prompt_id: promptId,
+      p_vote_type: voteType
+    });
+    if (error) {
+      console.error('votePrompt error:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  /**
+   * Fetch aggregated like/dislike counts for all prompts.
+   * @returns {Object} map of promptId → { likeCount, dislikeCount }
+   */
+  async function fetchPromptVoteCounts() {
+    const { data, error } = await sb.rpc('get_prompt_vote_counts');
+    if (error) {
+      console.error('fetchPromptVoteCounts error:', error.message);
+      return {};
+    }
+    const map = {};
+    (data || []).forEach(r => {
+      map[r.prompt_id] = {
+        likeCount:    r.like_count,
+        dislikeCount: r.dislike_count
+      };
+    });
+    return map;
+  }
+
+  /**
+   * Fetch the current user's votes on all prompts.
+   * @returns {Object} map of promptId → voteType ('like' | 'dislike')
+   */
+  async function fetchMyVotes() {
+    const { data, error } = await sb
+      .from('prompt_votes')
+      .select('prompt_id, vote_type');
+    if (error) {
+      console.error('fetchMyVotes error:', error.message);
+      return {};
+    }
+    const map = {};
+    (data || []).forEach(r => { map[r.prompt_id] = r.vote_type; });
+    return map;
+  }
+
+  // ===========================================================
+  // User Management (Admin)
+  // ===========================================================
+
+  /**
+   * Fetch all users for admin management.
+   */
+  async function fetchUsers() {
+    const { data, error } = await sb
+      .from('users')
+      .select('id, auth_id, email, name, role, practice, is_active, last_login, created_at')
+      .order('practice', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) {
+      console.error('fetchUsers error:', error.message);
+      return [];
+    }
+    return data || [];
+  }
+
+  /**
+   * Update a user's role.
+   */
+  async function updateUserRole(userId, newRole) {
+    const { data, error } = await sb
+      .from('users')
+      .update({ role: newRole })
+      .eq('id', userId)
+      .select()
+      .single();
+    if (error) {
+      console.error('updateUserRole error:', error.message);
+      return null;
+    }
+    await logActivity('UPDATE', 'users', userId, { field: 'role', newValue: newRole });
+    return data;
+  }
+
+  /**
+   * Update a user's active status.
+   */
+  async function updateUserStatus(userId, isActive) {
+    const { data, error } = await sb
+      .from('users')
+      .update({ is_active: isActive })
+      .eq('id', userId)
+      .select()
+      .single();
+    if (error) {
+      console.error('updateUserStatus error:', error.message);
+      return null;
+    }
+    await logActivity('UPDATE', 'users', userId, { field: 'is_active', newValue: isActive });
+    return data;
+  }
+
+  /**
+   * Update a user's profile fields (name, email, practice, role, is_active).
+   */
+  async function updateUser(userId, updates) {
+    const payload = {};
+    if (updates.name !== undefined)      payload.name = updates.name;
+    if (updates.email !== undefined)     payload.email = updates.email;
+    if (updates.practice !== undefined)  payload.practice = updates.practice;
+    if (updates.role !== undefined)      payload.role = updates.role;
+    if (updates.is_active !== undefined) payload.is_active = updates.is_active;
+
+    const { data, error } = await sb
+      .from('users')
+      .update(payload)
+      .eq('id', userId)
+      .select()
+      .single();
+    if (error) {
+      console.error('updateUser error:', error.message);
+      return null;
+    }
+    await logActivity('UPDATE', 'users', userId, payload);
+    return data;
+  }
+
+  // ===========================================================
+  // Role-Based View Permissions (Admin)
+  // ===========================================================
+
+  /**
+   * Fetch all role_view_permissions rows for the admin grid.
+   */
+  async function fetchRolePermissions() {
+    const { data, error } = await sb
+      .from('role_view_permissions')
+      .select('*')
+      .order('role', { ascending: true })
+      .order('view_key', { ascending: true });
+    if (error) {
+      console.error('fetchRolePermissions error:', error.message);
+      return [];
+    }
+    return data || [];
+  }
+
+  /**
+   * Update a single permission toggle.
+   */
+  async function updateRolePermission(role, viewKey, isVisible) {
+    const { data, error } = await sb
+      .from('role_view_permissions')
+      .update({ is_visible: isVisible })
+      .eq('role', role)
+      .eq('view_key', viewKey)
+      .select()
+      .single();
+    if (error) {
+      console.error('updateRolePermission error:', error.message);
+      return null;
+    }
+    await logActivity('UPDATE', 'role_view_permissions', data.id, {
+      role, view_key: viewKey, is_visible: isVisible
+    });
+    return data;
+  }
+
+  /**
+   * Fetch view permissions for a single role (lightweight).
+   * Returns a Map<viewKey, boolean> — used by the dashboard to
+   * show/hide nav items based on admin-managed permissions.
+   * Falls back to empty map on error (fail-open: all views visible).
+   * @param {string} role - One of 'admin', 'spoc', 'contributor', 'viewer'
+   * @returns {Promise<Map<string, boolean>>}
+   */
+  async function fetchMyViewPermissions(role) {
+    try {
+      const { data, error } = await sb
+        .from('role_view_permissions')
+        .select('view_key, is_visible')
+        .eq('role', role);
+      if (error) {
+        console.error('fetchMyViewPermissions error:', error.message);
+        return new Map();
+      }
+      const map = new Map();
+      (data || []).forEach(row => map.set(row.view_key, row.is_visible));
+      return map;
+    } catch (err) {
+      console.error('fetchMyViewPermissions exception:', err);
+      return new Map();
+    }
+  }
+
+  // ===========================================================
+  // Grafana IDE Stats — Practice-scoped for SPOCs
+  // ===========================================================
+
+  /**
+   * Fetch Grafana IDE usage stats for copilot_users.
+   * If practice is provided, filters to that practice only (SPOC view).
+   * If practice is null/undefined, returns all users (Admin view).
+   * Returns array of objects with user info + ide_* columns.
+   */
+  async function fetchGrafanaStats(practice) {
+    let query = sb
+      .from('copilot_users')
+      .select('id, name, email, practice, role_skill, status, ide_days_active, ide_total_interactions, ide_code_generations, ide_code_acceptances, ide_agent_days, ide_chat_days, ide_loc_suggested, ide_loc_added, ide_last_active_date, ide_data_period, ide_data_updated_at')
+      .order('practice', { ascending: true })
+      .order('name', { ascending: true })
+      .limit(2000);
+
+    if (practice) {
+      query = query.eq('practice', practice);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('fetchGrafanaStats error:', error.message);
+      return [];
+    }
+    return (data || []).map(u => ({
+      id:                  u.id,
+      name:                u.name,
+      email:               u.email,
+      practice:            u.practice,
+      roleSkill:           u.role_skill,
+      status:              u.status,
+      ideDaysActive:       u.ide_days_active || 0,
+      ideTotalInteractions:u.ide_total_interactions || 0,
+      ideCodeGenerations:  u.ide_code_generations || 0,
+      ideCodeAcceptances:  u.ide_code_acceptances || 0,
+      ideAgentDays:        u.ide_agent_days || 0,
+      ideChatDays:         u.ide_chat_days || 0,
+      ideLocSuggested:     u.ide_loc_suggested || 0,
+      ideLocAdded:         u.ide_loc_added || 0,
+      ideLastActiveDate:   u.ide_last_active_date,
+      ideDataPeriod:       u.ide_data_period,
+      ideDataUpdatedAt:    u.ide_data_updated_at
+    }));
+  }
+
+  // ===========================================================
+  // IDE Usage Daily — per-user per-day Copilot activity
+  // (backed by ide_usage_daily + ide_usage_user_rollup view)
+  // ===========================================================
+
+  /**
+   * Fetch the per-practice summary pivot (Total / Active / Inactive / Active%).
+   * Admin/Executive see every practice. SPOC sees only their own practice.
+   * Dept SPOC sees practices in their department.
+   * Team Lead / Contributor: returns a single synthetic row for their scope.
+   */
+  async function fetchIDEPracticeSummary() {
+    // Read the scoped user list from copilot_users (RLS narrows this by role).
+    const { data, error } = await sb
+      .from('copilot_users')
+      .select('practice, ide_days_active')
+      .limit(5000);
+    if (error) { console.error('fetchIDEPracticeSummary error:', error.message); return []; }
+    const byPractice = new Map();
+    (data || []).forEach(row => {
+      const key = row.practice || 'Unassigned';
+      const b = byPractice.get(key) || { practice: key, total: 0, active: 0, inactive: 0 };
+      b.total += 1;
+      if ((row.ide_days_active || 0) > 0) b.active += 1; else b.inactive += 1;
+      byPractice.set(key, b);
+    });
+    const rows = [...byPractice.values()]
+      .map(r => ({ ...r, activePct: r.total > 0 ? (r.active * 100 / r.total) : 0 }))
+      .sort((a, b) => a.practice.localeCompare(b.practice));
+    const totals = rows.reduce(
+      (acc, r) => ({
+        practice: 'TOTAL',
+        total: acc.total + r.total,
+        active: acc.active + r.active,
+        inactive: acc.inactive + r.inactive,
+      }),
+      { practice: 'TOTAL', total: 0, active: 0, inactive: 0 }
+    );
+    totals.activePct = totals.total > 0 ? (totals.active * 100 / totals.total) : 0;
+    if (rows.length > 1) rows.push(totals);
+    return rows;
+  }
+
+  /**
+   * Fetch all users with their current-window aggregate IDE metrics.
+   * Returns the Excel-style roster: practice / unit / empId / name / email /
+   * roleSkill / login / active / daysActive / generations / etc.
+   * Practice filter is optional client-side; RLS also scopes server-side.
+   */
+  async function fetchIDEUsers(practiceFilter) {
+    let q = sb
+      .from('copilot_users')
+      .select('id, name, email, practice, unit, emp_id, role_skill, grafana_login, status, ' +
+              'ide_days_active, ide_total_interactions, ide_code_generations, ide_code_acceptances, ' +
+              'ide_agent_days, ide_chat_days, ide_loc_suggested, ide_loc_added, ide_last_active_date, ' +
+              'ide_data_period, ide_data_updated_at')
+      .order('practice', { ascending: true })
+      .order('name', { ascending: true })
+      .limit(5000);
+    if (practiceFilter) q = q.eq('practice', practiceFilter);
+    const { data, error } = await q;
+    if (error) { console.error('fetchIDEUsers error:', error.message); return []; }
+    return (data || []).map(u => ({
+      id:                   u.id,
+      name:                 u.name,
+      email:                u.email,
+      practice:             u.practice,
+      unit:                 u.unit,
+      empId:                u.emp_id,
+      roleSkill:            u.role_skill,
+      login:                u.grafana_login,
+      status:               u.status,
+      active:               (u.ide_days_active || 0) > 0,
+      ideDaysActive:        u.ide_days_active || 0,
+      ideTotalInteractions: u.ide_total_interactions || 0,
+      ideCodeGenerations:   u.ide_code_generations || 0,
+      ideCodeAcceptances:   u.ide_code_acceptances || 0,
+      ideAgentDays:         u.ide_agent_days || 0,
+      ideChatDays:          u.ide_chat_days || 0,
+      ideLocSuggested:      u.ide_loc_suggested || 0,
+      ideLocAdded:          u.ide_loc_added || 0,
+      ideLastActiveDate:    u.ide_last_active_date,
+      ideDataPeriod:        u.ide_data_period,
+      ideDataUpdatedAt:     u.ide_data_updated_at,
+    }));
+  }
+
+  /**
+   * Fetch raw daily IDE records for a single user (for drill-down charts +
+   * breakdowns by IDE / feature / language / model).
+   */
+  async function fetchIDEUserDaily(userLogin, sinceDays) {
+    if (!userLogin) return [];
+    let q = sb
+      .from('ide_usage_daily')
+      .select('day, report_start_day, report_end_day, interactions, code_generations, code_acceptances, ' +
+              'used_agent, used_chat, loc_suggested_add, loc_added, loc_deleted, ' +
+              'by_ide, by_feature, by_language, by_model, synced_at')
+      .eq('user_login', userLogin)
+      .order('day', { ascending: true })
+      .limit(400);
+    if (sinceDays) {
+      const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+      q = q.gte('day', since.toISOString().slice(0, 10));
+    }
+    const { data, error } = await q;
+    if (error) { console.error('fetchIDEUserDaily error:', error.message); return []; }
+    return data || [];
+  }
+
+  /**
+   * Bulk-upsert IDE usage daily rows from a parsed NDJSON array.
+   * Chunks the inserts and reports progress via an optional callback.
+   * Returns { inserted, failed, errors }.
+   */
+  async function uploadIDEUsageDaily(records, sourceFile, onProgress) {
+    if (!Array.isArray(records) || !records.length) {
+      return { inserted: 0, failed: 0, errors: [] };
+    }
+    const CHUNK = 400;
+    let inserted = 0, failed = 0;
+    const errors = [];
+    const now = new Date().toISOString();
+
+    const rows = records.map(r => ({
+      user_login:        r.user_login,
+      github_user_id:    r.user_id || null,
+      enterprise_id:     r.enterprise_id || null,
+      day:               r.day,
+      report_start_day:  r.report_start_day || null,
+      report_end_day:    r.report_end_day || null,
+      interactions:      r.user_initiated_interaction_count || 0,
+      code_generations:  r.code_generation_activity_count || 0,
+      code_acceptances:  r.code_acceptance_activity_count || 0,
+      used_agent:        !!r.used_agent,
+      used_chat:         !!r.used_chat,
+      loc_suggested_add: r.loc_suggested_to_add_sum || 0,
+      loc_suggested_del: r.loc_suggested_to_delete_sum || 0,
+      loc_added:         r.loc_added_sum || 0,
+      loc_deleted:       r.loc_deleted_sum || 0,
+      by_ide:            r.totals_by_ide || null,
+      by_feature:        r.totals_by_feature || null,
+      by_language:       r.totals_by_language_feature || null,
+      by_model:          r.totals_by_language_model || r.totals_by_model_feature || null,
+      source_file:       sourceFile || null,
+      synced_at:         now,
+    })).filter(r => r.user_login && r.day);
+
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const chunk = rows.slice(i, i + CHUNK);
+      const { error } = await sb
+        .from('ide_usage_daily')
+        .upsert(chunk, { onConflict: 'user_login,day' });
+      if (error) {
+        failed += chunk.length;
+        errors.push(error.message);
+      } else {
+        inserted += chunk.length;
+      }
+      if (onProgress) onProgress({ processed: Math.min(i + CHUNK, rows.length), total: rows.length, inserted, failed });
+    }
+
+    // Refresh aggregates on copilot_users so legacy readers stay accurate.
+    const { error: rpcErr } = await sb.rpc('refresh_copilot_users_ide_aggregates');
+    if (rpcErr) errors.push('refresh_copilot_users_ide_aggregates: ' + rpcErr.message);
+
+    return { inserted, failed, errors, total: rows.length };
+  }
+
+  /**
+   * Parse an NDJSON (newline-delimited JSON) blob into an array of records.
+   * Skips blank lines and reports malformed lines.
+   */
+  function parseNDJSON(text) {
+    const out = [];
+    const errs = [];
+    const lines = String(text || '').split(/\r?\n/);
+    lines.forEach((line, idx) => {
+      const t = line.trim();
+      if (!t) return;
+      try { out.push(JSON.parse(t)); }
+      catch (e) { errs.push({ line: idx + 1, error: e.message }); }
+    });
+    return { records: out, errors: errs };
+  }
+
+  // ===========================================================
+  // Team Lead Assignments
+  // ===========================================================
+
+  /** Cache for team lead member emails */
+  let _teamLeadMembersCache = null;
+  let _teamLeadMembersCacheTs = 0;
+  const TL_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
+  /**
+   * Fetch emails of members assigned to a specific team lead.
+   * @param {string} teamLeadUserId — the team lead's users.id
+   * @returns {string[]} array of member emails
+   */
+  async function fetchTeamLeadMemberEmails(teamLeadUserId) {
+    if (!teamLeadUserId) return [];
+    // Use cache if fresh
+    if (_teamLeadMembersCache && (Date.now() - _teamLeadMembersCacheTs < TL_CACHE_TTL)) {
+      return _teamLeadMembersCache;
+    }
+    const { data, error } = await sb
+      .from('team_lead_assignments')
+      .select('member_email')
+      .eq('team_lead_id', teamLeadUserId);
+    if (error) { console.error('fetchTeamLeadMemberEmails error:', error.message); return []; }
+    _teamLeadMembersCache = (data || []).map(d => d.member_email);
+    _teamLeadMembersCacheTs = Date.now();
+    return _teamLeadMembersCache;
+  }
+
+  /**
+   * Fetch full team lead assignments for a practice (used by SPOC management UI).
+   * @param {string} practice — the practice name
+   * @returns {Array} assignment records
+   */
+  async function fetchTeamLeadAssignments(practice) {
+    const { data, error } = await sb
+      .from('team_lead_assignments')
+      .select('id, team_lead_id, member_email, practice, assigned_by, created_at')
+      .eq('practice', practice)
+      .order('team_lead_id', { ascending: true })
+      .order('member_email', { ascending: true });
+    if (error) { console.error('fetchTeamLeadAssignments error:', error.message); return []; }
+    return data || [];
+  }
+
+  /**
+   * Assign a member to a team lead.
+   * @param {string} teamLeadId — users.id of the team lead
+   * @param {string} memberEmail — email of the contributor to assign
+   * @param {string} practice — practice name
+   * @returns {object|null} the created assignment
+   */
+  async function assignMemberToTeamLead(teamLeadId, memberEmail, practice) {
+    const profile = await EAS_Auth.getUserProfile();
+    const { data, error } = await sb
+      .from('team_lead_assignments')
+      .upsert({
+        team_lead_id: teamLeadId,
+        member_email: memberEmail,
+        practice: practice,
+        assigned_by: profile?.id
+      }, { onConflict: 'member_email,practice' })
+      .select()
+      .single();
+    if (error) { console.error('assignMemberToTeamLead error:', error.message); return null; }
+    _teamLeadMembersCache = null; // invalidate cache
+    await logActivity('ASSIGN_TEAM_LEAD_MEMBER', 'team_lead_assignments', data?.id, {
+      team_lead_id: teamLeadId, member_email: memberEmail, practice
+    });
+    return data;
+  }
+
+  /**
+   * Remove a member from a team lead.
+   * @param {string} assignmentId — the assignment row id
+   */
+  async function removeMemberFromTeamLead(assignmentId) {
+    const { error } = await sb
+      .from('team_lead_assignments')
+      .delete()
+      .eq('id', assignmentId);
+    if (error) { console.error('removeMemberFromTeamLead error:', error.message); return false; }
+    _teamLeadMembersCache = null; // invalidate cache
+    await logActivity('REMOVE_TEAM_LEAD_MEMBER', 'team_lead_assignments', assignmentId, {});
+    return true;
+  }
+
+  /**
+   * Remove all member assignments for a team lead (used when demoting).
+   * @param {string} teamLeadId — users.id of the team lead
+   * @param {string} practice — practice name
+   */
+  async function removeAllTeamLeadAssignments(teamLeadId, practice) {
+    const { error } = await sb
+      .from('team_lead_assignments')
+      .delete()
+      .eq('team_lead_id', teamLeadId)
+      .eq('practice', practice);
+    if (error) { console.error('removeAllTeamLeadAssignments error:', error.message); return false; }
+    _teamLeadMembersCache = null;
+    return true;
+  }
+
+  // ===========================================================
+  // Featured Banner & Likes — Phase 12
+  // ===========================================================
+
+  /**
+   * Fetch banner candidates from the v_banner_candidates view.
+   * @param {string|null} quarterId — filter by quarter or null for all
+   * @returns {Array} candidates sorted by pinned, like_count, metric_value
+   */
+  async function fetchBannerCandidates(quarterId) {
+    let query = sb.from('v_banner_candidates').select('*');
+    if (quarterId && quarterId !== 'all') {
+      // Tasks & accomplishments are quarter-scoped; prompts & use cases have null quarter_id
+      query = query.or(`quarter_id.eq.${quarterId},quarter_id.is.null`);
+    }
+    const { data, error } = await query;
+    if (error) { console.error('fetchBannerCandidates error:', error.message); return []; }
+    // Sort: pinned first, then by like_count desc, then metric_value desc
+    return (data || []).sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      if (b.like_count !== a.like_count) return b.like_count - a.like_count;
+      return (b.metric_value || 0) - (a.metric_value || 0);
+    });
+  }
+
+  /**
+   * Fetch banner config (slots per type).
+   * @returns {Object} map of item_type → { slots, is_active }
+   */
+  async function fetchBannerConfig() {
+    const { data, error } = await sb.from('featured_banner_config').select('*');
+    if (error) { console.error('fetchBannerConfig error:', error.message); return {}; }
+    const map = {};
+    (data || []).forEach(r => { map[r.item_type] = { slots: r.slots, is_active: r.is_active, id: r.id }; });
+    return map;
+  }
+
+  /**
+   * Update banner config for a specific item_type.
+   */
+  async function updateBannerConfig(itemType, updates) {
+    const profile = await EAS_Auth.getUserProfile();
+    const { error } = await sb.from('featured_banner_config')
+      .update({ ...updates, updated_by: profile?.id, updated_at: new Date().toISOString() })
+      .eq('item_type', itemType);
+    if (error) { console.error('updateBannerConfig error:', error.message); return false; }
+    return true;
+  }
+
+  /**
+   * Fetch all active banner pins.
+   */
+  async function fetchBannerPins() {
+    const { data, error } = await sb.from('featured_banner_pins')
+      .select('*, pinned_user:users!featured_banner_pins_pinned_by_fkey(name)')
+      .or('expires_at.is.null,expires_at.gte.' + new Date().toISOString().split('T')[0]);
+    if (error) { console.error('fetchBannerPins error:', error.message); return []; }
+    return data || [];
+  }
+
+  /**
+   * Pin an item to the banner.
+   */
+  async function insertBannerPin(itemType, itemId, pinLabel, expiresAt) {
+    const profile = await EAS_Auth.getUserProfile();
+    const { data, error } = await sb.from('featured_banner_pins').insert({
+      item_type: itemType,
+      item_id: itemId,
+      pin_label: pinLabel || 'Admin Pick',
+      pinned_by: profile?.id,
+      expires_at: expiresAt || null
+    }).select().single();
+    if (error) { console.error('insertBannerPin error:', error.message); return null; }
+    return data;
+  }
+
+  /**
+   * Remove a pin from the banner.
+   */
+  async function deleteBannerPin(pinId) {
+    const { error } = await sb.from('featured_banner_pins').delete().eq('id', pinId);
+    if (error) { console.error('deleteBannerPin error:', error.message); return false; }
+    return true;
+  }
+
+  /**
+   * Toggle a like on an item (task, accomplishment, use_case).
+   * Uses the toggle_like RPC function.
+   * @returns {{ liked: boolean, like_count: number } | null}
+   */
+  async function toggleLike(itemType, itemId) {
+    const { data, error } = await sb.rpc('toggle_like', {
+      p_item_type: itemType,
+      p_item_id: itemId
+    });
+    if (error) { console.error('toggleLike error:', error.message); return null; }
+    return data;
+  }
+
+  /**
+   * Fetch the current user's likes (all item types).
+   * @returns {Object} map of "item_type:item_id" → true
+   */
+  async function fetchMyLikes() {
+    const profile = await EAS_Auth.getUserProfile();
+    if (!profile) return {};
+    const { data, error } = await sb.from('likes')
+      .select('item_type, item_id')
+      .eq('user_id', profile.id);
+    if (error) { console.error('fetchMyLikes error:', error.message); return {}; }
+    const map = {};
+    (data || []).forEach(r => { map[`${r.item_type}:${r.item_id}`] = true; });
+    return map;
+  }
+
+  /**
+   * Fetch like counts for a specific item type.
+   * @returns {Object} map of item_id → like_count
+   */
+  async function fetchLikeCounts(itemType) {
+    const { data, error } = await sb.from('likes')
+      .select('item_id')
+      .eq('item_type', itemType);
+    if (error) { console.error('fetchLikeCounts error:', error.message); return {}; }
+    const map = {};
+    (data || []).forEach(r => {
+      map[r.item_id] = (map[r.item_id] || 0) + 1;
+    });
+    return map;
+  }
+
+  // ===========================================================
+  //  AI News Feed
+  // ===========================================================
+
+  async function fetchAiNews({ limit = 20, offset = 0, source = null, topic = null } = {}) {
+    let query = sb
+      .from('ai_news')
+      .select('*', { count: 'exact' })
+      .order('published_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (source) query = query.eq('source', source);
+    if (topic) query = query.eq('topic', topic);
+
+    const { data, error, count } = await query;
+    if (error) {
+      console.error('fetchAiNews error:', error.message);
+      return { items: [], total: 0 };
+    }
+    return { items: data || [], total: count || 0 };
+  }
+
+  async function getAiNewsLastUpdated() {
+    const { data, error } = await sb
+      .from('ai_news')
+      .select('fetched_at')
+      .order('fetched_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !data) return null;
+    return data.fetched_at;
+  }
+
+  async function triggerAiNewsRefresh() {
+    const session = await sb.auth.getSession();
+    const token = session?.data?.session?.access_token;
+    if (!token) throw new Error('Not authenticated');
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-news-aggregator`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || 'Refresh failed');
+    }
+    return res.json();
+  }
+
+  // ===========================================================
+  // App Settings (task hour caps, global k/v config)
+  // ===========================================================
+
+  let _appSettingsCache = null;
+
+  async function getAppSettings() {
+    if (_appSettingsCache) return _appSettingsCache;
+    const { data, error } = await sb.from('app_settings').select('key, value');
+    if (error) { console.error('getAppSettings:', error.message); return {}; }
+    _appSettingsCache = Object.fromEntries((data || []).map(r => [r.key, r.value]));
+    return _appSettingsCache;
+  }
+
+  async function saveAppSettings(updates) {
+    const rows = Object.entries(updates).map(([key, value]) => ({
+      key, value: String(value), updated_at: new Date().toISOString()
+    }));
+    const { error } = await sb.from('app_settings').upsert(rows, { onConflict: 'key' });
+    if (error) { console.error('saveAppSettings:', error.message); return false; }
+    _appSettingsCache = null;
+    return true;
+  }
+
+  // ===========================================================
+  // App Config (JSONB k/v — auto-linkage toggle, ROI constants, etc.)
+  // ===========================================================
+
+  let _appConfigCache = null;
+
+  async function getAppConfig() {
+    if (_appConfigCache) return _appConfigCache;
+    const { data, error } = await sb.from('app_config').select('key, value');
+    if (error) { console.error('getAppConfig:', error.message); return {}; }
+    _appConfigCache = Object.fromEntries((data || []).map(r => [r.key, r.value]));
+    return _appConfigCache;
+  }
+
+  async function saveAppConfig(key, value) {
+    const { error } = await sb.from('app_config').upsert({
+      key, value, updated_at: new Date().toISOString()
+    }, { onConflict: 'key' });
+    if (error) { console.error('saveAppConfig:', error.message); return false; }
+    _appConfigCache = null;
+    return true;
+  }
+
+  async function fetchWeeklyHoursByEmployee(employeeEmail, weekStart) {
+    const { data, error } = await sb
+      .from('tasks')
+      .select('time_without_ai')
+      .eq('employee_email', employeeEmail)
+      .eq('week_start', weekStart);
+    if (error) { console.error('fetchWeeklyHours:', error.message); return 0; }
+    return (data || []).reduce((sum, t) => sum + (Number(t.time_without_ai) || 0), 0);
+  }
+
+  // ===========================================================
+  // Use Case + Linkage helpers (Phase D — Task 16)
+  // Raw snake_case shape used by linkage UI / admin queue / rollup widget.
+  // Distinct from fetchApprovedUseCases (which returns camelCase mapped objects).
+  // ===========================================================
+
+  /**
+   * Fetch use cases with optional filters.
+   * @param {Object} [opts]
+   * @param {boolean} [opts.approvedOnly=true] — restrict to approved reference use cases.
+   * @param {string|number|null} [opts.departmentId=null] — filter by department.
+   * @param {string} [opts.search=''] — case-insensitive name search (ILIKE).
+   * @returns {Promise<Array>} array of raw use_cases rows (snake_case).
+   */
+  async function fetchUseCases({ approvedOnly = true, departmentId = null, search = '' } = {}) {
+    let q = sb.from('use_cases').select(
+      'id,asset_id,name,description,sdlc_phase,category,subcategory,ai_tools,'
+      + 'department_id,practice_id,practice,source,is_approved_reference,'
+      + 'hours_saved_per_impl,no_of_adoptions,owner_spoc,'
+      + 'implementation_guidelines,strategic_takeaways,suggestion_how_to_apply,'
+      + 'business_benefits,efforts_without_ai,efforts_with_ai,'
+      + 'approval_status,review_notes,author_user_id'
+    );
+    if (approvedOnly) q = q.eq('is_approved_reference', true);
+    if (departmentId) q = q.eq('department_id', departmentId);
+    if (search) q = q.ilike('name', `%${search}%`);
+    const { data, error } = await q.order('name');
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * SPOC: create a new use case via RPC `spoc_create_use_case`.
+   * @param {Object} payload — use case fields (server validates per RLS).
+   * @returns {Promise<*>} RPC return value.
+   */
+  async function spocCreateUseCase(payload) {
+    const { data, error } = await sb.rpc('spoc_create_use_case', { payload });
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Link or unlink a task to a use case via RPC `set_task_use_case_link`.
+   * @param {string|number} taskId
+   * @param {string|number|null} useCaseId — null to clear the link.
+   * @param {string} [source='spoc_override']
+   */
+  async function setTaskUseCaseLink(taskId, useCaseId, source = 'spoc_override') {
+    const { data, error } = await sb.rpc('set_task_use_case_link', {
+      p_task_id: taskId, p_use_case_id: useCaseId, p_source: source,
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Fetch a single task's linkage fields with the joined use_case name + asset_id.
+   * @param {string|number} taskId
+   */
+  async function fetchTaskLinkage(taskId) {
+    const { data, error } = await sb.from('tasks')
+      .select('id,linked_use_case_id,link_confidence,link_status,link_source,linked_at,'
+            + 'use_cases:linked_use_case_id(name,asset_id)')
+      .eq('id', taskId).single();
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Admin queue: fetch tasks needing linkage review (default link_status='review').
+   * @param {Object} [opts]
+   * @param {string} [opts.status='review']
+   * @param {number} [opts.limit=50]
+   */
+  async function fetchUnlinkedQueue({ status = 'review', limit = 50 } = {}) {
+    const { data, error } = await sb.from('tasks')
+      .select('id,task_description,ai_tool,category,'
+            + 'link_status,link_confidence,linked_use_case_id,'
+            + 'use_cases:linked_use_case_id(name,asset_id)')
+      .eq('link_status', status).limit(limit).order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Rollup widget: tasks linked to a given use case.
+   * @param {string|number} useCaseId
+   */
+  async function fetchUseCaseLinkedTasks(useCaseId) {
+    const { data, error } = await sb.from('tasks')
+      .select('id,task_description,time_saved,employee_name,created_at')
+      .eq('linked_use_case_id', useCaseId).order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
+  // ===========================================================
+  // Public API
+  // ===========================================================
+
+  return {
+    // Quarter management
+    loadQuarters,
+    getQuarters,
+    getActiveQuarter,
+    getSelectedQuarter,
+    setSelectedQuarter,
+    getQuarterLabel,
+    populateQuarterSelector,
+    populatePageQuarterSelector,
+    getPreviousQuarter,
+    calcDelta,
+    formatDelta,
+
+    // Data queries (read)
+    fetchTasks,
+    fetchTasksPage,
+    fetchPracticeSummary,
+    getConservativeROI,
+    fetchQuarterSummary,
+    fetchAccomplishments,
+    fetchCopilotUsers,
+    fetchCopilotUsersByPractice,
+    fetchGrafanaStats,
+    fetchIDEPracticeSummary,
+    fetchIDEUsers,
+    fetchIDEUserDaily,
+    uploadIDEUsageDaily,
+    parseNDJSON,
+    fetchProjects,
+    fetchLovs,
+    fetchLovsRaw,
+    insertLov,
+    deleteLov,
+    updateLovLicensed,
+    fetchApprovedUseCases,
+    fetchUseCases,
+    spocCreateUseCase,
+    setTaskUseCaseLink,
+    fetchTaskLinkage,
+    fetchUnlinkedQueue,
+    fetchUseCaseLinkedTasks,
+    fetchLicensedToolAdoption,
+    fetchAllData,
+
+    // Licensed tool helpers
+    isLicensedTool,
+    LICENSED_TOOLS,
+
+    // Leaderboard & gamification (Phase 5)
+    fetchEmployeeLeaderboard,
+    fetchPracticeLeaderboard,
+    computeBadges,
+    fetchInactiveMembers,
+    nudgeUser,
+
+    // Data mutations (write)
+    insertTask,
+    updateTask,
+    deleteTask,
+    insertAccomplishment,
+    updateAccomplishment,
+    deleteAccomplishment,
+    insertCopilotUser,
+    updateCopilotUser,
+    deleteCopilotUser,
+    submitTaskWithApproval,
+    submitAccomplishmentWithApproval,
+
+    // Approval workflow (Phase 8)
+    getSpocForPractice,
+    getSpocsForPractice,
+    syncPracticeSpoc,
+    createSubmissionApproval,
+    fetchSubmissionApproval,
+    updateSubmissionApproval,
+    fetchPendingApprovals,
+    fetchSectorFallbackQueue,
+    fetchApprovalHistory,
+    approveSubmission,
+    rejectSubmission,
+    fetchEmployeeTaskApprovals,
+    // Audit & dumps
+    logActivity,
+    createDump,
+    fetchActivityLog,
+
+    // Prompt Library (Guide Me)
+    fetchPromptLibrary,
+    incrementPromptCopy,
+    addCommunityPrompt,
+    votePrompt,
+    fetchPromptVoteCounts,
+    fetchMyVotes,
+
+    // User Management (Admin)
+    fetchUsers,
+    updateUserRole,
+    updateUserStatus,
+    updateUser,
+
+    // Role-Based View Permissions (Admin)
+    fetchRolePermissions,
+    updateRolePermission,
+
+    // View Permissions (Dashboard consumer)
+    fetchMyViewPermissions,
+
+    // Projects CRUD (Phase 11)
+    insertProject,
+    updateProject,
+    deleteProject,
+
+    // Reported Issues / Blockers (Phase 11)
+    fetchReportedIssues,
+    insertReportedIssue,
+    updateReportedIssue,
+    deleteReportedIssue,
+
+    // Team Lead Assignments
+    fetchTeamLeadMemberEmails,
+    fetchTeamLeadAssignments,
+    assignMemberToTeamLead,
+    removeMemberFromTeamLead,
+    removeAllTeamLeadAssignments,
+
+    // Password Management (Phase 11)
+    changePassword,
+
+    // Featured Banner & Likes
+    fetchBannerCandidates,
+    fetchBannerConfig,
+    updateBannerConfig,
+    fetchBannerPins,
+    insertBannerPin,
+    deleteBannerPin,
+    toggleLike,
+    fetchMyLikes,
+    fetchLikeCounts,
+
+    // AI News Feed
+    fetchAiNews,
+    getAiNewsLastUpdated,
+    triggerAiNewsRefresh,
+
+    // App Settings (task hour caps, etc.)
+    getAppSettings,
+    saveAppSettings,
+    fetchWeeklyHoursByEmployee,
+
+    // App Config (JSONB k/v — auto-linkage toggle, etc.)
+    getAppConfig,
+    saveAppConfig,
+
+    // Use Case Approval Workflow
+    getReviewQueue,
+    reviewUseCase
+  };
+})();
+
+// Phase D codex review FIX B — expose IIFE export on window so other scripts
+// (admin-link-queue.js, use-case-library.js, phase8-submission.js) can find it
+// regardless of evaluation order or module-scope shadowing.
+if (typeof window !== 'undefined') { window.EAS_DB = EAS_DB; }

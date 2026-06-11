@@ -1,0 +1,263 @@
+/* ============================================================
+   EAS AI Dashboard — Design System Variables
+   Shared across: index.html, login.html, admin.html
+   ============================================================ */
+
+:root {
+  /* Background */
+  --bg-primary: #0b0f2e;
+  --bg-secondary: #131a4a;
+  --bg-card: #131a4a;
+  --bg-card-hover: #1e2d6b;
+
+  /* Borders & Surfaces */
+  --border: #1e2d6b;
+  --radius: 12px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Accent / Semantic */
+  --accent: #1B2587;
+  --accent-hover: #141d6e;
+  --success: #00D97E;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #00D97E;
+  --purple: #0038FF;
+  --pink: #ec4899;
+
+  /* Layout */
+  --sidebar-width: 260px;
+
+  /* Theme-aware transparencies */
+  --bg-translucent: rgba(255,255,255,0.05);
+  --bg-translucent-hover: rgba(255,255,255,0.1);
+  --bg-overlay: rgba(0,0,0,0.6);
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg-primary: #f4f6fb;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #e8ecf8;
+  --border: #c0c8e8;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --bg-translucent: rgba(0,0,0,0.04);
+  --bg-translucent-hover: rgba(0,0,0,0.08);
+  --bg-overlay: rgba(0,0,0,0.4);
+  --accent: #1B2587;
+  --accent-hover: #141d6e;
+}
+
+/* ============================================================
+   Base Reset & Typography
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  min-height: 100dvh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iOS Safari orientation fixes (portrait + landscape) */
+@media (hover: none) and (pointer: coarse) {
+  /* Prevent auto-zoom on input focus — iOS Safari zooms when font-size < 16px.
+     Overrides per-page rules that drop inputs to 13–14px in landscape. */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ============================================================
+   Scrollbar (WebKit + Firefox)
+   ============================================================ */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ============================================================
+   Shared Buttons
+   ============================================================ */
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  border-color: var(--accent);
+}
+
+/* .btn-danger: solid variant defined in dashboard.css (confirmation dialogs) */
+
+/* ============================================================
+   Shared Status Badges
+   ============================================================ */
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.status-completed { background: rgba(16,185,129,0.15); color: var(--success); }
+.status-inprogress { background: rgba(27,37,135,0.15); color: var(--accent); }
+.status-pending { background: rgba(245,158,11,0.15); color: var(--warning); }
+.status-testing { background: rgba(139,92,246,0.15); color: var(--purple); }
+
+/* ============================================================
+   Toast / Notifications
+   ============================================================ */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s;
+  z-index: 10000;
+  pointer-events: none;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast-success { background: var(--success); }
+.toast-error { background: var(--danger); }
+
+/* ============================================================
+   Utility Classes
+   ============================================================ */
+
+.hidden { display: none !important; }
+
+.text-center { text-align: center; }
+.text-muted { color: var(--text-muted); }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.text-accent { color: var(--accent); }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+
+/* ============================================================
+   Responsive / Mobile
+   ============================================================ */
+
+@media (max-width: 768px) {
+  :root { --sidebar-width: 0px; }
+}
+
+/* ============================================================
+   iOS Safari — Safe-area insets (notch, home indicator, status bar)
+   Requires viewport-fit=cover in <meta name="viewport">
+   ============================================================ */
+
+.toast {
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: calc(24px + env(safe-area-inset-right, 0px));
+}
+
+/* ============================================================
+   iPhone Landscape Orientation
+   Target: phones in landscape (short height + wide screen)
+   ============================================================ */
+
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Compact the page header */
+  .page-header {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* Reduce KPI card padding and font sizes */
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .kpi-card { padding: 12px; }
+  .kpi-value { font-size: 22px; }
+  .kpi-label { font-size: 10px; margin-bottom: 4px; }
+
+  /* Stack charts single-column */
+  .chart-grid { grid-template-columns: 1fr; gap: 12px; }
+  .chart-container { height: 200px; }
+
+  /* Tighter content padding */
+  .page-content { padding: 12px 16px; }
+
+  /* Reduce empty-state bulk */
+  .empty-state { padding: 24px 16px; }
+
+  /* Compact tab bars */
+  .tab { padding: 6px 12px; font-size: 12px; }
+  .tab-bar { margin-bottom: 12px; }
+
+  /* Modal — full-width in landscape to avoid overflow */
+  .modal {
+    max-width: 90%;
+    max-height: 85vh;
+    max-height: 85dvh;
+  }
+
+  /* Spotlight banner — shorter in landscape */
+  .spotlight-banner { min-height: 140px; }
+  .spotlight-slide { padding: 16px 48px 24px; gap: 6px; }
+
+  /* Guide page — compact hero */
+  .guide-hero { padding: 16px; gap: 12px; }
+}

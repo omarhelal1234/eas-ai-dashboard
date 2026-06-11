@@ -1,0 +1,4041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EAS AI Admin Panel</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90' font-weight='bold' fill='%233b82f6'>A</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../../js/config.js"></script>
+<script src="../../js/auth.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #1e293b;
+  --bg-card-hover: #334155;
+  --border: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #06b6d4;
+  --purple: #8b5cf6;
+  --pink: #ec4899;
+  --sidebar-width: 260px;
+  --radius: 12px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+/* ========= LOGIN SCREEN ========= */
+.login-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+}
+.login-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+}
+.login-logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.login-logo .shield {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.login-logo .shield svg { width: 28px; height: 28px; color: white; }
+.login-logo h1 {
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.login-logo p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.login-field { margin-bottom: 20px; }
+.login-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.login-field input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.login-field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+.login-error {
+  display: none;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.login-error.show { display: block; }
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+.login-btn:hover { opacity: 0.9; }
+
+/* ========= ADMIN LAYOUT ========= */
+.admin-app { display: none; }
+.admin-app.active { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  height: 100vh;
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 100;
+}
+.sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--danger), var(--warning));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.sidebar-header p { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.nav-section {
+  padding: 16px 12px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  margin: 2px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+.nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.nav-item.active { background: var(--accent); color: white; font-weight: 500; }
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.nav-item .badge {
+  margin-left: auto;
+  background: rgba(255,255,255,0.15);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.nav-item.active .badge { background: rgba(255,255,255,0.25); }
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Main Content */
+.main {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-height: 100vh;
+}
+.page-header {
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+}
+.page-header h2 { font-size: 22px; font-weight: 600; }
+.page-header .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.page-content { padding: 24px 32px; }
+
+/* Buttons */
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: var(--bg-card-hover); color: var(--text-primary); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--text-muted); }
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { opacity: 0.9; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover { opacity: 0.9; }
+.btn-warning { background: var(--warning); color: #000; }
+.btn-warning:hover { opacity: 0.9; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-icon { padding: 6px; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+.btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+.btn-icon.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Tables */
+.table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.table-header-bar {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.table-header-bar h3 { font-size: 15px; font-weight: 600; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { background: rgba(0,0,0,0.2); }
+th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-secondary); }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* Status badges */
+.status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.status-completed { background: rgba(16,185,129,0.15); color: var(--success); }
+.status-inprogress { background: rgba(59,130,246,0.15); color: var(--accent); }
+.status-pending { background: rgba(245,158,11,0.15); color: var(--warning); }
+
+/* Filters */
+.filters-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.filter-select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.search-input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  min-width: 220px;
+  font-family: inherit;
+}
+.search-input:focus, .filter-select:focus { outline: none; border-color: var(--accent); }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 90%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+.modal h3 { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+/* KPI summary cards */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: all 0.2s;
+}
+.kpi-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow); }
+.kpi-label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; }
+.kpi-value { font-size: 28px; font-weight: 700; }
+.kpi-value.blue { color: var(--accent); }
+.kpi-value.green { color: var(--success); }
+.kpi-value.yellow { color: var(--warning); }
+.kpi-value.purple { color: var(--purple); }
+.kpi-value.pink { color: var(--pink); }
+.kpi-value.cyan { color: var(--info); }
+.kpi-value.red { color: var(--danger); }
+
+/* LOV tag list */
+.lov-section { margin-bottom: 32px; }
+.lov-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.lov-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.lov-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.2);
+  color: var(--accent);
+}
+.lov-tag .remove {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: rgba(239,68,68,0.2);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+.lov-tag .remove:hover { background: var(--danger); color: white; }
+.lov-add { display: flex; gap: 8px; }
+.lov-add input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  flex: 1;
+  max-width: 300px;
+  font-family: inherit;
+}
+.lov-add input:focus { outline: none; border-color: var(--accent); }
+
+/* Data management */
+.data-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.data-action-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.data-action-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.data-action-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 2000;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast-success { background: var(--success); color: white; }
+.toast-error { background: var(--danger); color: white; }
+.toast-warning { background: var(--warning); color: #000; }
+
+/* Confirm dialog */
+.confirm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1100;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.confirm-overlay.active { display: flex; }
+.confirm-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+}
+.confirm-box h3 { font-size: 16px; margin-bottom: 12px; }
+.confirm-box p { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
+.confirm-actions { display: flex; gap: 8px; justify-content: center; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.hidden { display: none !important; }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .mobile-toggle { display: block !important; }
+  .page-header { padding: 24px 16px; padding-left: 56px; }
+  .page-content { padding: 16px; }
+  .form-row { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ========= LOGIN SCREEN ========= -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="shield">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <h1>Admin Panel</h1>
+      <p>EAS AI Adoption Tracker</p>
+    </div>
+    <div class="login-error" id="login-error">Invalid username or password</div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="login-user" placeholder="Enter username" autocomplete="username" autofocus>
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="attemptLogin()">Sign In</button>
+  </div>
+</div>
+
+<!-- ========= ADMIN APP ========= -->
+<div class="admin-app" id="admin-app">
+
+  <!-- Mobile Toggle -->
+  <button class="mobile-toggle" style="display:none;position:fixed;top:16px;left:16px;z-index:200;background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:8px;cursor:pointer;color:var(--text-primary);"
+    onclick="document.querySelector('.sidebar').classList.toggle('open')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+  </button>
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <h1>⚙ Admin Panel</h1>
+      <p>EAS AI Management</p>
+    </div>
+
+    <div class="sidebar-nav">
+    <div class="nav-section">Management</div>
+    <div class="nav-item active" data-page="overview">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Overview
+    </div>
+    <div class="nav-item" data-page="manage-tasks">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Tasks
+      <span class="badge" id="admin-task-count">0</span>
+    </div>
+    <div class="nav-item" data-page="manage-accomplishments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      Accomplishments
+      <span class="badge" id="admin-acc-count">0</span>
+    </div>
+    <div class="nav-item" data-page="manage-copilot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Copilot Users
+      <span class="badge" id="admin-copilot-count">0</span>
+    </div>
+    <div class="nav-item" data-page="manage-projects">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Projects
+      <span class="badge" id="admin-proj-count">0</span>
+    </div>
+    <div class="nav-item" data-page="ide-usage">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      IDE Usage
+      <span class="badge" id="admin-ide-count">0</span>
+    </div>
+    <div class="nav-item" data-page="manage-approvals">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 12 15 15 10"/></svg>
+      Approvals
+      <span class="badge" id="admin-approval-count">0</span>
+    </div>
+    <div class="nav-item" data-page="manage-users">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Users
+      <span class="badge" id="admin-user-count">0</span>
+    </div>
+
+    <div class="nav-section">Configuration</div>
+    <div class="nav-item" data-page="manage-departments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Departments
+      <span class="badge" id="admin-dept-count">0</span>
+    </div>
+    <div class="nav-item" data-page="manage-practices">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Practices
+      <span class="badge" id="admin-practice-count">0</span>
+    </div>
+    <div class="nav-item" data-page="manage-lovs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Lists of Values
+    </div>
+    <div class="nav-item" data-page="manage-data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      Data Management
+    </div>
+    <div class="nav-item" data-page="manage-prompts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/></svg>
+      Prompt Library
+      <span class="badge" id="admin-prompt-count">0</span>
+    </div>
+    <div class="nav-item" data-page="manage-executives">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/><circle cx="7" cy="16" r="1.5"/><circle cx="11" cy="8" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="19" cy="6" r="1.5"/></svg>
+      Executive Assignments
+      <span class="badge" id="admin-exec-count">0</span>
+    </div>
+    <div class="nav-item" data-page="manage-permissions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      View Permissions
+    </div>
+    </div><!-- /sidebar-nav -->
+
+    <div class="sidebar-footer">
+      <button class="btn btn-secondary" style="width:100%;justify-content:center" onclick="goToDashboard()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Dashboard
+      </button>
+      <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:8px" onclick="logout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main">
+
+    <!-- Overview Page -->
+    <div id="page-overview" class="page">
+      <div class="page-header">
+        <div>
+          <h2>Admin Overview</h2>
+          <div class="subtitle">Data management and configuration</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div class="kpi-grid" id="admin-kpi-grid"></div>
+        <div class="table-card">
+          <div class="table-header-bar">
+            <h3>Practice Summary</h3>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Practice</th><th>Head</th><th>SPOC</th><th>Tasks</th><th>Time Saved (hrs)</th><th>Efficiency</th><th>Completed</th><th>Projects</th></tr></thead>
+              <tbody id="admin-practice-summary"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Tasks Page -->
+    <div id="page-manage-tasks" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Manage Tasks</h2>
+          <div class="subtitle">Edit and delete AI tasks</div>
+        </div>
+        <button class="btn btn-primary" onclick="openTaskModal()">+ Add Task</button>
+      </div>
+      <div class="page-content">
+        <div class="filters-bar">
+          <input type="text" class="search-input" id="admin-task-search" placeholder="Search tasks..." oninput="renderAdminTasks()">
+          <select class="filter-select" id="admin-task-filter-practice" onchange="renderAdminTasks()"><option value="">All Practices</option></select>
+          <select class="filter-select" id="admin-task-filter-status" onchange="renderAdminTasks()">
+            <option value="">All Status</option>
+            <option value="Completed">Completed</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>#</th><th>Practice</th><th>Project</th><th>Task</th><th>Tool</th><th>Without AI</th><th>With AI</th><th>Saved</th><th>Status</th><th style="width:100px">Actions</th></tr></thead>
+              <tbody id="admin-tasks-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Accomplishments Page -->
+    <div id="page-manage-accomplishments" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Manage Accomplishments</h2>
+          <div class="subtitle">Edit and delete AI wins</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAccModal()">+ Add Win</button>
+      </div>
+      <div class="page-content">
+        <div class="filters-bar">
+          <input type="text" class="search-input" id="admin-acc-search" placeholder="Search accomplishments..." oninput="renderAdminAccomplishments()">
+          <select class="filter-select" id="admin-acc-filter-practice" onchange="renderAdminAccomplishments()"><option value="">All Practices</option></select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>#</th><th>Practice</th><th>Title</th><th>Category</th><th>Tool</th><th>Impact</th><th style="width:100px">Actions</th></tr></thead>
+              <tbody id="admin-acc-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Copilot Users Page -->
+    <div id="page-manage-copilot" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Manage Copilot Users</h2>
+          <div class="subtitle">GitHub Copilot user management</div>
+        </div>
+        <button class="btn btn-primary" onclick="openCopilotModal()">+ Add User</button>
+      </div>
+      <div class="page-content">
+        <div class="filters-bar">
+          <input type="text" class="search-input" id="admin-copilot-search" placeholder="Search users..." oninput="renderAdminCopilot()">
+          <select class="filter-select" id="admin-copilot-filter-practice" onchange="renderAdminCopilot()"><option value="">All Practices</option></select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>#</th><th>Practice</th><th>Name</th><th>Email</th><th>GitHub Handle</th><th>Status</th><th style="width:100px">Actions</th></tr></thead>
+              <tbody id="admin-copilot-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Projects Page -->
+    <div id="page-manage-projects" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Manage Projects</h2>
+          <div class="subtitle">Edit and delete projects</div>
+        </div>
+        <button class="btn btn-primary" onclick="openProjectModal()">+ Add Project</button>
+      </div>
+      <div class="page-content">
+        <div class="filters-bar">
+          <input type="text" class="search-input" id="admin-proj-search" placeholder="Search projects..." oninput="renderAdminProjects()">
+          <select class="filter-select" id="admin-proj-filter-practice" onchange="renderAdminProjects()"><option value="">All Practices</option></select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>#</th><th>Practice</th><th>Project Name</th><th>Code</th><th>Customer</th><th>Value (SAR)</th><th>PM</th><th style="width:100px">Actions</th></tr></thead>
+              <tbody id="admin-proj-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Approvals Page -->
+    <div id="page-manage-approvals" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Task Approvals</h2>
+          <div class="subtitle">Review and approve submitted tasks</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div class="filters-bar">
+          <select class="filter-select" id="approval-filter-status" onchange="renderApprovals()">
+            <option value="">All Status</option>
+            <option value="pending">Pending Admin</option>
+            <option value="spoc_review">SPOC Review</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <select class="filter-select" id="approval-filter-practice" onchange="renderApprovals()"><option value="">All Practices</option></select>
+          <input type="text" class="search-input" id="approval-search" placeholder="Search by employee or task..." oninput="renderApprovals()" style="flex:1">
+        </div>
+        
+        <!-- Pending Approvals Section -->
+        <div class="table-card" style="margin-bottom: 32px;">
+          <div class="table-header-bar">
+            <h3>⏳ Pending Approvals</h3>
+            <span class="badge" id="pending-approval-count">0</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Employee</th><th>Practice</th><th>Task</th><th>Time Saved (hrs)</th><th>Status</th><th>Submitted</th><th style="width:150px">Action</th></tr></thead>
+              <tbody id="pending-approvals-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Approval History Section -->
+        <div class="table-card">
+          <div class="table-header-bar">
+            <h3>📋 Approval History</h3>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Employee</th><th>Practice</th><th>Task</th><th>Time Saved (hrs)</th><th>Status</th><th>Approved By</th><th>Approved At</th></tr></thead>
+              <tbody id="approval-history-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Departments Page -->
+    <div id="page-manage-departments" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Manage Departments</h2>
+          <div class="subtitle">Add, edit and manage organizational departments</div>
+        </div>
+        <button class="btn btn-primary" onclick="openDepartmentModal()">+ Add Department</button>
+      </div>
+      <div class="page-content">
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" id="admin-dept-search" placeholder="Search departments…" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" oninput="renderAdminDepartments()">
+          <select id="admin-dept-status-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" onchange="renderAdminDepartments()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:40px">#</th>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Head</th>
+                  <th>Practices</th>
+                  <th style="width:80px">Status</th>
+                  <th style="width:120px">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-depts-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Practices Page -->
+    <div id="page-manage-practices" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Manage Practices</h2>
+          <div class="subtitle">Add, edit and manage practices linked to departments</div>
+        </div>
+        <button class="btn btn-primary" onclick="openPracticeModal()">+ Add Practice</button>
+      </div>
+      <div class="page-content">
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" id="admin-practice-search" placeholder="Search practices…" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" oninput="renderAdminPractices()">
+          <select id="admin-practice-dept-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" onchange="renderAdminPractices()">
+            <option value="">All Departments</option>
+          </select>
+          <select id="admin-practice-status-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-family:inherit" onchange="renderAdminPractices()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:40px">#</th>
+                  <th>Practice</th>
+                  <th>Department</th>
+                  <th>Head</th>
+                  <th>SPOC</th>
+                  <th style="width:80px">Status</th>
+                  <th style="width:120px">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-practices-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage LOVs Page -->
+    <div id="page-manage-lovs" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Lists of Values</h2>
+          <div class="subtitle">Manage dropdown options: practices, categories, tools, statuses</div>
+        </div>
+      </div>
+      <div class="page-content" id="lovs-content"></div>
+    </div>
+
+    <!-- Data Management Page -->
+    <div id="page-manage-data" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Data Management</h2>
+          <div class="subtitle">Backup, restore, and manage dashboard data</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div class="kpi-grid" style="margin-bottom:32px">
+          <div class="kpi-card"><div class="kpi-label">Tasks</div><div class="kpi-value blue" id="dm-tasks">0</div></div>
+          <div class="kpi-card"><div class="kpi-label">Accomplishments</div><div class="kpi-value green" id="dm-acc">0</div></div>
+          <div class="kpi-card"><div class="kpi-label">Copilot Users</div><div class="kpi-value purple" id="dm-copilot">0</div></div>
+          <div class="kpi-card"><div class="kpi-label">Projects</div><div class="kpi-value cyan" id="dm-proj">0</div></div>
+        </div>
+        <div class="data-action-grid">
+          <div class="data-action-card">
+            <h4>📥 Backup Data</h4>
+            <p>Download a JSON backup of all current dashboard data including tasks, accomplishments, copilot users, projects, and settings.</p>
+            <button class="btn btn-primary" onclick="backupData()">Download Backup</button>
+          </div>
+          <div class="data-action-card">
+            <h4>📤 Restore Data</h4>
+            <p>Upload a previously saved JSON backup to restore all data. This will replace current data.</p>
+            <input type="file" id="restore-file" accept=".json" style="display:none" onchange="restoreData(this)">
+            <button class="btn btn-warning" onclick="document.getElementById('restore-file').click()">Upload Backup</button>
+          </div>
+          <div class="data-action-card">
+            <h4>🔄 Reset to Default</h4>
+            <p>Reset all data back to the original default values from data.js. This cannot be undone.</p>
+            <button class="btn btn-danger" onclick="confirmAction('Reset all data to defaults? This cannot be undone.', resetToDefault)">Reset Data</button>
+          </div>
+          <div class="data-action-card">
+            <h4>🗑️ Clear All Data</h4>
+            <p>Remove all tasks, accomplishments, copilot users, and projects. Practice settings are preserved.</p>
+            <button class="btn btn-danger" onclick="confirmAction('Clear ALL tasks, accomplishments, copilot users, and projects?', clearAllData)">Clear All</button>
+          </div>
+          <div class="data-action-card">
+            <h4>📊 Export to Excel</h4>
+            <p>Export all dashboard data to an Excel spreadsheet with separate sheets for each data type.</p>
+            <button class="btn btn-success" onclick="exportAdminExcel()">Export Excel</button>
+          </div>
+          <div class="data-action-card">
+            <h4>💾 Save to LocalStorage</h4>
+            <p>Save current data to browser localStorage so edits persist across page reloads.</p>
+            <button class="btn btn-primary" onclick="saveToLocalStorage(); showToast('Data saved to localStorage')">Save Now</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Prompt Library Page -->
+    <div id="page-manage-prompts" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Prompt Library</h2>
+          <div class="subtitle">Manage AI prompts shown in the Guide Me section</div>
+        </div>
+        <button class="btn btn-primary" onclick="openPromptModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Prompt
+        </button>
+      </div>
+      <div class="page-content">
+        <!-- Filters -->
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" id="admin-prompt-search" placeholder="Search prompts…" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary)" oninput="renderAdminPrompts()">
+          <select id="admin-prompt-role-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary)" onchange="renderAdminPrompts()">
+            <option value="">All Roles</option>
+            <option value="pm">Project Manager</option>
+            <option value="sa">Solution Architect</option>
+            <option value="ba">Business Analyst</option>
+            <option value="dev">Developer</option>
+            <option value="dba">DBA</option>
+            <option value="admin">Admin</option>
+            <option value="dm">Delivery Manager</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th style="width:120px">Role</th>
+                <th style="width:150px">Category</th>
+                <th>Prompt Text</th>
+                <th style="width:60px">Copies</th>
+                <th style="width:50px">Active</th>
+                <th style="width:80px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-prompts-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Users Page -->
+    <div id="page-manage-users" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Manage Users</h2>
+          <div class="subtitle">View and manage user roles and access</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <!-- Filters -->
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <input type="text" id="admin-user-search" placeholder="Search by name or email…" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary)" oninput="renderAdminUsers()">
+          <select id="admin-user-role-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary)" onchange="renderAdminUsers()">
+            <option value="">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="spoc">SPOC</option>
+            <option value="contributor">Contributor</option>
+            <option value="viewer">Viewer</option>
+            <option value="executive">Executive</option>
+          </select>
+          <select id="admin-user-practice-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-primary)" onchange="renderAdminUsers()">
+            <option value="">All Practices</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px">#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Practice</th>
+                <th style="width:140px">Role</th>
+                <th style="width:80px">Active</th>
+                <th style="width:120px">Last Login</th>
+                <th style="width:130px">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Executive Assignments Page -->
+    <div id="page-manage-executives" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>Executive Assignments</h2>
+          <div class="subtitle">Assign practices to executive users for cross-practice visibility</div>
+        </div>
+      </div>
+      <div class="page-content">
+        <div id="exec-assign-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text-muted)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48" style="margin-bottom:16px;opacity:0.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <h3 style="color:var(--text-secondary)">No Executive Users</h3>
+          <p>To add an executive, go to <strong>Users</strong> and set a user's role to <strong>Executive</strong>.</p>
+        </div>
+        <div id="exec-assign-content">
+          <div id="exec-cards-container" style="display:flex;flex-direction:column;gap:20px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manage Permissions Page -->
+    <div id="page-manage-permissions" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>View Permissions</h2>
+          <div class="subtitle">Control which sections each role can see across the dashboard and VS Code extension</div>
+        </div>
+        <button class="btn btn-secondary" onclick="resetAllPermissions()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          Reset All to Visible
+        </button>
+      </div>
+      <div class="page-content">
+        <div class="table-card">
+          <table id="permissions-matrix">
+            <thead>
+              <tr>
+                <th style="width:200px">View Section</th>
+                <th style="text-align:center">Admin</th>
+                <th style="text-align:center">SPOC</th>
+                <th style="text-align:center">Contributor</th>
+                <th style="text-align:center">Viewer</th>
+                <th style="text-align:center">Executive</th>
+              </tr>
+            </thead>
+            <tbody id="permissions-matrix-tbody">
+              <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text-muted)">
+          <strong>How it works:</strong> Toggles control visibility of sidebar sections across the web dashboard and VS Code extension. Enabled (green) = visible, Disabled (red) = hidden. Dashboard changes take effect on the user's next page load; extension changes on the next sidebar refresh. Default: all visible (deny-list approach). Dashboard permissions work in addition to role-based restrictions &mdash; admin can hide views but cannot grant access beyond what the role allows.
+        </div>
+      </div>
+    </div>
+
+    <!-- IDE Usage Page -->
+    <div id="page-ide-usage" class="page hidden">
+      <div class="page-header">
+        <div>
+          <h2>IDE Usage Analytics</h2>
+          <div class="subtitle">GitHub Copilot IDE activity from Grafana telemetry</div>
+        </div>
+        <button class="btn btn-secondary" onclick="exportIdeUsageCsv()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+      <div class="page-content">
+        <div class="kpi-grid" id="ide-kpi-grid">
+          <div class="kpi-card"><div class="kpi-label">Active Users</div><div class="kpi-value cyan" id="ide-kpi-users">--</div></div>
+          <div class="kpi-card"><div class="kpi-label">Code Generations</div><div class="kpi-value blue" id="ide-kpi-codegens">--</div></div>
+          <div class="kpi-card"><div class="kpi-label">Code Acceptances</div><div class="kpi-value green" id="ide-kpi-acceptances">--</div></div>
+          <div class="kpi-card"><div class="kpi-label">LOC Added</div><div class="kpi-value purple" id="ide-kpi-loc">--</div></div>
+          <div class="kpi-card"><div class="kpi-label">Agent Days</div><div class="kpi-value pink" id="ide-kpi-agent">--</div></div>
+          <div class="kpi-card"><div class="kpi-label">Chat Days</div><div class="kpi-value yellow" id="ide-kpi-chat">--</div></div>
+        </div>
+        <div class="filters-bar">
+          <input type="text" class="search-input" id="ide-usage-search" placeholder="Search by name or username..." oninput="filterIdeTable()">
+          <select class="filter-select" id="ide-usage-filter-practice" onchange="filterIdeTable()"><option value="">All Practices</option></select>
+          <select class="filter-select" id="ide-usage-sort" onchange="filterIdeTable()">
+            <option value="ide_days_active">Sort: Days Active</option>
+            <option value="ide_code_generations">Sort: Code Generations</option>
+            <option value="ide_loc_added">Sort: LOC Added</option>
+            <option value="ide_total_interactions">Sort: Interactions</option>
+            <option value="name">Sort: Name</option>
+          </select>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Practice</th>
+                  <th style="text-align:right">Days Active</th>
+                  <th style="text-align:right">Code Gens</th>
+                  <th style="text-align:right">Acceptances</th>
+                  <th style="text-align:right">Interactions</th>
+                  <th style="text-align:right">LOC Added</th>
+                  <th style="text-align:right">LOC Suggested</th>
+                  <th style="text-align:right">Agent Days</th>
+                  <th style="text-align:right">Chat Days</th>
+                  <th>Last Active</th>
+                  <th>Data Period</th>
+                </tr>
+              </thead>
+              <tbody id="ide-usage-tbody">
+                <tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-muted)">Loading IDE usage data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div style="margin-top:12px;padding:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text-muted)">
+          <strong>Data source:</strong> Grafana Copilot IDE usage telemetry, synced via <code>scripts/sync_grafana.py</code>. Only users with IDE activity are shown. Data period is shown per user.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /admin-app -->
+
+<!-- Edit Task Modal -->
+<div class="modal-overlay" id="modal-edit-task">
+  <div class="modal">
+    <h3 id="task-modal-title">Add Task</h3>
+    <input type="hidden" id="et-index" value="-1">
+    <div class="form-row">
+      <div class="form-group"><label>Practice</label><select id="et-practice"></select></div>
+      <div class="form-group"><label>Week #</label><input type="number" id="et-week" min="1" value="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Week Start</label><input type="date" id="et-weekstart"></div>
+      <div class="form-group"><label>Week End</label><input type="date" id="et-weekend"></div>
+    </div>
+    <div class="form-group"><label>Project</label><input type="text" id="et-project" placeholder="Project name"></div>
+    <div class="form-group"><label>Task Description</label><textarea id="et-task" rows="2" placeholder="What was done with AI?"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Category</label><select id="et-category"></select></div>
+      <div class="form-group"><label>AI Tool</label><select id="et-tool"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Time Without AI (hrs)</label><input type="number" id="et-without" step="0.1" min="0"></div>
+      <div class="form-group"><label>Time With AI (hrs)</label><input type="number" id="et-with" step="0.1" min="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Quality (1-5)</label><input type="number" id="et-quality" min="1" max="5" step="0.1"></div>
+      <div class="form-group"><label>Status</label><select id="et-status"><option>Completed</option><option>In Progress</option><option>Pending</option><option>Testing</option></select></div>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="et-notes" rows="2" placeholder="Additional notes"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-task')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Accomplishment Modal -->
+<div class="modal-overlay" id="modal-edit-acc">
+  <div class="modal">
+    <h3 id="acc-modal-title">Add Accomplishment</h3>
+    <input type="hidden" id="ea-index" value="-1">
+    <div class="form-row">
+      <div class="form-group"><label>Practice</label><select id="ea-practice"></select></div>
+      <div class="form-group"><label>Category</label><select id="ea-category"></select></div>
+    </div>
+    <div class="form-group"><label>Title</label><input type="text" id="ea-title" placeholder="Accomplishment title"></div>
+    <div class="form-group"><label>Description</label><textarea id="ea-desc" rows="3" placeholder="What was accomplished?"></textarea></div>
+    <div class="form-group"><label>AI Tool</label><select id="ea-tool"></select></div>
+    <div class="form-group"><label>Impact / Business Value</label><textarea id="ea-impact" rows="2" placeholder="Quantified impact or business value"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-acc')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAccomplishment()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Copilot User Modal -->
+<div class="modal-overlay" id="modal-edit-copilot">
+  <div class="modal">
+    <h3 id="copilot-modal-title">Add Copilot User</h3>
+    <input type="hidden" id="ec-index" value="-1">
+    <div class="form-row">
+      <div class="form-group"><label>Practice</label><select id="ec-practice"></select></div>
+      <div class="form-group"><label>Status</label><select id="ec-status"><option>Active</option><option>Pending</option><option>Inactive</option></select></div>
+    </div>
+    <div class="form-group"><label>Name</label><input type="text" id="ec-name" placeholder="Full name"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="ec-email" placeholder="Email address"></div>
+    <div class="form-group"><label>GitHub Handle</label><input type="text" id="ec-github" placeholder="@username"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-copilot')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCopilotUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Project Modal -->
+<div class="modal-overlay" id="modal-edit-project">
+  <div class="modal">
+    <h3 id="project-modal-title">Add Project</h3>
+    <input type="hidden" id="ep-index" value="-1">
+    <div class="form-row">
+      <div class="form-group"><label>Practice</label><select id="ep-practice"></select></div>
+      <div class="form-group"><label>Project Code</label><input type="text" id="ep-code" placeholder="PRJ-001"></div>
+    </div>
+    <div class="form-group"><label>Project Name</label><input type="text" id="ep-name" placeholder="Project name"></div>
+    <div class="form-group"><label>Customer</label><input type="text" id="ep-customer" placeholder="Customer name"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Value (SAR)</label><input type="number" id="ep-value" step="1000" min="0"></div>
+      <div class="form-group"><label>Revenue Type</label><input type="text" id="ep-revenue" placeholder="e.g. Fixed, T&M"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Start Date</label><input type="date" id="ep-start"></div>
+      <div class="form-group"><label>End Date</label><input type="date" id="ep-end"></div>
+    </div>
+    <div class="form-group"><label>Project Manager</label><input type="text" id="ep-pm" placeholder="PM name"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-project')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProject()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Practice Modal -->
+<div class="modal-overlay" id="modal-edit-practice">
+  <div class="modal">
+    <h3 id="practice-modal-title">Add Practice</h3>
+    <input type="hidden" id="epr-id" value="">
+    <div class="form-group"><label>Practice Name *</label><input type="text" id="epr-name" placeholder="Practice name"></div>
+    <div class="form-group"><label>Department</label><select id="epr-department"><option value="">— No Department —</option></select></div>
+    <div class="form-group"><label>Description</label><textarea id="epr-description" rows="2" placeholder="Brief description of the practice"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Head</label><input type="text" id="epr-head" placeholder="Practice head name"></div>
+      <div class="form-group"><label>SPOC</label><input type="text" id="epr-spoc" placeholder="SPOC name"></div>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="epr-status">
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-practice')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePractice()">Save Practice</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Department Modal -->
+<div class="modal-overlay" id="modal-edit-department">
+  <div class="modal" style="max-width:540px">
+    <h3 id="dept-modal-title">Add Department</h3>
+    <input type="hidden" id="ed-id" value="">
+    <div class="form-group"><label>Department Name *</label><input type="text" id="ed-name" placeholder="Department name"></div>
+    <div class="form-group"><label>Description</label><textarea id="ed-description" rows="2" placeholder="Brief description of the department"></textarea></div>
+    <div class="form-group"><label>Head</label><input type="text" id="ed-head" placeholder="Department head name"></div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="ed-status">
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-department')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDepartment()">Save Department</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="modal-edit-user">
+  <div class="modal" style="max-width:500px">
+    <h3 id="user-modal-title">Edit User</h3>
+    <input type="hidden" id="eu-id" value="">
+    <div class="form-group"><label>Name</label><input type="text" id="eu-name" placeholder="Full name"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="eu-email" placeholder="Email address" readonly style="opacity:0.6"></div>
+    <div class="form-row">
+      <div class="form-group" id="eu-practice-group">
+        <label>Practice</label>
+        <select id="eu-practice"></select>
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="eu-role" onchange="toggleExecPractices()">
+          <option value="admin">Admin</option>
+          <option value="spoc">SPOC</option>
+          <option value="contributor">Contributor</option>
+          <option value="viewer">Viewer</option>
+          <option value="executive">Executive</option>
+        </select>
+      </div>
+    </div>
+    <!-- Multi-practice picker for executives -->
+    <div class="form-group" id="exec-practices-row" style="display:none">
+      <label>Assigned Practices <span style="font-weight:normal;font-size:12px;color:var(--text-muted)">(select all that apply)</span></label>
+      <div id="exec-practices-checkboxes" style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 0"></div>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="eu-active">
+        <option value="true">Active</option>
+        <option value="false">Inactive</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-user')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Magic Link Result Modal -->
+<div class="modal-overlay" id="modal-magic-link">
+  <div class="modal" style="max-width:560px">
+    <h3 style="display:flex;align-items:center;gap:8px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" width="22" height="22"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Magic Login Link
+    </h3>
+    <p style="margin:12px 0 8px;font-size:13px;color:var(--text-muted)">Share this one-time link with the user. It expires in ~1 hour.</p>
+    <div style="margin:12px 0">
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">User Email</label>
+      <div id="ml-email" style="padding:8px 12px;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;font-size:14px;margin-top:4px"></div>
+    </div>
+    <div style="margin:12px 0">
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Login Link</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <input type="text" id="ml-link" readonly style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-primary);color:var(--text-primary);font-size:13px;font-family:monospace">
+        <button class="btn btn-primary" onclick="copyMagicLink()" style="white-space:nowrap" title="Copy to clipboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy
+        </button>
+      </div>
+    </div>
+    <div style="margin:12px 0;padding:10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;font-size:12px;color:var(--warning)">
+      ⚠️ <strong>Security:</strong> Anyone with this link can sign in as this user. Share it securely and never post it publicly.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-magic-link')">Close</button>
+      <button class="btn btn-primary" onclick="window.open(document.getElementById('ml-link').value, '_blank')">Open in New Tab</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-overlay" id="confirm-dialog">
+  <div class="confirm-box">
+    <h3>⚠️ Confirm Action</h3>
+    <p id="confirm-msg"></p>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-yes" onclick="closeConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prompt Library Modal -->
+<div class="modal-overlay" id="modal-edit-prompt">
+  <div class="modal" style="max-width:600px">
+    <h3 id="prompt-modal-title">Add Prompt</h3>
+    <input type="hidden" id="ep-id" value="">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Role</label>
+        <select id="ep-role" onchange="updateRoleLabel()">
+          <option value="pm">Project Manager</option>
+          <option value="sa">Solution Architect</option>
+          <option value="ba">Business Analyst</option>
+          <option value="dev">Developer</option>
+          <option value="dba">Database Administrator</option>
+          <option value="admin">System / IT Admin</option>
+          <option value="dm">Delivery Manager</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="ep-category" placeholder="e.g. Sprint & Planning">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Prompt Text</label>
+      <textarea id="ep-text" rows="5" placeholder="Enter the prompt text. Use [brackets] for placeholders."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Sort Order</label>
+        <input type="number" id="ep-sort" min="1" value="1" style="width:80px">
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px;padding-top:24px">
+        <input type="checkbox" id="ep-active" checked>
+        <label for="ep-active" style="margin:0">Active</label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-prompt')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePrompt()">Save Prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Data: loaded from Supabase via js/config.js -->
+<script>
+// ============ AUTH (Supabase-based) ============
+let isAuthenticated = false;
+
+async function attemptLogin() {
+  const email = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  if (!email || !password) return;
+
+  const sb = getSupabaseClient();
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    document.getElementById('login-error').classList.add('show');
+    document.getElementById('login-pass').value = '';
+    setTimeout(() => document.getElementById('login-error').classList.remove('show'), 3000);
+    return;
+  }
+
+  // Check role — admin only for admin panel
+  const profile = await EAS_Auth.getUserProfile(true);
+  if (!profile || profile.role !== 'admin') {
+    await EAS_Auth.signOut();
+    document.getElementById('login-error').classList.add('show');
+    setTimeout(() => document.getElementById('login-error').classList.remove('show'), 3000);
+    return;
+  }
+
+  isAuthenticated = true;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-app').classList.add('active');
+  initAdmin();
+}
+
+function logout() {
+  EAS_Auth.signOut(); // clears session + redirects to login.html
+}
+
+function goToDashboard() {
+  window.location.href = 'index.html';
+}
+
+// Enter key on login
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') attemptLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
+
+// Session persistence via Supabase
+(async () => {
+  const session = await EAS_Auth.getSession();
+  if (session) {
+    const profile = await EAS_Auth.getUserProfile();
+    if (profile && profile.role === 'admin') {
+      isAuthenticated = true;
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-app').classList.add('active');
+      setTimeout(initAdmin, 0);
+    }
+  }
+})();
+
+// ============ DATA LAYER ============
+const APP_DATA = {
+  tasks: [],
+  accomplishments: [],
+  copilotUsers: [],
+  projects: [],
+  summary: {
+    totals: { tasks: 0, timeWithout: 0, timeWith: 0, timeSaved: 0, efficiency: 0, quality: 0, completed: 0, projects: 0 },
+    practices: []
+  },
+  lovs: {
+    taskCategories: [],
+    aiTools: []
+  }
+};
+
+let data;
+
+function loadData() {
+  const saved = localStorage.getItem('eas_admin_data');
+  if (saved) {
+    try { data = JSON.parse(saved); return; } catch(e) {}
+  }
+  data = JSON.parse(JSON.stringify(APP_DATA));
+}
+
+function saveToLocalStorage() {
+  localStorage.setItem('eas_admin_data', JSON.stringify(data));
+}
+
+function autoSave() {
+  saveToLocalStorage();
+}
+
+// ============ NAVIGATION ============
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    const page = document.getElementById('page-' + item.dataset.page);
+    if (page) page.classList.remove('hidden');
+    document.querySelector('.sidebar').classList.remove('open');
+    renderCurrentPage(item.dataset.page);
+  });
+});
+
+function renderCurrentPage(page) {
+  switch(page) {
+    case 'overview': renderOverview(); break;
+    case 'manage-tasks': renderAdminTasks(); break;
+    case 'manage-accomplishments': renderAdminAccomplishments(); break;
+    case 'manage-copilot': renderAdminCopilot(); break;
+    case 'manage-projects': renderAdminProjects(); break;
+    case 'manage-approvals': renderApprovals(); break;
+    case 'manage-departments': renderAdminDepartments(); break;
+    case 'manage-practices': renderAdminPractices(); break;
+    case 'manage-lovs': renderLOVs(); break;
+    case 'manage-data': renderDataMgmt(); break;
+    case 'manage-prompts': renderAdminPrompts(); break;
+    case 'manage-users': renderAdminUsers(); break;
+    case 'manage-executives': renderAdminExecutives(); break;
+    case 'manage-permissions': renderAdminPermissions(); break;
+    case 'ide-usage': renderIdeUsage(); break;
+  }
+}
+
+// ============ HELPERS ============
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+
+let confirmCallback = null;
+function confirmAction(msg, callback) {
+  document.getElementById('confirm-msg').textContent = msg;
+  confirmCallback = callback;
+  document.getElementById('confirm-yes').onclick = () => { closeConfirm(); if (confirmCallback) confirmCallback(); };
+  document.getElementById('confirm-dialog').classList.add('active');
+}
+function closeConfirm() { document.getElementById('confirm-dialog').classList.remove('active'); }
+
+function statusBadge(status) {
+  if (!status) return '';
+  const s = status.toLowerCase().trim();
+  let cls = 'status-pending';
+  if (s === 'completed') cls = 'status-completed';
+  else if (s === 'in progress') cls = 'status-inprogress';
+  return `<span class="status-badge ${cls}">${status}</span>`;
+}
+
+function truncate(str, len = 50) {
+  if (!str) return '';
+  return str.length > len ? str.substring(0, len) + '...' : str;
+}
+
+function updateNavCounts() {
+  const allTasks = data.tasks ? data.tasks.length : 0;
+  const approvedTasks = data.tasks ? data.tasks.filter(t => (t.approvalStatus || t.approval_status) === 'approved').length : 0;
+  document.getElementById('admin-task-count').textContent = `${allTasks} (${approvedTasks} ✓)`;
+  document.getElementById('admin-acc-count').textContent = data.accomplishments ? data.accomplishments.length : 0;
+  document.getElementById('admin-copilot-count').textContent = data.copilotUsers ? data.copilotUsers.length : 0;
+  document.getElementById('admin-proj-count').textContent = data.projects ? data.projects.length : 0;
+}
+
+// ============ INIT ============
+function initAdmin() {
+  loadData();
+  populateFilterDropdowns();
+  populateFormDropdowns();
+  updateNavCounts();
+
+  // Deep-link: if URL has a hash like #manage-users, navigate to that page
+  const hash = window.location.hash.replace('#', '');
+  if (hash) {
+    const navItem = document.querySelector('.nav-item[data-page="' + hash + '"]');
+    if (navItem) {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      navItem.classList.add('active');
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      const page = document.getElementById('page-' + hash);
+      if (page) page.classList.remove('hidden');
+      renderCurrentPage(hash);
+      return;
+    }
+  }
+  renderOverview();
+}
+
+function populateFilterDropdowns() {
+  const practices = data.summary.practices.map(p => p.name);
+  ['admin-task-filter-practice','admin-acc-filter-practice','admin-copilot-filter-practice','admin-proj-filter-practice'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Clear existing options except first
+    while (el.options.length > 1) el.remove(1);
+    practices.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; el.appendChild(o); });
+  });
+}
+
+function populateFormDropdowns() {
+  const practices = data.summary.practices.map(p => p.name);
+  const categories = data.lovs ? data.lovs.taskCategories || [] : [];
+  const tools = data.lovs ? data.lovs.aiTools || [] : [];
+
+  ['et-practice','ea-practice','ec-practice','ep-practice'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    practices.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; el.appendChild(o); });
+  });
+
+  ['et-category','ea-category'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    categories.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; el.appendChild(o); });
+  });
+
+  ['et-tool','ea-tool'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    tools.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; el.appendChild(o); });
+  });
+}
+
+// ============ OVERVIEW ============
+function renderOverview() {
+  const totals = data.summary.totals;
+  document.getElementById('admin-kpi-grid').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total Tasks</div><div class="kpi-value blue">${totals.tasks}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Completed</div><div class="kpi-value green">${totals.completed}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Time Saved (hrs)</div><div class="kpi-value yellow">${totals.timeSaved.toFixed(1)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Avg Efficiency</div><div class="kpi-value purple">${totals.efficiency.toFixed(1)}%</div></div>
+    <div class="kpi-card"><div class="kpi-label">Copilot Users</div><div class="kpi-value cyan">${data.copilotUsers ? data.copilotUsers.length : 0}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Projects</div><div class="kpi-value pink">${totals.projects}</div></div>
+  `;
+
+  let html = '';
+  data.summary.practices.forEach(p => {
+    html += `<tr>
+      <td style="font-weight:600;color:var(--text-primary)">${p.name}</td>
+      <td>${p.head}</td>
+      <td>${p.spoc}</td>
+      <td>${p.tasks}</td>
+      <td>${p.timeSaved.toFixed(1)}</td>
+      <td>${p.efficiency.toFixed(1)}%</td>
+      <td>${p.completed}</td>
+      <td>${p.projects}</td>
+    </tr>`;
+  });
+  document.getElementById('admin-practice-summary').innerHTML = html;
+}
+
+// ============ TASKS CRUD ============
+function renderAdminTasks() {
+  const search = (document.getElementById('admin-task-search').value || '').toLowerCase();
+  const practice = document.getElementById('admin-task-filter-practice').value;
+  const status = document.getElementById('admin-task-filter-status').value;
+
+  let tasks = data.tasks || [];
+  if (practice) tasks = tasks.filter(t => t.practice === practice);
+  if (status) tasks = tasks.filter(t => (t.status || '').toLowerCase() === status.toLowerCase());
+  if (search) tasks = tasks.filter(t =>
+    (t.task || '').toLowerCase().includes(search) ||
+    (t.project || '').toLowerCase().includes(search) ||
+    (t.practice || '').toLowerCase().includes(search)
+  );
+
+  let html = '';
+  tasks.forEach((t, fi) => {
+    const idx = data.tasks.indexOf(t);
+    html += `<tr>
+      <td>${idx + 1}</td>
+      <td style="font-weight:500">${t.practice}</td>
+      <td>${truncate(t.project, 30)}</td>
+      <td>${truncate(t.task, 40)}</td>
+      <td>${t.aiTool || ''}</td>
+      <td>${t.timeWithout || 0}h</td>
+      <td>${t.timeWith || 0}h</td>
+      <td style="color:var(--success)">${t.timeSaved || 0}h</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>
+        <button class="btn-icon" onclick="editTask(${idx})" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon danger" onclick="deleteTask(${idx})" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </td>
+    </tr>`;
+  });
+
+  if (!html) html = '<tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text-muted)">No tasks found</td></tr>';
+  document.getElementById('admin-tasks-tbody').innerHTML = html;
+  updateNavCounts();
+}
+
+function openTaskModal(idx = -1) {
+  document.getElementById('et-index').value = idx;
+  document.getElementById('task-modal-title').textContent = idx === -1 ? 'Add Task' : 'Edit Task';
+  populateFormDropdowns();
+
+  if (idx >= 0 && data.tasks[idx]) {
+    const t = data.tasks[idx];
+    document.getElementById('et-practice').value = t.practice || '';
+    document.getElementById('et-week').value = t.week || 1;
+    document.getElementById('et-weekstart').value = t.weekStart ? formatDateForInput(t.weekStart) : '';
+    document.getElementById('et-weekend').value = t.weekEnd ? formatDateForInput(t.weekEnd) : '';
+    document.getElementById('et-project').value = t.project || '';
+    document.getElementById('et-task').value = t.task || '';
+    document.getElementById('et-category').value = t.category || '';
+    document.getElementById('et-tool').value = t.aiTool || '';
+    document.getElementById('et-without').value = t.timeWithout || '';
+    document.getElementById('et-with').value = t.timeWith || '';
+    document.getElementById('et-quality').value = t.quality || '';
+    document.getElementById('et-status').value = t.status || 'Completed';
+    document.getElementById('et-notes').value = t.notes || '';
+  } else {
+    ['et-project','et-task','et-notes'].forEach(id => document.getElementById(id).value = '');
+    ['et-without','et-with','et-quality'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('et-week').value = 1;
+    document.getElementById('et-weekstart').value = '';
+    document.getElementById('et-weekend').value = '';
+    document.getElementById('et-status').value = 'Completed';
+  }
+  openModal('modal-edit-task');
+}
+
+function formatDateForInput(dateStr) {
+  if (!dateStr) return '';
+  // Handle DD/MM/YYYY format
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const d = parts[0].padStart(2, '0');
+      const m = parts[1].padStart(2, '0');
+      const y = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+      return `${y}-${m}-${d}`;
+    }
+  }
+  return dateStr;
+}
+
+function formatDateForStorage(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+}
+
+function saveTask() {
+  const idx = parseInt(document.getElementById('et-index').value);
+  const tw = parseFloat(document.getElementById('et-without').value) || 0;
+  const ta = parseFloat(document.getElementById('et-with').value) || 0;
+
+  const taskObj = {
+    practice: document.getElementById('et-practice').value,
+    week: document.getElementById('et-week').value,
+    weekStart: formatDateForStorage(document.getElementById('et-weekstart').value),
+    weekEnd: formatDateForStorage(document.getElementById('et-weekend').value),
+    project: document.getElementById('et-project').value,
+    task: document.getElementById('et-task').value,
+    category: document.getElementById('et-category').value,
+    aiTool: document.getElementById('et-tool').value,
+    timeWithout: tw,
+    timeWith: ta,
+    timeSaved: Math.max(0, tw - ta),
+    quality: parseFloat(document.getElementById('et-quality').value) || 0,
+    status: document.getElementById('et-status').value,
+    notes: document.getElementById('et-notes').value
+  };
+
+  if (idx >= 0) {
+    data.tasks[idx] = { ...data.tasks[idx], ...taskObj };
+    showToast('Task updated successfully');
+  } else {
+    data.tasks.push(taskObj);
+    showToast('Task added successfully');
+  }
+
+  recalcSummary();
+  autoSave();
+  closeModal('modal-edit-task');
+  renderAdminTasks();
+}
+
+function editTask(idx) { openTaskModal(idx); }
+
+function deleteTask(idx) {
+  confirmAction('Delete this task? This cannot be undone.', () => {
+    data.tasks.splice(idx, 1);
+    recalcSummary();
+    autoSave();
+    renderAdminTasks();
+    showToast('Task deleted', 'warning');
+  });
+}
+
+// ============ ACCOMPLISHMENTS CRUD ============
+function renderAdminAccomplishments() {
+  const search = (document.getElementById('admin-acc-search').value || '').toLowerCase();
+  const practice = document.getElementById('admin-acc-filter-practice').value;
+
+  let items = data.accomplishments || [];
+  if (practice) items = items.filter(a => a.practice === practice);
+  if (search) items = items.filter(a =>
+    (a.title || '').toLowerCase().includes(search) ||
+    (a.description || '').toLowerCase().includes(search)
+  );
+
+  let html = '';
+  items.forEach(a => {
+    const idx = data.accomplishments.indexOf(a);
+    html += `<tr>
+      <td>${idx + 1}</td>
+      <td style="font-weight:500">${a.practice || ''}</td>
+      <td>${truncate(a.title, 40)}</td>
+      <td>${a.category || ''}</td>
+      <td>${a.aiTool || ''}</td>
+      <td>${truncate(a.impact, 40)}</td>
+      <td>
+        <button class="btn-icon" onclick="editAcc(${idx})" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon danger" onclick="deleteAcc(${idx})" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </td>
+    </tr>`;
+  });
+
+  if (!html) html = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No accomplishments found</td></tr>';
+  document.getElementById('admin-acc-tbody').innerHTML = html;
+  updateNavCounts();
+}
+
+function openAccModal(idx = -1) {
+  document.getElementById('ea-index').value = idx;
+  document.getElementById('acc-modal-title').textContent = idx === -1 ? 'Add Accomplishment' : 'Edit Accomplishment';
+  populateFormDropdowns();
+
+  if (idx >= 0 && data.accomplishments[idx]) {
+    const a = data.accomplishments[idx];
+    document.getElementById('ea-practice').value = a.practice || '';
+    document.getElementById('ea-category').value = a.category || '';
+    document.getElementById('ea-title').value = a.title || '';
+    document.getElementById('ea-desc').value = a.description || '';
+    document.getElementById('ea-tool').value = a.aiTool || '';
+    document.getElementById('ea-impact').value = a.impact || '';
+  } else {
+    ['ea-title','ea-desc','ea-impact'].forEach(id => document.getElementById(id).value = '');
+  }
+  openModal('modal-edit-acc');
+}
+
+function saveAccomplishment() {
+  const idx = parseInt(document.getElementById('ea-index').value);
+  const obj = {
+    practice: document.getElementById('ea-practice').value,
+    category: document.getElementById('ea-category').value,
+    title: document.getElementById('ea-title').value,
+    description: document.getElementById('ea-desc').value,
+    aiTool: document.getElementById('ea-tool').value,
+    impact: document.getElementById('ea-impact').value
+  };
+
+  if (idx >= 0) {
+    data.accomplishments[idx] = { ...data.accomplishments[idx], ...obj };
+    showToast('Accomplishment updated');
+  } else {
+    data.accomplishments.push(obj);
+    showToast('Accomplishment added');
+  }
+  autoSave();
+  closeModal('modal-edit-acc');
+  renderAdminAccomplishments();
+}
+
+function editAcc(idx) { openAccModal(idx); }
+
+function deleteAcc(idx) {
+  confirmAction('Delete this accomplishment?', () => {
+    data.accomplishments.splice(idx, 1);
+    autoSave();
+    renderAdminAccomplishments();
+    showToast('Accomplishment deleted', 'warning');
+  });
+}
+
+// ============ COPILOT USERS CRUD ============
+function renderAdminCopilot() {
+  const search = (document.getElementById('admin-copilot-search').value || '').toLowerCase();
+  const practice = document.getElementById('admin-copilot-filter-practice').value;
+
+  let items = data.copilotUsers || [];
+  if (practice) items = items.filter(u => u.practice === practice);
+  if (search) items = items.filter(u =>
+    (u.name || '').toLowerCase().includes(search) ||
+    (u.email || '').toLowerCase().includes(search) ||
+    (u.github || '').toLowerCase().includes(search)
+  );
+
+  let html = '';
+  items.forEach(u => {
+    const idx = data.copilotUsers.indexOf(u);
+    const st = (u.status || 'Active');
+    html += `<tr>
+      <td>${idx + 1}</td>
+      <td style="font-weight:500">${u.practice || ''}</td>
+      <td>${u.name || ''}</td>
+      <td>${u.email || ''}</td>
+      <td>${u.github || ''}</td>
+      <td>${statusBadge(st)}</td>
+      <td>
+        <button class="btn-icon" onclick="editCopilotUser(${idx})" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon danger" onclick="deleteCopilotUser(${idx})" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </td>
+    </tr>`;
+  });
+
+  if (!html) html = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No copilot users found</td></tr>';
+  document.getElementById('admin-copilot-tbody').innerHTML = html;
+  updateNavCounts();
+}
+
+function openCopilotModal(idx = -1) {
+  document.getElementById('ec-index').value = idx;
+  document.getElementById('copilot-modal-title').textContent = idx === -1 ? 'Add Copilot User' : 'Edit Copilot User';
+  populateFormDropdowns();
+
+  if (idx >= 0 && data.copilotUsers[idx]) {
+    const u = data.copilotUsers[idx];
+    document.getElementById('ec-practice').value = u.practice || '';
+    document.getElementById('ec-status').value = u.status || 'Active';
+    document.getElementById('ec-name').value = u.name || '';
+    document.getElementById('ec-email').value = u.email || '';
+    document.getElementById('ec-github').value = u.github || '';
+  } else {
+    ['ec-name','ec-email','ec-github'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ec-status').value = 'Active';
+  }
+  openModal('modal-edit-copilot');
+}
+
+function saveCopilotUser() {
+  const idx = parseInt(document.getElementById('ec-index').value);
+  const obj = {
+    practice: document.getElementById('ec-practice').value,
+    status: document.getElementById('ec-status').value,
+    name: document.getElementById('ec-name').value,
+    email: document.getElementById('ec-email').value,
+    github: document.getElementById('ec-github').value
+  };
+
+  if (idx >= 0) {
+    data.copilotUsers[idx] = { ...data.copilotUsers[idx], ...obj };
+    showToast('Copilot user updated');
+  } else {
+    data.copilotUsers.push(obj);
+    showToast('Copilot user added');
+  }
+  autoSave();
+  closeModal('modal-edit-copilot');
+  renderAdminCopilot();
+}
+
+function editCopilotUser(idx) { openCopilotModal(idx); }
+
+function deleteCopilotUser(idx) {
+  confirmAction('Remove this copilot user?', () => {
+    data.copilotUsers.splice(idx, 1);
+    autoSave();
+    renderAdminCopilot();
+    showToast('User removed', 'warning');
+  });
+}
+
+// ============ PROJECTS CRUD ============
+function renderAdminProjects() {
+  const search = (document.getElementById('admin-proj-search').value || '').toLowerCase();
+  const practice = document.getElementById('admin-proj-filter-practice').value;
+
+  let items = data.projects || [];
+  if (practice) items = items.filter(p => p.practice === practice);
+  if (search) items = items.filter(p =>
+    (p.name || '').toLowerCase().includes(search) ||
+    (p.customer || '').toLowerCase().includes(search) ||
+    (p.code || '').toLowerCase().includes(search)
+  );
+
+  let html = '';
+  items.forEach(p => {
+    const idx = data.projects.indexOf(p);
+    html += `<tr>
+      <td>${idx + 1}</td>
+      <td style="font-weight:500">${p.practice || ''}</td>
+      <td>${truncate(p.name, 35)}</td>
+      <td>${p.code || ''}</td>
+      <td>${p.customer || ''}</td>
+      <td>${p.value ? Number(p.value).toLocaleString() : ''}</td>
+      <td>${p.pm || ''}</td>
+      <td>
+        <button class="btn-icon" onclick="editProject(${idx})" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon danger" onclick="deleteProject(${idx})" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </td>
+    </tr>`;
+  });
+
+  if (!html) html = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">No projects found</td></tr>';
+  document.getElementById('admin-proj-tbody').innerHTML = html;
+  updateNavCounts();
+}
+
+function openProjectModal(idx = -1) {
+  document.getElementById('ep-index').value = idx;
+  document.getElementById('project-modal-title').textContent = idx === -1 ? 'Add Project' : 'Edit Project';
+  populateFormDropdowns();
+
+  if (idx >= 0 && data.projects[idx]) {
+    const p = data.projects[idx];
+    document.getElementById('ep-practice').value = p.practice || '';
+    document.getElementById('ep-code').value = p.code || '';
+    document.getElementById('ep-name').value = p.name || '';
+    document.getElementById('ep-customer').value = p.customer || '';
+    document.getElementById('ep-value').value = p.value || '';
+    document.getElementById('ep-revenue').value = p.revenueType || '';
+    document.getElementById('ep-start').value = p.start ? formatDateForInput(p.start) : '';
+    document.getElementById('ep-end').value = p.end ? formatDateForInput(p.end) : '';
+    document.getElementById('ep-pm').value = p.pm || '';
+  } else {
+    ['ep-code','ep-name','ep-customer','ep-value','ep-revenue','ep-pm'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ep-start').value = '';
+    document.getElementById('ep-end').value = '';
+  }
+  openModal('modal-edit-project');
+}
+
+function saveProject() {
+  const idx = parseInt(document.getElementById('ep-index').value);
+  const obj = {
+    practice: document.getElementById('ep-practice').value,
+    code: document.getElementById('ep-code').value,
+    name: document.getElementById('ep-name').value,
+    customer: document.getElementById('ep-customer').value,
+    value: parseFloat(document.getElementById('ep-value').value) || 0,
+    revenueType: document.getElementById('ep-revenue').value,
+    start: formatDateForStorage(document.getElementById('ep-start').value),
+    end: formatDateForStorage(document.getElementById('ep-end').value),
+    pm: document.getElementById('ep-pm').value
+  };
+
+  if (idx >= 0) {
+    data.projects[idx] = { ...data.projects[idx], ...obj };
+    showToast('Project updated');
+  } else {
+    data.projects.push(obj);
+    showToast('Project added');
+  }
+  autoSave();
+  closeModal('modal-edit-project');
+  renderAdminProjects();
+}
+
+function editProject(idx) { openProjectModal(idx); }
+
+function deleteProject(idx) {
+  confirmAction('Delete this project?', () => {
+    data.projects.splice(idx, 1);
+    autoSave();
+    renderAdminProjects();
+    showToast('Project deleted', 'warning');
+  });
+}
+
+// ============ APPROVALS ============
+async function renderApprovals() {
+  const profile = await EAS_Auth.getUserProfile();
+  const userRole = profile?.role || 'contributor';
+  const userPractice = profile?.practice || '';
+  const userId = profile?.id;
+
+  try {
+    // Fetch pending approvals
+    const pendingApprovals = await EAS_DB.fetchPendingApprovals(userRole, userPractice, userId);
+    
+    // Fetch approval history
+    const approvalHistory = await EAS_DB.fetchApprovalHistory(userRole, userPractice, 50);
+
+    // Populate practices filter
+    const practiceSelect = document.getElementById('approval-filter-practice');
+    if (practiceSelect && data.practices && practiceSelect.options.length === 1) {
+      data.practices.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        practiceSelect.appendChild(opt);
+      });
+    }
+
+    // Render pending approvals
+    renderPendingApprovals(pendingApprovals);
+    
+    // Render approval history
+    renderApprovalHistory(approvalHistory);
+
+    // Update badges
+    document.getElementById('admin-approval-count').textContent = pendingApprovals?.length || 0;
+    document.getElementById('pending-approval-count').textContent = pendingApprovals?.length || 0;
+  } catch (err) {
+    console.error('Approvals render error:', err.message, err);
+    
+    let errorMessage = err.message || 'Failed to load approvals';
+    let showSetupInstructions = false;
+    
+    // Check if it's a table/view not found error
+    if (errorMessage.includes('relation') || errorMessage.includes('no rows')) {
+      showSetupInstructions = true;
+      errorMessage = 'Approval system not yet initialized';
+    } else if (errorMessage.includes('permission') || errorMessage.includes('denied')) {
+      showSetupInstructions = false;
+      errorMessage = 'Permission denied. You may not have sufficient access.';
+    }
+    
+    const html = `
+      <tr>
+        <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">
+          <div style="font-size:16px;margin-bottom:16px">⚠️ ${errorMessage}</div>
+          <div style="font-size:13px;color:var(--text-primary);margin-bottom:16px">
+            ${showSetupInstructions ? 'The approval workflow tables haven\'t been created yet.' : err.message}
+          </div>
+          ${showSetupInstructions ? `
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:24px;max-width:600px;margin-left:auto;margin-right:auto">
+            <strong>To enable the approval workflow:</strong><br/>
+            1. Apply the Supabase migration<br/>
+            2. RLS policies must be configured<br/>
+            3. Refresh this page
+          </div>
+          ` : ''}
+          <button class="btn btn-primary" onclick="location.reload()">🔄 Refresh Page</button>
+        </td>
+      </tr>
+    `;
+    document.getElementById('pending-approvals-tbody').innerHTML = html;
+    document.getElementById('approval-history-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Unable to load history</td></tr>';
+  }
+}
+
+function renderPendingApprovals(approvals = []) {
+  const statusFilter = document.getElementById('approval-filter-status').value;
+  const practiceFilter = document.getElementById('approval-filter-practice').value;
+  const search = (document.getElementById('approval-search').value || '').toLowerCase();
+
+  let filtered = approvals || [];
+  if (statusFilter) filtered = filtered.filter(a => a.approval_status === statusFilter);
+  if (practiceFilter) filtered = filtered.filter(a => a.practice === practiceFilter);
+  if (search) {
+    filtered = filtered.filter(a =>
+      (a.submitted_by_email || '').toLowerCase().includes(search) ||
+      (a.practice || '').toLowerCase().includes(search)
+    );
+  }
+
+  let html = '';
+  filtered.forEach(approval => {
+    const statusLabel = {
+      'pending': '⏳ Pending Admin',
+      'ai_review': '🤖 AI Review (legacy)',
+      'spoc_review': '👤 SPOC Review',
+      'admin_review': '⏳ Admin Review'
+    }[approval.approval_status] || approval.approval_status;
+
+    const submittedTime = approval.submitted_at ? new Date(approval.submitted_at).toLocaleDateString() : 'N/A';
+
+    html += `<tr>
+      <td>${approval.submitted_by_email || 'N/A'}</td>
+      <td>${approval.practice || 'N/A'}</td>
+      <td>${truncate(approval.submission_id ? 'Task #' + approval.submission_id.substring(0, 8) : 'N/A', 30)}</td>
+      <td style="color:var(--success);font-weight:600">${approval.saved_hours?.toFixed(1) || 0}h</td>
+      <td><span style="background:var(--info);color:white;padding:4px 12px;border-radius:20px;font-size:11px">${statusLabel}</span></td>
+      <td style="font-size:12px;color:var(--text-muted)">${submittedTime}</td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="openApprovalDetailModal('${approval.id}')" style="padding:6px 12px;font-size:11px">Review</button>
+        <button class="btn btn-success btn-sm" onclick="approveApproval('${approval.id}')" style="padding:6px 12px;font-size:11px;background:var(--success)">✓ Approve</button>
+        <button class="btn btn-danger btn-sm" onclick="rejectApprovalModal('${approval.id}')" style="padding:6px 12px;font-size:11px">✕ Reject</button>
+      </td>
+    </tr>`;
+  });
+
+  if (!html) {
+    html = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No pending approvals</td></tr>';
+  }
+  document.getElementById('pending-approvals-tbody').innerHTML = html;
+}
+
+function renderApprovalHistory(approvals = []) {
+  let html = '';
+  (approvals || []).slice(0, 50).forEach(approval => {
+    const statusLabel = approval.approval_status === 'approved' ? '✅ Approved' : '❌ Rejected';
+    const approvedTime = approval.approved_at ? new Date(approval.approved_at).toLocaleDateString() : 'N/A';
+
+    html += `<tr>
+      <td>${approval.submitted_by_email || 'N/A'}</td>
+      <td>${approval.practice || 'N/A'}</td>
+      <td>${truncate(approval.submission_id ? 'Task #' + approval.submission_id.substring(0, 8) : 'N/A', 30)}</td>
+      <td style="color:var(--success);font-weight:600">${approval.saved_hours?.toFixed(1) || 0}h</td>
+      <td><span style="color:${approval.approval_status === 'approved' ? 'var(--success)' : 'var(--danger)'};font-weight:600">${statusLabel}</span></td>
+      <td>${approval.approved_by_name || approval.admin_approved ? 'Admin' : 'SPOC'}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${approvedTime}</td>
+    </tr>`;
+  });
+
+  if (!html) {
+    html = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No approval history</td></tr>';
+  }
+  document.getElementById('approval-history-tbody').innerHTML = html;
+}
+
+async function approveApproval(approvalId) {
+  confirmAction('Approve this task submission?', async () => {
+    const approval = await EAS_DB.approveSubmission(approvalId, '');
+    if (approval) {
+      showToast('✅ Task approved successfully', 'success');
+      renderApprovals();
+    } else {
+      showToast('❌ Failed to approve task', 'error');
+    }
+  });
+}
+
+function rejectApprovalModal(approvalId) {
+  const reason = prompt('Enter rejection reason:', '');
+  if (reason !== null) {
+    rejectApprovalWithReason(approvalId, reason);
+  }
+}
+
+async function rejectApprovalWithReason(approvalId, reason) {
+  const approval = await EAS_DB.rejectSubmission(approvalId, reason);
+  if (approval) {
+    showToast('❌ Task rejected', 'warning');
+    renderApprovals();
+  } else {
+    showToast('Failed to reject task', 'error');
+  }
+}
+
+function openApprovalDetailModal(approvalId) {
+  alert('Approval Detail: ' + approvalId + '\n\nFull detail modal to be implemented.');
+}
+
+// ============ DEPARTMENTS (Supabase-based) ============
+let _adminDepartments = [];
+
+async function renderAdminDepartments() {
+  const sb = getSupabaseClient();
+  if (!_adminDepartments.length) {
+    const { data: depts, error } = await sb
+      .from('departments')
+      .select('*, practices(id, name)')
+      .order('name', { ascending: true });
+    if (error) {
+      showToast('Failed to load departments: ' + error.message, 'error');
+      return;
+    }
+    _adminDepartments = depts || [];
+  }
+
+  // Update count badge
+  const badge = document.getElementById('admin-dept-count');
+  if (badge) badge.textContent = _adminDepartments.length;
+
+  // Apply filters
+  const search = (document.getElementById('admin-dept-search')?.value || '').toLowerCase();
+  const statusFilter = document.getElementById('admin-dept-status-filter')?.value || '';
+
+  let filtered = _adminDepartments;
+  if (search) {
+    filtered = filtered.filter(d =>
+      (d.name || '').toLowerCase().includes(search) ||
+      (d.description || '').toLowerCase().includes(search) ||
+      (d.head || '').toLowerCase().includes(search)
+    );
+  }
+  if (statusFilter === 'active') filtered = filtered.filter(d => d.is_active);
+  if (statusFilter === 'inactive') filtered = filtered.filter(d => !d.is_active);
+
+  let html = '';
+  filtered.forEach((d, i) => {
+    const statusIcon = d.is_active ? '<span style="color:var(--success)">● Active</span>' : '<span style="color:var(--text-muted)">● Inactive</span>';
+    const practiceCount = d.practices ? d.practices.length : 0;
+    const practiceNames = d.practices ? d.practices.map(p => p.name).join(', ') : '—';
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600;color:var(--text-primary)">${escapeHtml(d.name)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(d.description || '')}">${escapeHtml(d.description || '—')}</td>
+      <td>${escapeHtml(d.head || '—')}</td>
+      <td><span title="${escapeHtml(practiceNames)}">${practiceCount}</span></td>
+      <td>${statusIcon}</td>
+      <td>
+        <button class="btn-icon" onclick="editDepartment('${d.id}')" title="Edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon danger" onclick="deleteDepartment('${d.id}', '${escapeHtml(d.name)}')" title="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  });
+
+  document.getElementById('admin-depts-tbody').innerHTML = html || '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No departments found</td></tr>';
+}
+
+function openDepartmentModal(id = null) {
+  document.getElementById('ed-id').value = id || '';
+  document.getElementById('dept-modal-title').textContent = id ? 'Edit Department' : 'Add Department';
+  document.getElementById('ed-name').value = '';
+  document.getElementById('ed-description').value = '';
+  document.getElementById('ed-head').value = '';
+  document.getElementById('ed-status').value = 'true';
+
+  if (id) {
+    const dept = _adminDepartments.find(d => d.id === id);
+    if (dept) {
+      document.getElementById('ed-name').value = dept.name || '';
+      document.getElementById('ed-description').value = dept.description || '';
+      document.getElementById('ed-head').value = dept.head || '';
+      document.getElementById('ed-status').value = dept.is_active ? 'true' : 'false';
+    }
+  }
+  openModal('modal-edit-department');
+}
+
+function editDepartment(id) { openDepartmentModal(id); }
+
+async function saveDepartment() {
+  const id = document.getElementById('ed-id').value;
+  const name = document.getElementById('ed-name').value.trim();
+  const description = document.getElementById('ed-description').value.trim();
+  const head = document.getElementById('ed-head').value.trim();
+  const is_active = document.getElementById('ed-status').value === 'true';
+
+  if (!name) { showToast('Department name is required', 'error'); return; }
+
+  const sb = getSupabaseClient();
+  let error;
+
+  if (id) {
+    // Update
+    ({ error } = await sb.from('departments').update({ name, description, head, is_active }).eq('id', id));
+  } else {
+    // Insert
+    ({ error } = await sb.from('departments').insert({ name, description, head, is_active }));
+  }
+
+  if (error) {
+    showToast('Failed to save department: ' + error.message, 'error');
+    return;
+  }
+
+  closeModal('modal-edit-department');
+  showToast(id ? 'Department updated' : 'Department created', 'success');
+  _adminDepartments = []; // force refresh
+  _adminPractices = []; // refresh practices too (they include department)
+  renderAdminDepartments();
+}
+
+function deleteDepartment(id, name) {
+  confirmAction(`Delete department "${name}"? Practices linked to it will be unlinked.`, async () => {
+    const sb = getSupabaseClient();
+    // First unlink practices
+    await sb.from('practices').update({ department_id: null }).eq('department_id', id);
+    const { error } = await sb.from('departments').delete().eq('id', id);
+    if (error) {
+      showToast('Failed to delete department: ' + error.message, 'error');
+      return;
+    }
+    showToast('Department deleted', 'success');
+    _adminDepartments = [];
+    _adminPractices = [];
+    renderAdminDepartments();
+  });
+}
+
+// ============ PRACTICES (Supabase-based) ============
+let _adminPractices = [];
+
+async function renderAdminPractices() {
+  const sb = getSupabaseClient();
+  if (!_adminPractices.length) {
+    const { data: pracs, error } = await sb
+      .from('practices')
+      .select('*, departments(id, name)')
+      .order('name', { ascending: true });
+    if (error) {
+      showToast('Failed to load practices: ' + error.message, 'error');
+      return;
+    }
+    _adminPractices = pracs || [];
+  }
+
+  // Ensure departments are loaded for filter dropdown
+  if (!_adminDepartments.length) {
+    const { data: depts } = await sb.from('departments').select('id, name').order('name');
+    _adminDepartments = depts || [];
+  }
+
+  // Populate department filter if empty
+  const deptFilter = document.getElementById('admin-practice-dept-filter');
+  if (deptFilter && deptFilter.options.length <= 1) {
+    _adminDepartments.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name;
+      deptFilter.appendChild(opt);
+    });
+  }
+
+  // Update count badge
+  const badge = document.getElementById('admin-practice-count');
+  if (badge) badge.textContent = _adminPractices.length;
+
+  // Apply filters
+  const search = (document.getElementById('admin-practice-search')?.value || '').toLowerCase();
+  const deptFilterVal = document.getElementById('admin-practice-dept-filter')?.value || '';
+  const statusFilter = document.getElementById('admin-practice-status-filter')?.value || '';
+
+  let filtered = _adminPractices;
+  if (search) {
+    filtered = filtered.filter(p =>
+      (p.name || '').toLowerCase().includes(search) ||
+      (p.head || '').toLowerCase().includes(search) ||
+      (p.spoc || '').toLowerCase().includes(search)
+    );
+  }
+  if (deptFilterVal) filtered = filtered.filter(p => p.department_id === deptFilterVal);
+  if (statusFilter === 'active') filtered = filtered.filter(p => p.is_active !== false);
+  if (statusFilter === 'inactive') filtered = filtered.filter(p => p.is_active === false);
+
+  let html = '';
+  filtered.forEach((p, i) => {
+    const deptName = p.departments ? p.departments.name : (p.department || '—');
+    const statusIcon = (p.is_active !== false) ? '<span style="color:var(--success)">● Active</span>' : '<span style="color:var(--text-muted)">● Inactive</span>';
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:600;color:var(--text-primary)">${escapeHtml(p.name)}</td>
+      <td>${escapeHtml(deptName)}</td>
+      <td>${escapeHtml(p.head || '—')}</td>
+      <td>${escapeHtml(p.spoc || '—')}</td>
+      <td>${statusIcon}</td>
+      <td>
+        <button class="btn-icon" onclick="editPractice('${p.id}')" title="Edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon danger" onclick="deletePractice('${p.id}', '${escapeHtml(p.name)}')" title="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  });
+
+  document.getElementById('admin-practices-tbody').innerHTML = html || '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No practices found</td></tr>';
+}
+
+async function openPracticeModal(id = null) {
+  const sb = getSupabaseClient();
+  document.getElementById('epr-id').value = id || '';
+  document.getElementById('practice-modal-title').textContent = id ? 'Edit Practice' : 'Add Practice';
+  document.getElementById('epr-name').value = '';
+  document.getElementById('epr-description').value = '';
+  document.getElementById('epr-head').value = '';
+  document.getElementById('epr-spoc').value = '';
+  document.getElementById('epr-status').value = 'true';
+
+  // Populate department dropdown
+  if (!_adminDepartments.length) {
+    const { data: depts } = await sb.from('departments').select('id, name').order('name');
+    _adminDepartments = depts || [];
+  }
+  const deptSelect = document.getElementById('epr-department');
+  deptSelect.innerHTML = '<option value="">— No Department —</option>';
+  _adminDepartments.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id;
+    opt.textContent = d.name;
+    deptSelect.appendChild(opt);
+  });
+
+  if (id) {
+    const practice = _adminPractices.find(p => p.id === id);
+    if (practice) {
+      document.getElementById('epr-name').value = practice.name || '';
+      document.getElementById('epr-description').value = practice.description || '';
+      document.getElementById('epr-head').value = practice.head || '';
+      document.getElementById('epr-spoc').value = practice.spoc || '';
+      document.getElementById('epr-status').value = (practice.is_active !== false) ? 'true' : 'false';
+      document.getElementById('epr-department').value = practice.department_id || '';
+    }
+  }
+  openModal('modal-edit-practice');
+}
+
+function editPractice(id) { openPracticeModal(id); }
+
+async function savePractice() {
+  const id = document.getElementById('epr-id').value;
+  const name = document.getElementById('epr-name').value.trim();
+  const description = document.getElementById('epr-description').value.trim();
+  const head = document.getElementById('epr-head').value.trim();
+  const spoc = document.getElementById('epr-spoc').value.trim();
+  const is_active = document.getElementById('epr-status').value === 'true';
+  const department_id = document.getElementById('epr-department').value || null;
+
+  if (!name) { showToast('Practice name is required', 'error'); return; }
+
+  const sb = getSupabaseClient();
+  let error;
+
+  if (id) {
+    // Update
+    ({ error } = await sb.from('practices').update({ name, description, head, spoc, is_active, department_id }).eq('id', id));
+  } else {
+    // Insert
+    ({ error } = await sb.from('practices').insert({ name, description, head, spoc, is_active, department_id }));
+  }
+
+  if (error) {
+    showToast('Failed to save practice: ' + error.message, 'error');
+    return;
+  }
+
+  closeModal('modal-edit-practice');
+  showToast(id ? 'Practice updated' : 'Practice created', 'success');
+  _adminPractices = []; // force refresh
+  renderAdminPractices();
+}
+
+function deletePractice(id, name) {
+  confirmAction(`Delete practice "${name}"? This will affect all linked tasks, users, and projects.`, async () => {
+    const sb = getSupabaseClient();
+    const { error } = await sb.from('practices').delete().eq('id', id);
+    if (error) {
+      showToast('Failed to delete practice: ' + error.message, 'error');
+      return;
+    }
+    showToast('Practice deleted', 'success');
+    _adminPractices = [];
+    renderAdminPractices();
+  });
+}
+
+// ============ LISTS OF VALUES ============
+function renderLOVs() {
+  if (!data.lovs) data.lovs = {};
+  const lovDefs = [
+    { key: 'taskCategories', label: 'Task Categories', color: 'var(--accent)' },
+    { key: 'aiTools', label: 'AI Tools', color: 'var(--success)' },
+    { key: 'practices', label: 'Practice Names', color: 'var(--purple)', source: 'summary' },
+    { key: 'statuses', label: 'Task Statuses', color: 'var(--warning)', defaults: ['Completed','In Progress','Pending','Testing'] }
+  ];
+
+  let html = '';
+  lovDefs.forEach(lov => {
+    let values;
+    if (lov.source === 'summary') {
+      values = data.summary.practices.map(p => p.name);
+    } else if (lov.defaults && !data.lovs[lov.key]) {
+      data.lovs[lov.key] = [...lov.defaults];
+      values = data.lovs[lov.key];
+    } else {
+      values = data.lovs[lov.key] || [];
+    }
+
+    html += `<div class="lov-section">
+      <h3>${lov.label} <span style="font-size:12px;color:var(--text-muted);font-weight:400">(${values.length} items)</span></h3>
+      <div class="lov-tags">`;
+    values.forEach((v, i) => {
+      const canRemove = lov.source !== 'summary';
+      html += `<div class="lov-tag" style="background:${lov.color}15;border-color:${lov.color}33;color:${lov.color}">
+        ${v}
+        ${canRemove ? `<span class="remove" onclick="removeLOV('${lov.key}', ${i})">×</span>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+
+    if (lov.source !== 'summary') {
+      html += `<div class="lov-add">
+        <input type="text" id="lov-input-${lov.key}" placeholder="Add new ${lov.label.toLowerCase().replace(/s$/, '')}..."
+          onkeydown="if(event.key==='Enter')addLOV('${lov.key}')">
+        <button class="btn btn-sm btn-primary" onclick="addLOV('${lov.key}')">Add</button>
+      </div>`;
+    } else {
+      html += `<p style="font-size:12px;color:var(--text-muted);margin-top:4px">Practice names are managed in the Practices section</p>`;
+    }
+    html += '</div>';
+  });
+
+  document.getElementById('lovs-content').innerHTML = html;
+}
+
+function addLOV(key) {
+  const input = document.getElementById('lov-input-' + key);
+  const val = input.value.trim();
+  if (!val) return;
+  if (!data.lovs[key]) data.lovs[key] = [];
+  if (data.lovs[key].includes(val)) { showToast('Already exists', 'error'); return; }
+  data.lovs[key].push(val);
+  input.value = '';
+  autoSave();
+  populateFormDropdowns();
+  renderLOVs();
+  showToast('Added: ' + val);
+}
+
+function removeLOV(key, idx) {
+  const val = data.lovs[key][idx];
+  confirmAction(`Remove "${val}" from the list?`, () => {
+    data.lovs[key].splice(idx, 1);
+    autoSave();
+    populateFormDropdowns();
+    renderLOVs();
+    showToast('Removed: ' + val, 'warning');
+  });
+}
+
+// ============ DATA MANAGEMENT ============
+function renderDataMgmt() {
+  document.getElementById('dm-tasks').textContent = (data.tasks || []).length;
+  document.getElementById('dm-acc').textContent = (data.accomplishments || []).length;
+  document.getElementById('dm-copilot').textContent = (data.copilotUsers || []).length;
+  document.getElementById('dm-proj').textContent = (data.projects || []).length;
+}
+
+// ============ PROMPT LIBRARY ADMIN ============
+let _adminPrompts = [];
+const ROLE_LABELS = {
+  pm: 'Project Manager', sa: 'Solution Architect', ba: 'Business Analyst',
+  dev: 'Developer', dba: 'Database Administrator', admin: 'System / IT Admin', dm: 'Delivery Manager'
+};
+
+async function loadAdminPrompts() {
+  const sb = getSupabaseClient();
+  const { data: rows, error } = await sb
+    .from('prompt_library')
+    .select('*')
+    .order('role', { ascending: true })
+    .order('sort_order', { ascending: true });
+  if (error) {
+    console.error('loadAdminPrompts error:', error.message);
+    showToast('Failed to load prompts: ' + error.message, 'error');
+    return;
+  }
+  _adminPrompts = rows || [];
+  const badge = document.getElementById('admin-prompt-count');
+  if (badge) badge.textContent = _adminPrompts.length;
+}
+
+async function renderAdminPrompts() {
+  if (_adminPrompts.length === 0) await loadAdminPrompts();
+
+  const search = (document.getElementById('admin-prompt-search')?.value || '').toLowerCase();
+  const roleFilter = document.getElementById('admin-prompt-role-filter')?.value || '';
+
+  let filtered = _adminPrompts;
+  if (roleFilter) filtered = filtered.filter(p => p.role === roleFilter);
+  if (search) filtered = filtered.filter(p =>
+    (p.prompt_text || '').toLowerCase().includes(search) ||
+    (p.category || '').toLowerCase().includes(search) ||
+    (p.role_label || '').toLowerCase().includes(search)
+  );
+
+  let html = '';
+  filtered.forEach((p, i) => {
+    const truncText = p.prompt_text.length > 120 ? p.prompt_text.substring(0, 120) + '…' : p.prompt_text;
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td><span class="prompt-role-badge ${p.role}" style="font-size:11px;padding:2px 8px;border-radius:4px">${ROLE_LABELS[p.role] || p.role}</span></td>
+      <td>${p.category || ''}</td>
+      <td style="font-size:12px;line-height:1.4" title="${p.prompt_text.replace(/"/g, '&quot;')}">${truncText}</td>
+      <td style="text-align:center">${p.copy_count || 0}</td>
+      <td style="text-align:center">${p.is_active ? '✅' : '❌'}</td>
+      <td>
+        <button class="btn-icon" onclick="editPrompt('${p.id}')" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon danger" onclick="deletePrompt('${p.id}')" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </td>
+    </tr>`;
+  });
+
+  if (!html) html = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted)">No prompts found</td></tr>';
+  document.getElementById('admin-prompts-tbody').innerHTML = html;
+}
+
+function updateRoleLabel() {
+  // Auto-fill role_label based on role selection (used during save)
+}
+
+function openPromptModal(id = null) {
+  document.getElementById('ep-id').value = id || '';
+  document.getElementById('prompt-modal-title').textContent = id ? 'Edit Prompt' : 'Add Prompt';
+
+  if (id) {
+    const p = _adminPrompts.find(x => x.id === id);
+    if (p) {
+      document.getElementById('ep-role').value = p.role;
+      document.getElementById('ep-category').value = p.category || '';
+      document.getElementById('ep-text').value = p.prompt_text || '';
+      document.getElementById('ep-sort').value = p.sort_order || 1;
+      document.getElementById('ep-active').checked = p.is_active !== false;
+    }
+  } else {
+    document.getElementById('ep-role').value = 'pm';
+    document.getElementById('ep-category').value = '';
+    document.getElementById('ep-text').value = '';
+    document.getElementById('ep-sort').value = 1;
+    document.getElementById('ep-active').checked = true;
+  }
+  openModal('modal-edit-prompt');
+}
+
+function editPrompt(id) { openPromptModal(id); }
+
+async function savePrompt() {
+  const id = document.getElementById('ep-id').value;
+  const role = document.getElementById('ep-role').value;
+  const roleLabel = ROLE_LABELS[role] || role;
+  const category = document.getElementById('ep-category').value.trim();
+  const promptText = document.getElementById('ep-text').value.trim();
+  const sortOrder = parseInt(document.getElementById('ep-sort').value) || 1;
+  const isActive = document.getElementById('ep-active').checked;
+
+  if (!promptText) { showToast('Prompt text is required', 'error'); return; }
+  if (!category) { showToast('Category is required', 'error'); return; }
+
+  const sb = getSupabaseClient();
+  const payload = { role, role_label: roleLabel, category, prompt_text: promptText, sort_order: sortOrder, is_active: isActive };
+
+  let error;
+  if (id) {
+    ({ error } = await sb.from('prompt_library').update(payload).eq('id', id));
+  } else {
+    ({ error } = await sb.from('prompt_library').insert(payload));
+  }
+
+  if (error) {
+    showToast('Save failed: ' + error.message, 'error');
+    return;
+  }
+
+  closeModal('modal-edit-prompt');
+  showToast(id ? 'Prompt updated' : 'Prompt added');
+  _adminPrompts = []; // Clear cache to force reload
+  renderAdminPrompts();
+}
+
+async function deletePrompt(id) {
+  if (!confirm('Delete this prompt? This cannot be undone.')) return;
+
+  const sb = getSupabaseClient();
+  const { error } = await sb.from('prompt_library').delete().eq('id', id);
+  if (error) {
+    showToast('Delete failed: ' + error.message, 'error');
+    return;
+  }
+  showToast('Prompt deleted');
+  _adminPrompts = [];
+  renderAdminPrompts();
+}
+
+function backupData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `eas-ai-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Backup downloaded');
+}
+
+function restoreData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const restored = JSON.parse(e.target.result);
+      if (!restored.tasks || !restored.summary) { showToast('Invalid backup file', 'error'); return; }
+      data = restored;
+      autoSave();
+      populateFilterDropdowns();
+      populateFormDropdowns();
+      updateNavCounts();
+      renderOverview();
+      showToast('Data restored successfully');
+    } catch(err) {
+      showToast('Error reading backup file', 'error');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+function resetToDefault() {
+  data = JSON.parse(JSON.stringify(APP_DATA));
+  localStorage.removeItem('eas_admin_data');
+  populateFilterDropdowns();
+  populateFormDropdowns();
+  updateNavCounts();
+  renderOverview();
+  showToast('Data reset to defaults');
+}
+
+function clearAllData() {
+  data.tasks = [];
+  data.accomplishments = [];
+  data.copilotUsers = [];
+  data.projects = [];
+  data.summary.totals = { tasks: 0, timeWithout: 0, timeWith: 0, timeSaved: 0, efficiency: 0, quality: 0, completed: 0, projects: 0 };
+  data.summary.practices.forEach(p => {
+    p.tasks = 0; p.timeWithout = 0; p.timeWith = 0; p.timeSaved = 0; p.efficiency = 0; p.quality = 0; p.completed = 0; p.projects = 0;
+  });
+  autoSave();
+  updateNavCounts();
+  renderOverview();
+  showToast('All data cleared', 'warning');
+}
+
+function exportAdminExcel() {
+  if (typeof XLSX === 'undefined') { showToast('SheetJS library not loaded', 'error'); return; }
+  const wb = XLSX.utils.book_new();
+
+  // Tasks sheet
+  if (data.tasks && data.tasks.length) {
+    const ws = XLSX.utils.json_to_sheet(data.tasks);
+    XLSX.utils.book_append_sheet(wb, ws, 'Tasks');
+  }
+
+  // Accomplishments sheet
+  if (data.accomplishments && data.accomplishments.length) {
+    const ws = XLSX.utils.json_to_sheet(data.accomplishments);
+    XLSX.utils.book_append_sheet(wb, ws, 'Accomplishments');
+  }
+
+  // Copilot Users sheet
+  if (data.copilotUsers && data.copilotUsers.length) {
+    const ws = XLSX.utils.json_to_sheet(data.copilotUsers);
+    XLSX.utils.book_append_sheet(wb, ws, 'Copilot Users');
+  }
+
+  // Projects sheet
+  if (data.projects && data.projects.length) {
+    const ws = XLSX.utils.json_to_sheet(data.projects);
+    XLSX.utils.book_append_sheet(wb, ws, 'Projects');
+  }
+
+  // Summary sheet
+  const ws = XLSX.utils.json_to_sheet(data.summary.practices);
+  XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+
+  XLSX.writeFile(wb, `eas-ai-admin-export-${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('Excel exported');
+}
+
+// ============ RECALC SUMMARY ============
+function recalcSummary() {
+  const practiceMap = {};
+  data.summary.practices.forEach(p => {
+    practiceMap[p.name] = p;
+    p.tasks = 0; p.timeWithout = 0; p.timeWith = 0; p.timeSaved = 0; p.efficiency = 0; p.quality = 0; p.completed = 0;
+  });
+
+  let qualityCountMap = {};
+  data.tasks.forEach(t => {
+    const pName = t.practice;
+    // Find matching practice (handle aliases)
+    let p = practiceMap[pName];
+    if (!p && pName === 'ERP') p = practiceMap['ERP Solutions'];
+    if (!p) return;
+
+    p.tasks++;
+    p.timeWithout += t.timeWithout || 0;
+    p.timeWith += t.timeWith || 0;
+    p.timeSaved += t.timeSaved || 0;
+    if (t.quality > 0) {
+      if (!qualityCountMap[pName]) qualityCountMap[pName] = { sum: 0, count: 0 };
+      qualityCountMap[pName].sum += t.quality;
+      qualityCountMap[pName].count++;
+    }
+    if (t.status && t.status.toLowerCase() === 'completed') p.completed++;
+  });
+
+  // Calc derived values
+  data.summary.practices.forEach(p => {
+    if (p.timeWithout > 0) p.efficiency = ((p.timeSaved / p.timeWithout) * 100);
+    const qm = qualityCountMap[p.name];
+    if (qm && qm.count > 0) p.quality = qm.sum / qm.count;
+    // Count unique projects
+    const projSet = new Set(data.tasks.filter(t => t.practice === p.name).map(t => t.project).filter(Boolean));
+    p.projects = projSet.size || p.projects;
+  });
+
+  // Recalc totals
+  const totals = data.summary.totals;
+  totals.tasks = data.tasks.length;
+  totals.timeWithout = data.summary.practices.reduce((s, p) => s + p.timeWithout, 0);
+  totals.timeWith = data.summary.practices.reduce((s, p) => s + p.timeWith, 0);
+  totals.timeSaved = data.summary.practices.reduce((s, p) => s + p.timeSaved, 0);
+  totals.efficiency = totals.timeWithout > 0 ? (totals.timeSaved / totals.timeWithout * 100) : 0;
+  totals.completed = data.summary.practices.reduce((s, p) => s + p.completed, 0);
+  totals.projects = data.summary.practices.reduce((s, p) => s + p.projects, 0);
+
+  const allQ = data.tasks.filter(t => t.quality > 0);
+  totals.quality = allQ.length > 0 ? allQ.reduce((s, t) => s + t.quality, 0) / allQ.length : 0;
+}
+</script>
+
+<!-- ========== AI ADOPTION AGENT CHAT WIDGET ========== -->
+<style>
+.adoption-agent-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #0078d4);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  z-index: 999;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.adoption-agent-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
+}
+
+.adoption-agent-widget {
+  position: fixed;
+  bottom: 90px;
+  right: 20px;
+  width: 420px;
+  height: 600px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 5px 40px rgba(0, 0, 0, 0.2);
+  display: none;
+  flex-direction: column;
+  z-index: 999;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+.adoption-agent-widget.open {
+  display: flex;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.agent-header {
+  background: linear-gradient(135deg, #3b82f6, #0078d4);
+  color: white;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.agent-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agent-close-btn:hover {
+  opacity: 0.8;
+}
+
+.agent-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f9fafb;
+}
+
+.agent-message {
+  display: flex;
+  gap: 8px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.agent-message.user {
+  justify-content: flex-end;
+}
+
+.agent-message.bot {
+  justify-content: flex-start;
+}
+
+.agent-bubble {
+  max-width: 80%;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.agent-message.user .agent-bubble {
+  background: #3b82f6;
+  color: white;
+  border-radius: 12px 4px 12px 12px;
+}
+
+.agent-message.bot .agent-bubble {
+  background: #e5e7eb;
+  color: #1f2937;
+  border-radius: 4px 12px 12px 12px;
+}
+
+.agent-bubble a {
+  color: #0078d4;
+  text-decoration: underline;
+}
+
+.agent-message.bot .agent-bubble a {
+  color: #0078d4;
+}
+
+.agent-input-area {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 8px;
+  background: white;
+}
+
+.agent-input-area input {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.agent-input-area input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.agent-input-area button {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+  font-size: 13px;
+}
+
+.agent-input-area button:hover {
+  background: #2563eb;
+}
+
+.agent-input-area button:active {
+  transform: scale(0.95);
+}
+
+.agent-loading {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 12px;
+  background: #e5e7eb;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.agent-loading span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: bounce 1.4s infinite;
+}
+
+.agent-loading span:nth-child(2) { animation-delay: 0.2s; }
+.agent-loading span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+
+.agent-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  border-left: 3px solid #dc2626;
+}
+
+.agent-disclaimer {
+  font-size: 11px;
+  color: #6b7280;
+  padding: 12px;
+  text-align: center;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+@media (max-width: 768px) {
+  .adoption-agent-widget {
+    width: calc(100vw - 40px);
+    height: 70vh;
+    bottom: 80px;
+    right: 20px;
+  }
+}
+</style>
+
+<!-- Chat Widget HTML -->
+<button id="adoption-agent-toggle" class="adoption-agent-toggle" title="Ask AI Adoption Agent">
+  💬
+</button>
+
+<div id="adoption-agent-widget" class="adoption-agent-widget">
+  <div class="agent-header">
+    <div class="agent-header-title">
+      <span>🤖</span>
+      <span>AI Adoption Agent</span>
+    </div>
+    <button class="agent-close-btn" onclick="toggleAdoptionAgent()">✕</button>
+  </div>
+  
+  <div id="agent-messages" class="agent-messages"></div>
+  
+  <div class="agent-disclaimer">
+    Powered by Claude AI. Analyzes live dashboard data for insights & recommendations.
+  </div>
+  
+  <div class="agent-input-area">
+    <input 
+      id="agent-input" 
+      type="text" 
+      placeholder="Ask about reports, metrics, blockers, recommendations..."
+      onkeypress="if(event.key==='Enter') sendAdoptionAgentQuery()"
+    />
+    <button onclick="sendAdoptionAgentQuery()">Send</button>
+  </div>
+</div>
+
+<script>
+let agentConversation = [];
+let agentIsLoading = false;
+
+// Supabase Edge Function URL — no localhost needed
+const AGENT_API_URL = 'https://apcfnzbiylhgiutcjigg.supabase.co/functions/v1/adoption-agent';
+
+/**
+ * Convert basic markdown to HTML for agent responses (sanitized)
+ */
+function markdownToHtml(text) {
+  const raw = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^### (.+)$/gm, '<h4 style="margin:8px 0 4px;font-size:13px;">$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3 style="margin:10px 0 4px;font-size:14px;">$1</h3>')
+    .replace(/^# (.+)$/gm, '<h3 style="margin:10px 0 6px;font-size:15px;">$1</h3>')
+    .replace(/^[\-\*] (.+)$/gm, '<li style="margin-left:16px;list-style:disc;">$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li style="margin-left:16px;list-style:decimal;">$1</li>')
+    .replace(/`([^`]+)`/g, '<code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;font-size:12px;">$1</code>')
+    .replace(/\n{2,}/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+  return typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(raw) : raw;
+}
+
+function toggleAdoptionAgent() {
+  const widget = document.getElementById('adoption-agent-widget');
+  widget.classList.toggle('open');
+  if (widget.classList.contains('open')) {
+    document.getElementById('agent-input').focus();
+    if (agentConversation.length === 0) {
+      showAgentGreeting();
+    }
+  }
+}
+
+function showAgentGreeting() {
+  const messagesDiv = document.getElementById('agent-messages');
+  const greeting = document.createElement('div');
+  greeting.className = 'agent-message bot';
+  greeting.innerHTML = `
+    <div class="agent-bubble">
+      <strong>Welcome to AI Adoption Agent!</strong><br><br>
+      I can help you with:<br>
+      • 📊 Current adoption metrics & trends<br>
+      • 🎯 Q2 progress reports<br>
+      • 🔴 Risk & escalation alerts<br>
+      • 💡 Actionable recommendations<br>
+      • 👥 Practice-level analysis<br>
+      • 📈 Forecasts & projections<br><br>
+      <em>Ask me anything about AI adoption!</em>
+    </div>
+  `;
+  messagesDiv.appendChild(greeting);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+async function sendAdoptionAgentQuery() {
+  const input = document.getElementById('agent-input');
+  const query = input.value.trim();
+  
+  if (!query || agentIsLoading) return;
+  
+  const messagesDiv = document.getElementById('agent-messages');
+  
+  // Add user message
+  const userMsg = document.createElement('div');
+  userMsg.className = 'agent-message user';
+  userMsg.innerHTML = `<div class="agent-bubble">${escapeHtml(query)}</div>`;
+  messagesDiv.appendChild(userMsg);
+  
+  input.value = '';
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  
+  // Show loading state
+  agentIsLoading = true;
+  const loadingMsg = document.createElement('div');
+  loadingMsg.className = 'agent-message bot';
+  loadingMsg.id = 'agent-loading';
+  loadingMsg.innerHTML = '<div class="agent-loading"><span></span><span></span><span></span></div>';
+  messagesDiv.appendChild(loadingMsg);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  
+  try {
+    // Call Supabase Edge Function
+    const response = await fetch(AGENT_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({
+        query: query.substring(0, 2000),
+        conversation: agentConversation.slice(-20),
+        userRole: (typeof EAS_Auth !== 'undefined' && EAS_Auth?.getUserRole?.()) || 'admin',
+        userPractice: (typeof EAS_Auth !== 'undefined' && EAS_Auth?.getUserPractice?.()) || '',
+        timestamp: new Date().toISOString()
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    // Remove loading state
+    document.getElementById('agent-loading')?.remove();
+    
+    // Add agent response (render markdown)
+    const agentMsg = document.createElement('div');
+    agentMsg.className = 'agent-message bot';
+    agentMsg.innerHTML = `<div class="agent-bubble">${markdownToHtml(result.reply)}</div>`;
+    messagesDiv.appendChild(agentMsg);
+    
+    // Store in conversation history
+    agentConversation.push({ role: 'user', text: query });
+    agentConversation.push({ role: 'agent', text: result.reply });
+    
+    // Keep last 20 messages for context
+    if (agentConversation.length > 40) {
+      agentConversation = agentConversation.slice(-40);
+    }
+    
+  } catch (err) {
+    console.error('Agent error:', err);
+    document.getElementById('agent-loading')?.remove();
+    
+    const errDiv = document.createElement('div');
+    errDiv.className = 'agent-message bot';
+    errDiv.innerHTML = `<div class="agent-error">❌ Sorry, I couldn't process that. Please try again or check your connection.</div>`;
+    messagesDiv.appendChild(errDiv);
+  } finally {
+    agentIsLoading = false;
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+}
+
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// ============ ADMIN MAGIC LINK ============
+const MAGIC_LINK_URL = SUPABASE_URL + '/functions/v1/admin-magic-link';
+
+async function generateMagicLink(email) {
+  if (!email) return;
+  confirmAction(
+    `Generate a one-time login link for ${email}? Anyone with this link can sign in as this user.`,
+    async () => { await _doGenerateMagicLink(email); }
+  );
+}
+
+async function _doGenerateMagicLink(email) {
+  try {
+    showToast('Generating magic link…', 'info');
+    const session = await EAS_Auth.getSession();
+    if (!session) {
+      showToast('You must be logged in', 'error');
+      return;
+    }
+    const res = await fetch(MAGIC_LINK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Failed to generate link', 'error');
+      return;
+    }
+    // Show result modal
+    document.getElementById('ml-email').textContent = data.email;
+    document.getElementById('ml-link').value = data.action_link;
+    openModal('modal-magic-link');
+    showToast('Magic link generated', 'success');
+  } catch (err) {
+    console.error('generateMagicLink error:', err);
+    showToast('Network error: ' + err.message, 'error');
+  }
+}
+
+function copyMagicLink() {
+  const linkInput = document.getElementById('ml-link');
+  linkInput.select();
+  navigator.clipboard.writeText(linkInput.value).then(() => {
+    showToast('Link copied to clipboard', 'success');
+  }).catch(() => {
+    // Fallback
+    document.execCommand('copy');
+    showToast('Link copied', 'success');
+  });
+}
+
+// ============ MANAGE USERS ============
+let _adminUsers = [];
+
+async function renderAdminUsers() {
+  const sb = getSupabaseClient();
+  if (!_adminUsers.length) {
+    const { data, error } = await sb
+      .from('users')
+      .select('id, auth_id, email, name, role, practice, is_active, last_login, created_at')
+      .order('practice', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) {
+      showToast('Failed to load users: ' + error.message, 'error');
+      return;
+    }
+    _adminUsers = data || [];
+  }
+
+  // Populate practice filter if empty
+  const practiceFilter = document.getElementById('admin-user-practice-filter');
+  if (practiceFilter && practiceFilter.options.length <= 1) {
+    const practices = [...new Set(_adminUsers.map(u => u.practice).filter(Boolean))].sort();
+    practices.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      practiceFilter.appendChild(opt);
+    });
+  }
+
+  // Apply filters
+  const search = (document.getElementById('admin-user-search')?.value || '').toLowerCase();
+  const roleFilter = document.getElementById('admin-user-role-filter')?.value || '';
+  const practFilter = document.getElementById('admin-user-practice-filter')?.value || '';
+
+  let filtered = _adminUsers;
+  if (search) {
+    filtered = filtered.filter(u =>
+      (u.name || '').toLowerCase().includes(search) ||
+      (u.email || '').toLowerCase().includes(search)
+    );
+  }
+  if (roleFilter) filtered = filtered.filter(u => u.role === roleFilter);
+  if (practFilter) filtered = filtered.filter(u => u.practice === practFilter);
+
+  // Update count badge
+  const badge = document.getElementById('admin-user-count');
+  if (badge) badge.textContent = _adminUsers.length;
+
+  // Render table
+  const roleBadgeColor = { admin: '#dc3545', spoc: '#fd7e14', contributor: '#0d6efd', viewer: '#6c757d', executive: '#8b5cf6' };
+  let html = '';
+  filtered.forEach((u, i) => {
+    const roleColor = roleBadgeColor[u.role] || '#6c757d';
+    const activeIcon = u.is_active ? '✅' : '❌';
+    const lastLogin = u.last_login ? new Date(u.last_login).toLocaleDateString() : '—';
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:500">${escapeHtml(u.name || '')}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${escapeHtml(u.email || '')}</td>
+      <td>${escapeHtml(u.practice || '')}</td>
+      <td>
+        <select onchange="quickChangeRole('${u.id}', this.value)" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text-primary);font-size:12px;cursor:pointer">
+          <option value="admin"${u.role === 'admin' ? ' selected' : ''}>Admin</option>
+          <option value="spoc"${u.role === 'spoc' ? ' selected' : ''}>SPOC</option>
+          <option value="contributor"${u.role === 'contributor' ? ' selected' : ''}>Contributor</option>
+          <option value="viewer"${u.role === 'viewer' ? ' selected' : ''}>Viewer</option>
+          <option value="executive"${u.role === 'executive' ? ' selected' : ''}>Executive</option>
+        </select>
+      </td>
+      <td style="text-align:center">${activeIcon}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${lastLogin}</td>
+      <td style="display:flex;gap:4px">
+        <button class="btn-icon" onclick="editUser('${u.id}')" title="Edit user">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon" onclick="generateMagicLink('${escapeHtml(u.email)}')" title="Generate login link" style="color:var(--accent)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  });
+
+  document.getElementById('admin-users-tbody').innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">No users found</td></tr>';
+}
+
+async function quickChangeRole(userId, newRole) {
+  const sb = getSupabaseClient();
+  const { error } = await sb.from('users').update({ role: newRole }).eq('id', userId);
+  if (error) {
+    showToast('Failed to update role: ' + error.message, 'error');
+    _adminUsers = []; // force refresh
+    renderAdminUsers();
+    return;
+  }
+  // Update local cache
+  const user = _adminUsers.find(u => u.id === userId);
+  if (user) user.role = newRole;
+  // Clean up executive_practices if role changed away from executive
+  if (newRole !== 'executive') {
+    await sb.from('executive_practices').delete().eq('user_id', userId);
+  }
+  showToast(`Role updated to ${newRole}`, 'success');
+}
+
+async function editUser(userId) {
+  const user = _adminUsers.find(u => u.id === userId);
+  if (!user) return;
+
+  document.getElementById('eu-id').value = user.id;
+  document.getElementById('eu-name').value = user.name || '';
+  document.getElementById('eu-email').value = user.email || '';
+  document.getElementById('eu-role').value = user.role || 'contributor';
+  document.getElementById('eu-active').value = user.is_active ? 'true' : 'false';
+
+  // Populate practice select from Supabase practices cache or from users
+  const practiceSelect = document.getElementById('eu-practice');
+  let practices;
+  if (_adminPractices.length) {
+    practices = _adminPractices.map(p => p.name).sort();
+  } else {
+    practices = [...new Set(_adminUsers.map(u => u.practice).filter(Boolean))].sort();
+  }
+  practiceSelect.innerHTML = practices.map(p =>
+    `<option value="${escapeHtml(p)}"${user.practice === p ? ' selected' : ''}>${escapeHtml(p)}</option>`
+  ).join('');
+
+  // Populate executive multi-practice checkboxes
+  const checkboxContainer = document.getElementById('exec-practices-checkboxes');
+  if (checkboxContainer) {
+    checkboxContainer.innerHTML = practices.map(p =>
+      `<label style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;background:var(--bg-card)">
+        <input type="checkbox" class="exec-practice-cb" value="${escapeHtml(p)}"> ${escapeHtml(p)}
+      </label>`
+    ).join('');
+  }
+
+  // If executive, load existing assigned practices
+  if (user.role === 'executive') {
+    const sb = getSupabaseClient();
+    const { data: execPractices } = await sb
+      .from('executive_practices')
+      .select('practice')
+      .eq('user_id', user.id);
+    const assignedPractices = (execPractices || []).map(ep => ep.practice);
+    document.querySelectorAll('.exec-practice-cb').forEach(cb => {
+      cb.checked = assignedPractices.includes(cb.value);
+    });
+  }
+
+  toggleExecPractices();
+  document.getElementById('user-modal-title').textContent = 'Edit User — ' + (user.name || user.email);
+  openModal('modal-edit-user');
+}
+
+function toggleExecPractices() {
+  const role = document.getElementById('eu-role').value;
+  const execRow = document.getElementById('exec-practices-row');
+  const practiceGroup = document.getElementById('eu-practice-group');
+  if (role === 'executive') {
+    if (execRow) execRow.style.display = '';
+    if (practiceGroup) practiceGroup.style.display = 'none';
+  } else {
+    if (execRow) execRow.style.display = 'none';
+    if (practiceGroup) practiceGroup.style.display = '';
+  }
+}
+
+async function saveUser() {
+  const id = document.getElementById('eu-id').value;
+  const role = document.getElementById('eu-role').value;
+  const updates = {
+    name: document.getElementById('eu-name').value.trim(),
+    practice: role === 'executive' ? null : document.getElementById('eu-practice').value,
+    role: role,
+    is_active: document.getElementById('eu-active').value === 'true'
+  };
+
+  if (!updates.name) {
+    showToast('Name is required', 'error');
+    return;
+  }
+
+  const sb = getSupabaseClient();
+  const { error } = await sb.from('users').update(updates).eq('id', id);
+  if (error) {
+    showToast('Failed to save user: ' + error.message, 'error');
+    return;
+  }
+
+  // Handle executive practice assignments
+  if (role === 'executive') {
+    const selectedPractices = [...document.querySelectorAll('.exec-practice-cb:checked')].map(cb => cb.value);
+    // Delete existing assignments
+    await sb.from('executive_practices').delete().eq('user_id', id);
+    // Insert new assignments
+    if (selectedPractices.length > 0) {
+      const { error: epError } = await sb
+        .from('executive_practices')
+        .insert(selectedPractices.map(p => ({ user_id: id, practice: p })));
+      if (epError) {
+        showToast('User saved but failed to update practice assignments: ' + epError.message, 'error');
+      }
+    }
+  } else {
+    // Clean up executive_practices if role changed away from executive
+    await sb.from('executive_practices').delete().eq('user_id', id);
+  }
+
+  closeModal('modal-edit-user');
+  showToast('User updated successfully', 'success');
+  _adminUsers = []; // force refresh
+  renderAdminUsers();
+}
+
+// ============ MANAGE EXECUTIVE ASSIGNMENTS ============
+let _execAssignData = [];
+
+async function renderAdminExecutives() {
+  const sb = getSupabaseClient();
+  // Fetch executive users
+  const { data: execUsers, error: uErr } = await sb
+    .from('users')
+    .select('id, name, email, practice')
+    .eq('role', 'executive')
+    .order('name');
+
+  if (uErr) {
+    showToast('Failed to load executive users: ' + uErr.message, 'error');
+    return;
+  }
+
+  // Update badge count
+  const badge = document.getElementById('admin-exec-count');
+  if (badge) badge.textContent = (execUsers || []).length;
+
+  const empty = document.getElementById('exec-assign-empty');
+  const content = document.getElementById('exec-assign-content');
+
+  if (!execUsers || execUsers.length === 0) {
+    empty.style.display = 'block';
+    content.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
+  // Fetch all executive_practices
+  const { data: epRows } = await sb
+    .from('executive_practices')
+    .select('user_id, practice');
+
+  // Fetch all practices for the picker
+  const { data: allPractices } = await sb
+    .from('practices')
+    .select('name')
+    .order('name');
+
+  const practiceList = (allPractices || []).map(p => p.name);
+  const epMap = {};
+  (epRows || []).forEach(r => {
+    if (!epMap[r.user_id]) epMap[r.user_id] = [];
+    epMap[r.user_id].push(r.practice);
+  });
+
+  _execAssignData = execUsers.map(u => ({
+    ...u,
+    practices: epMap[u.id] || []
+  }));
+
+  const container = document.getElementById('exec-cards-container');
+  container.innerHTML = _execAssignData.map(u => {
+    const tags = u.practices.length > 0
+      ? u.practices.map(p => `<span style="display:inline-block;padding:4px 10px;border-radius:12px;font-size:0.8rem;background:var(--accent-bg,rgba(99,102,241,0.12));color:var(--accent-primary,#6366f1);margin:3px 2px">${p}</span>`).join('')
+      : '<span style="color:var(--text-muted);font-style:italic">No practices assigned</span>';
+
+    return `
+      <div class="card" style="padding:20px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <div>
+            <h3 style="margin:0 0 4px">${u.name || 'Unnamed'}</h3>
+            <div style="font-size:0.85rem;color:var(--text-muted)">${u.email || '—'} · Home practice: <strong>${u.practice || '—'}</strong></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="editExecPractices('${u.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit
+          </button>
+        </div>
+        <div style="margin-top:12px">
+          <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:6px">Assigned Practices (${u.practices.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0">${tags}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function editExecPractices(userId) {
+  const sb = getSupabaseClient();
+  const user = _execAssignData.find(u => u.id === userId);
+  if (!user) return;
+
+  // Fetch all practices
+  const { data: allPractices } = await sb
+    .from('practices')
+    .select('name')
+    .order('name');
+  const practiceList = (allPractices || []).map(p => p.name);
+
+  const checkedSet = new Set(user.practices);
+  const checkboxes = practiceList.map(p =>
+    `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background 0.15s"
+            onmouseover="this.style.background='var(--bg-hover,rgba(0,0,0,0.04))'"
+            onmouseout="this.style.background='transparent'">
+      <input type="checkbox" class="exec-assign-cb" value="${p}" ${checkedSet.has(p) ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--accent-primary,#6366f1)">
+      <span>${p}</span>
+    </label>`
+  ).join('');
+
+  // Build a small inline modal
+  const existing = document.getElementById('exec-assign-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'exec-assign-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border-radius:16px;max-width:480px;width:100%;max-height:80vh;overflow:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+      <h3 style="margin:0 0 4px">Edit Practices</h3>
+      <p style="margin:0 0 16px;color:var(--text-muted);font-size:0.9rem">${user.name || 'Unnamed'}</p>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <button class="btn btn-sm" onclick="document.querySelectorAll('.exec-assign-cb').forEach(c=>c.checked=true)" style="font-size:0.78rem">Select All</button>
+        <button class="btn btn-sm" onclick="document.querySelectorAll('.exec-assign-cb').forEach(c=>c.checked=false)" style="font-size:0.78rem">Deselect All</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">
+        ${checkboxes}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+        <button class="btn" onclick="document.getElementById('exec-assign-modal').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveExecPractices('${userId}')">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function saveExecPractices(userId) {
+  const sb = getSupabaseClient();
+  const selected = [...document.querySelectorAll('.exec-assign-cb:checked')].map(c => c.value);
+
+  // Delete existing
+  const { error: delErr } = await sb.from('executive_practices').delete().eq('user_id', userId);
+  if (delErr) {
+    showToast('Failed to clear old assignments: ' + delErr.message, 'error');
+    return;
+  }
+
+  // Insert new
+  if (selected.length > 0) {
+    const { error: insErr } = await sb
+      .from('executive_practices')
+      .insert(selected.map(p => ({ user_id: userId, practice: p })));
+    if (insErr) {
+      showToast('Failed to save assignments: ' + insErr.message, 'error');
+      return;
+    }
+  }
+
+  const modal = document.getElementById('exec-assign-modal');
+  if (modal) modal.remove();
+  showToast(`Updated practice assignments (${selected.length} practices)`, 'success');
+  renderAdminExecutives();
+}
+
+// ============ MANAGE PERMISSIONS ============
+let _adminPermissions = [];
+const ROLE_ORDER = ['admin', 'spoc', 'contributor', 'viewer', 'executive'];
+
+async function renderAdminPermissions() {
+  const sb = getSupabaseClient();
+  const { data, error } = await sb
+    .from('role_view_permissions')
+    .select('*')
+    .order('view_key', { ascending: true })
+    .order('role', { ascending: true });
+
+  if (error) {
+    showToast('Failed to load permissions: ' + error.message, 'error');
+    return;
+  }
+  _adminPermissions = data || [];
+
+  // Group by view_key
+  const viewKeys = [...new Set(_adminPermissions.map(p => p.view_key))].sort();
+  const labelMap = {};
+  _adminPermissions.forEach(p => { labelMap[p.view_key] = p.label || p.view_key; });
+
+  // Separate into categories for visual grouping
+  const webKeys = viewKeys.filter(vk => vk.startsWith('web.'));
+  const extKeys = viewKeys.filter(vk => vk.startsWith('ext.'));
+  const otherKeys = viewKeys.filter(vk => !vk.startsWith('web.') && !vk.startsWith('ext.'));
+
+  let html = '';
+
+  function renderCategoryRows(keys, categoryLabel) {
+    if (keys.length === 0) return;
+    html += `<tr><td colspan="5" style="padding:12px 8px 6px;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.5px;color:var(--primary);border-bottom:2px solid var(--primary);background:var(--bg-main)">${escapeHtml(categoryLabel)}</td></tr>`;
+    keys.forEach(vk => {
+      html += `<tr><td style="font-weight:500">${escapeHtml(labelMap[vk])}<br><span style="font-size:11px;color:var(--text-muted)">${escapeHtml(vk)}</span></td>`;
+      ROLE_ORDER.forEach(role => {
+        const perm = _adminPermissions.find(p => p.view_key === vk && p.role === role);
+        const isVisible = perm ? perm.is_visible : true;
+        const toggleId = `perm-${role}-${vk.replace(/\./g, '-')}`;
+        html += `<td style="text-align:center">
+          <label class="toggle-switch" style="display:inline-block;position:relative;width:44px;height:24px;cursor:pointer">
+            <input type="checkbox" id="${toggleId}" ${isVisible ? 'checked' : ''}
+              onchange="togglePermission('${escapeHtml(role)}', '${escapeHtml(vk)}', this.checked)"
+              style="opacity:0;width:0;height:0">
+            <span style="position:absolute;top:0;left:0;right:0;bottom:0;background:${isVisible ? '#28a745' : '#dc3545'};border-radius:24px;transition:0.3s"></span>
+            <span style="position:absolute;top:2px;${isVisible ? 'left:22px' : 'left:2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></span>
+          </label>
+        </td>`;
+      });
+      html += '</tr>';
+    });
+  }
+
+  renderCategoryRows(webKeys, '🌐 Dashboard Views');
+  renderCategoryRows(extKeys, '🖥️ VS Code Extension Views');
+  renderCategoryRows(otherKeys, 'Other');
+
+  document.getElementById('permissions-matrix-tbody').innerHTML = html || '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted)">No permissions configured. Run the SQL migration first.</td></tr>';
+}
+
+async function togglePermission(role, viewKey, isVisible) {
+  const sb = getSupabaseClient();
+  const { error } = await sb
+    .from('role_view_permissions')
+    .update({ is_visible: isVisible })
+    .eq('role', role)
+    .eq('view_key', viewKey);
+
+  if (error) {
+    showToast('Failed to update permission: ' + error.message, 'error');
+    renderAdminPermissions(); // re-render to revert visual state
+    return;
+  }
+
+  // Update local cache
+  const perm = _adminPermissions.find(p => p.role === role && p.view_key === viewKey);
+  if (perm) perm.is_visible = isVisible;
+
+  // Update toggle visual without full re-render
+  const toggleId = `perm-${role}-${viewKey.replace(/\./g, '-')}`;
+  const checkbox = document.getElementById(toggleId);
+  if (checkbox) {
+    const track = checkbox.nextElementSibling;
+    const thumb = track?.nextElementSibling;
+    if (track) track.style.background = isVisible ? '#28a745' : '#dc3545';
+    if (thumb) thumb.style.left = isVisible ? '22px' : '2px';
+  }
+
+  showToast(`${viewKey} ${isVisible ? 'enabled' : 'disabled'} for ${role}`, 'success');
+}
+
+async function resetAllPermissions() {
+  confirmAction('Reset all view permissions to visible? This will enable all sidebar sections for all roles.', async () => {
+    const sb = getSupabaseClient();
+    const { error } = await sb
+      .from('role_view_permissions')
+      .update({ is_visible: true })
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+
+    if (error) {
+      showToast('Failed to reset permissions: ' + error.message, 'error');
+      return;
+    }
+    showToast('All permissions reset to visible', 'success');
+    renderAdminPermissions();
+  });
+}
+
+// Toggle button click handler
+document.getElementById('adoption-agent-toggle')?.addEventListener('click', toggleAdoptionAgent);
+
+// ============ IDE USAGE ANALYTICS ============
+let _ideUsageData = [];
+
+async function renderIdeUsage() {
+  const sb = getSupabaseClient();
+  const { data: rows, error } = await sb
+    .from('copilot_users')
+    .select('name, username, practice, ide_days_active, ide_total_interactions, ide_code_generations, ide_code_acceptances, ide_agent_days, ide_chat_days, ide_loc_suggested, ide_loc_added, ide_last_active_date, ide_data_period')
+    .not('ide_days_active', 'is', null)
+    .gt('ide_days_active', 0)
+    .order('ide_days_active', { ascending: false });
+
+  if (error) {
+    showToast('Failed to load IDE usage data: ' + error.message, 'error');
+    return;
+  }
+
+  _ideUsageData = rows || [];
+
+  // Update badge
+  const badge = document.getElementById('admin-ide-count');
+  if (badge) badge.textContent = _ideUsageData.length;
+
+  // Populate practice filter
+  const practiceSet = new Set(_ideUsageData.map(r => r.practice).filter(Boolean));
+  const sel = document.getElementById('ide-usage-filter-practice');
+  if (sel) {
+    while (sel.options.length > 1) sel.remove(1);
+    [...practiceSet].sort().forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p;
+      sel.appendChild(o);
+    });
+  }
+
+  // KPIs
+  const totUsers = _ideUsageData.length;
+  const totCodeGens = _ideUsageData.reduce((s, r) => s + (r.ide_code_generations || 0), 0);
+  const totAcceptances = _ideUsageData.reduce((s, r) => s + (r.ide_code_acceptances || 0), 0);
+  const totLoc = _ideUsageData.reduce((s, r) => s + (r.ide_loc_added || 0), 0);
+  const totAgent = _ideUsageData.reduce((s, r) => s + (r.ide_agent_days || 0), 0);
+  const totChat = _ideUsageData.reduce((s, r) => s + (r.ide_chat_days || 0), 0);
+
+  document.getElementById('ide-kpi-users').textContent = totUsers.toLocaleString();
+  document.getElementById('ide-kpi-codegens').textContent = totCodeGens.toLocaleString();
+  document.getElementById('ide-kpi-acceptances').textContent = totAcceptances.toLocaleString();
+  document.getElementById('ide-kpi-loc').textContent = totLoc.toLocaleString();
+  document.getElementById('ide-kpi-agent').textContent = totAgent.toLocaleString();
+  document.getElementById('ide-kpi-chat').textContent = totChat.toLocaleString();
+
+  filterIdeTable();
+}
+
+function filterIdeTable() {
+  const search = (document.getElementById('ide-usage-search')?.value || '').toLowerCase();
+  const practice = document.getElementById('ide-usage-filter-practice')?.value || '';
+  const sortBy = document.getElementById('ide-usage-sort')?.value || 'ide_days_active';
+
+  let items = _ideUsageData.slice();
+  if (practice) items = items.filter(r => r.practice === practice);
+  if (search) items = items.filter(r =>
+    (r.name || '').toLowerCase().includes(search) ||
+    (r.username || '').toLowerCase().includes(search)
+  );
+
+  // Sort
+  if (sortBy === 'name') {
+    items.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  } else {
+    items.sort((a, b) => (b[sortBy] || 0) - (a[sortBy] || 0));
+  }
+
+  let html = '';
+  items.forEach((r, i) => {
+    const lastActive = r.ide_last_active_date ? new Date(r.ide_last_active_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    html += `<tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:500">${r.name || r.username || '—'}</td>
+      <td>${r.practice || '—'}</td>
+      <td style="text-align:right;font-weight:600;color:var(--info)">${(r.ide_days_active || 0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.ide_code_generations || 0).toLocaleString()}</td>
+      <td style="text-align:right;color:var(--success)">${(r.ide_code_acceptances || 0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.ide_total_interactions || 0).toLocaleString()}</td>
+      <td style="text-align:right;font-weight:600;color:var(--purple)">${(r.ide_loc_added || 0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.ide_loc_suggested || 0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.ide_agent_days || 0).toLocaleString()}</td>
+      <td style="text-align:right">${(r.ide_chat_days || 0).toLocaleString()}</td>
+      <td>${lastActive}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${r.ide_data_period || '—'}</td>
+    </tr>`;
+  });
+
+  if (!html) html = '<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text-muted)">No IDE usage data found</td></tr>';
+  document.getElementById('ide-usage-tbody').innerHTML = html;
+}
+
+function exportIdeUsageCsv() {
+  if (!_ideUsageData.length) { showToast('No IDE data to export', 'warning'); return; }
+  const headers = ['Name','Username','Practice','Days Active','Code Generations','Code Acceptances','Total Interactions','LOC Added','LOC Suggested','Agent Days','Chat Days','Last Active','Data Period'];
+  const rows = _ideUsageData.map(r => [
+    r.name, r.username, r.practice,
+    r.ide_days_active, r.ide_code_generations, r.ide_code_acceptances,
+    r.ide_total_interactions, r.ide_loc_added, r.ide_loc_suggested,
+    r.ide_agent_days, r.ide_chat_days, r.ide_last_active_date, r.ide_data_period
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'ide_usage_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('CSV exported');
+}
+</script>
+
+</body>
+</html>
