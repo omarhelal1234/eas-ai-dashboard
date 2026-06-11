@@ -1,0 +1,38 @@
+name: Deploy Pages from private source
+
+on:
+  repository_dispatch:
+    types: [deploy]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: omarhelal1234/eas-ai-dashboard-src
+          token: ${{ secrets.SRC_TOKEN }}
+      - name: Assemble site
+        run: |
+          mkdir -p _site/src
+          cp *.html _site/
+          cp -r src/pages _site/src/pages
+          cp -r css js assets _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
